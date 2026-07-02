@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Support · Road Travel</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0f12;
+      --surface: #14171c;
+      --border: #222530;
+      --accent: #e8a838;
+      --text: #e8eaf0;
+      --muted: #7a7f8e;
+      --radius: 12px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 2rem 2rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .logo-mark {
+      width: 28px;
+      height: 28px;
+      background: var(--accent);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-name {
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    main {
+      flex: 1;
+      width: 100%;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 4rem 2rem;
+    }
+
+    .page-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1rem;
+    }
+
+    h1 {
+      font-size: clamp(1.75rem, 4vw, 2.5rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.75rem;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.65;
+      margin-bottom: 3rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* FAQ */
+    .faq { margin-bottom: 3rem; }
+
+    .faq h2 {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+
+    details {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 0.5rem;
+      overflow: hidden;
+    }
+
+    summary {
+      padding: 1rem 1.25rem;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+    }
+
+    summary::-webkit-details-marker { display: none; }
+
+    summary::after {
+      content: "+";
+      font-size: 1.1rem;
+      font-weight: 400;
+      color: var(--muted);
+      transition: transform 0.2s;
+    }
+
+    details[open] summary::after {
+      transform: rotate(45deg);
+    }
+
+    details[open] {
+      background: var(--surface);
+    }
+
+    .faq-body {
+      padding: 0 1.25rem 1.25rem;
+      font-size: 0.9rem;
+      color: #b0b4c0;
+      line-height: 1.7;
+    }
+
+    /* Contact card */
+    .contact-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      display: flex;
+      gap: 1.5rem;
+      align-items: flex-start;
+    }
+
+    .contact-icon {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #1e2229, #252a34);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .contact-body h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+    }
+
+    .contact-body p {
+      font-size: 0.875rem;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 1rem;
+    }
+
+    .contact-body a.btn {
+      display: inline-block;
+      padding: 0.6rem 1.2rem;
+      background: var(--accent);
+      color: #0d0f12;
+      font-size: 0.875rem;
+      font-weight: 600;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+
+    .contact-body a.btn:hover { opacity: 0.88; }
+
+    @media (max-width: 480px) {
+      .contact-card { flex-direction: column; }
+    }
+
+    footer {
+      padding: 2rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.8rem;
+      border-top: 1px solid var(--border);
+    }
+
+    footer a { color: var(--muted); text-decoration: none; }
+    footer a:hover { color: var(--text); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M2 8h12M8 2l6 6-6 6" stroke="#0d0f12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+  <a class="logo-name" href="/">Road Travel</a>
+</header>
+
+<main>
+  <div class="page-label">
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M8 11v-1M8 6a1.5 1.5 0 0 1 0 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    Help
+  </div>
+  <h1>Support</h1>
+  <p class="subtitle">Got a question or running into an issue? We're here to help.</p>
+
+  <div class="faq">
+    <h2>Frequently Asked Questions</h2>
+
+    <details>
+      <summary>How do I plan a road trip route?</summary>
+      <div class="faq-body">
+        Open the app and tap the route planner. Add your start point, destination, and any stops along the way. Road Travel will suggest the best routes and show estimated drive times.
+      </div>
+    </details>
+
+    <details>
+      <summary>Does the app work offline?</summary>
+      <div class="faq-body">
+        Yes — you can download maps for offline use before your trip. Go to Settings → Offline Maps and select the regions you need.
+      </div>
+    </details>
+
+    <details>
+      <summary>How do I delete my account and data?</summary>
+      <div class="faq-body">
+        Go to Settings → Account → Delete Account. This will permanently remove your profile and all associated data. If you need help, contact us below.
+      </div>
+    </details>
+
+    <details>
+      <summary>I found a bug — how do I report it?</summary>
+      <div class="faq-body">
+        Use the contact option below and describe what happened, which device you're on, and the steps to reproduce the issue. Screenshots are always helpful!
+      </div>
+    </details>
+  </div>
+
+  <div class="contact-card">
+    <div class="contact-icon">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h13A1.5 1.5 0 0 1 18 4.5v11A1.5 1.5 0 0 1 16.5 17h-13A1.5 1.5 0 0 1 2 15.5v-11z" stroke="var(--accent)" stroke-width="1.5"/>
+        <path d="M2 5l8 6 8-6" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="contact-body">
+      <h3>Email us</h3>
+      <p>Can't find what you're looking for? Send us a message and we'll get back to you within 1–2 business days.</p>
+      <a class="btn" href="mailto:support@roadtravel.info">support@roadtravel.info</a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <p>&copy; 2026 Road Travel &nbsp;·&nbsp;
+    <a href="/privacy.html">Privacy</a> &nbsp;·&nbsp;
+    <a href="/support.html">Support</a>
+  </p>
+</footer>
+
+</body>
+</html>
