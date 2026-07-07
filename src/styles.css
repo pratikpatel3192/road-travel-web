@@ -1,14 +1,54 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Palette mirrors the iOS app (Core/Settings/Theme + asset catalog): blue accent, a soft blue-tinted
+   background that is never pure white, surface cards above it. Light by default; dark either forced
+   via [data-theme="dark"] (the in-app Appearance setting) or, when no override is set, by the OS. */
 :root {
-  --bg: #0d0f12;
-  --surface: #14171c;
-  --border: #222530;
-  --accent: #e8a838;
-  --text: #e8eaf0;
-  --muted: #7a7f8e;
-  --body-muted: #b0b4c0;
-  --radius: 12px;
+  --radius: 14px;
+  --sev-clear: #16a34a;
+  --sev-caution: #f59e0b;
+  --sev-severe: #dc2626;
+
+  /* Light (default) */
+  --accent: #2d6fb5;
+  --accent-contrast: #ffffff;
+  --bg: #e9f1f9;
+  --surface: #ffffff;
+  --surface-2: #f1f6fb;
+  --border: #d7e2ee;
+  --text: #0f1722;
+  --muted: #5b6675;
+  --body-muted: #5b6675;
+  color-scheme: light;
+}
+
+/* Dark palette — deep navy, never pure black. Shared by the explicit override and the system default. */
+:root[data-theme='dark'] {
+  --accent: #5aa9e6;
+  --accent-contrast: #06111d;
+  --bg: #0f1722;
+  --surface: #1b2736;
+  --surface-2: #16202c;
+  --border: #2a3a4d;
+  --text: #e9f1f9;
+  --muted: #93a3b6;
+  --body-muted: #93a3b6;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --accent: #5aa9e6;
+    --accent-contrast: #06111d;
+    --bg: #0f1722;
+    --surface: #1b2736;
+    --surface-2: #16202c;
+    --border: #2a3a4d;
+    --text: #e9f1f9;
+    --muted: #93a3b6;
+    --body-muted: #93a3b6;
+    color-scheme: dark;
+  }
 }
 
 body {

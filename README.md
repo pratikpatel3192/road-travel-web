@@ -1,6 +1,24 @@
 # RoadTravelWeb
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.0.5.
+The Road Travel web client (Angular 22). A **thin** client (ADR-0011): all routing/weather/AI is
+server-side in `road-travel-core`; this renders it. Marketing pages live at `/`; the planner is the
+auth-gated `/app` route.
+
+## Run the app locally
+
+1. **Config** — copy the template and fill in values for your environment:
+   ```bash
+   cp public/config.example.json public/config.json   # gitignored; per-env (ADR-0014)
+   ```
+   `apiBaseUrl` → where core runs (`http://localhost:8000` locally). `supabaseUrl`/`supabaseAnonKey`
+   enable magic-link sign-in (leave blank to run unauthenticated against a local backend).
+   `mapboxToken` (public `pk.…`) enables the live Mapbox map (otherwise an SVG route fallback renders).
+2. **Backend** — run `road-travel-core` (e.g. `uvicorn road_travel_core.main:app --port 8000`); its
+   default CORS allows `http://localhost:4200`.
+3. **Web** — `npm install && npm start`, then open `http://localhost:4200/app`.
+
+Uses the generated **`@road-travel/sdk`** (from `road-travel-contracts`) — never hand-write API calls;
+regenerate the SDK from the OpenAPI spec.
 
 ## Development server
 

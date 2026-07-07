@@ -1,0 +1,6 @@
+{
+  "apiBaseUrl": "http://localhost:8000",
+  "supabaseUrl": "",
+  "supabaseAnonKey": "",
+  "mapboxToken": ""
+}
