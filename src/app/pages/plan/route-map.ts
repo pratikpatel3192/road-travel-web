@@ -13,7 +13,7 @@ import type { PlanTripResponse } from '@road-travel/sdk';
 import * as L from 'leaflet';
 
 import { SettingsService } from '../../core/settings.service';
-import { SEVERITY_COLOR, type Severity } from './severity';
+import { SEVERITY_COLOR, type Severity, weatherEmoji } from './severity';
 
 // Free, keyless tile sources. Esri World Imagery gives satellite; its reference layers add roads +
 // labels for "hybrid".
@@ -140,7 +140,7 @@ export class RouteMap implements OnDestroy {
   private routeLayer: L.LayerGroup | null = null;
   private bounds: L.LatLngBounds | null = null;
   private resizeObserver: ResizeObserver | null = null;
-  private readonly markers = new Map<number, { marker: L.CircleMarker; sev: Severity }>();
+  private readonly markers = new Map<number, { marker: L.Marker; sev: Severity; emoji: string }>();
 
   constructor() {
     effect(() => {
@@ -195,20 +195,18 @@ export class RouteMap implements OnDestroy {
       }).addTo(layer);
     }
 
+    // A weather pin at every milestone: the condition emoji in a white badge ringed by severity
+    // color (first = origin, last = destination). Click-to-select stays synced with the timeline.
     for (const s of plan.samples) {
       const sev = (s.weather?.severity as Severity) ?? 'clear';
-      const marker = L.circleMarker([s.latitude, s.longitude], this.dotStyle(sev, false));
+      const emoji = weatherEmoji(s.weather?.condition_symbol, s.weather?.condition_text);
+      const marker = L.marker([s.latitude, s.longitude], {
+        icon: this.pinIcon(emoji, sev, false),
+        keyboard: false,
+      });
       marker.on('click', () => this.selectedChange.emit(s.index));
       marker.addTo(layer);
-      this.markers.set(s.index, { marker, sev });
-    }
-
-    const coords = plan.route_coordinates;
-    if (coords.length) {
-      const start = coords[0];
-      const end = coords[coords.length - 1];
-      L.circleMarker([start.latitude, start.longitude], this.pin('#111827')).addTo(layer);
-      L.circleMarker([end.latitude, end.longitude], this.pin('#2d6fb5')).addTo(layer);
+      this.markers.set(s.index, { marker, sev, emoji });
     }
 
     this.bounds = bounds.isValid() ? bounds : null;
@@ -254,29 +252,29 @@ export class RouteMap implements OnDestroy {
 
   private applySelection(): void {
     const sel = this.selected();
-    this.markers.forEach(({ marker, sev }, idx) => {
+    this.markers.forEach(({ marker, sev, emoji }, idx) => {
       const on = idx === sel;
-      marker.setRadius(on ? 8 : 5);
-      marker.setStyle(this.dotPath(sev, on));
-      if (on) marker.bringToFront();
+      marker.setIcon(this.pinIcon(emoji, sev, on));
+      marker.setZIndexOffset(on ? 1000 : 0);
     });
   }
 
-  private dotStyle(sev: Severity, on: boolean): L.CircleMarkerOptions {
-    return { radius: on ? 8 : 5, ...this.dotPath(sev, on) };
-  }
-
-  private dotPath(sev: Severity, on: boolean): L.PathOptions {
-    return {
-      color: on ? '#0f1722' : '#ffffff',
-      weight: on ? 3 : 2,
-      fillColor: SEVERITY_COLOR[sev],
-      fillOpacity: 1,
-    };
-  }
-
-  private pin(color: string): L.CircleMarkerOptions {
-    return { radius: 6, color: '#fff', weight: 2, fillColor: color, fillOpacity: 1 };
+  /** A weather-emoji map pin: white badge, severity-colored ring, enlarged when selected. */
+  private pinIcon(emoji: string, sev: Severity, selected: boolean): L.DivIcon {
+    const size = selected ? 32 : 24;
+    const border = selected ? 3 : 2;
+    const font = selected ? 18 : 13;
+    const html =
+      `<div style="width:${size}px;height:${size}px;border-radius:50%;` +
+      `display:flex;align-items:center;justify-content:center;background:#ffffff;` +
+      `border:${border}px solid ${SEVERITY_COLOR[sev]};box-shadow:0 1px 4px rgba(0,0,0,0.35);` +
+      `font-size:${font}px;line-height:1;">${emoji}</div>`;
+    return L.divIcon({
+      html,
+      className: 'wx-pin',
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+    });
   }
 
   ngOnDestroy(): void {
