@@ -17,6 +17,8 @@ export class EntitlementService {
   readonly me = this._me.asReadonly();
   readonly isPro = computed(() => !!this._me()?.is_pro);
   readonly usage = computed(() => this._me()?.usage ?? null);
+  /** Whether onboarding is complete (F-003). Null until /v1/me has loaded. */
+  readonly onboarded = computed(() => this._me()?.onboarded ?? null);
 
   /** Fetch the latest snapshot. Swallows errors (gating simply stays at its last known state). */
   async refresh(): Promise<MeResponse | null> {

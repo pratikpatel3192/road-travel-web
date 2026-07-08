@@ -3,17 +3,20 @@ import { RouterLink } from '@angular/router';
 
 import { SettingsService, type ThemeMode } from '../../core/settings.service';
 import { PlaceField } from '../plan/place-field';
+import { ProfileSettings } from './profile-settings';
 
-/** The Settings screen — appearance, units, and Home/Work favorites, mirroring the iOS SettingsView. */
+/** The Settings screen — profile, appearance, units, and Home/Work favorites (iOS parity). */
 @Component({
   selector: 'app-settings',
-  imports: [RouterLink, PlaceField],
+  imports: [RouterLink, PlaceField, ProfileSettings],
   template: `
     <div class="page">
       <header class="top">
         <a routerLink="/app" class="back" aria-label="Back">←</a>
         <h1>Settings</h1>
       </header>
+
+      <app-profile-settings />
 
       <section class="card">
         <h2>Appearance</h2>

@@ -2,16 +2,26 @@ import { Injectable, inject } from '@angular/core';
 import {
   type BriefingRequest,
   type BriefingResponse,
+  type ConsentInput,
   type MeResponse,
+  type OnboardingRequest,
   type PaywallResponse,
   type PlanTripRequest,
   type PlanTripResponse,
+  type ProfileResponse,
+  type ProfileUpdate,
   type SaveTripRequest,
   type SavedTripModel,
+  type SurveyQuestionsResponse,
   createBriefingV1BriefingsPost,
   getMeV1MeGet,
+  getProfileV1MeProfileGet,
+  getSurveyQuestionsV1SurveyQuestionsGet,
   planTripV1TripsPlanPost,
+  recordConsentsV1MeConsentsPost,
   saveTripV1TripsPost,
+  submitOnboardingV1MeOnboardingPost,
+  updateProfileV1MeProfilePut,
 } from '@road-travel/sdk';
 
 import { AuthService } from './auth.service';
@@ -78,5 +88,51 @@ export class ApiService {
     const { data, error, response } = await saveTripV1TripsPost({ ...this.options(), body });
     if (error || !data) this.raise(response, error);
     return data as SavedTripModel;
+  }
+
+  // --- F-003 onboarding / profile / survey / consent ---------------------------------------------
+
+  /** The seeded onboarding survey questions (for the client to render). */
+  async getSurveyQuestions(): Promise<SurveyQuestionsResponse> {
+    const { data, error, response } = await getSurveyQuestionsV1SurveyQuestionsGet(this.options());
+    if (error || !data) this.raise(response, error);
+    return data as SurveyQuestionsResponse;
+  }
+
+  /** Profile + vehicles + survey answers + consents + available vehicle types. */
+  async getProfile(): Promise<ProfileResponse> {
+    const { data, error, response } = await getProfileV1MeProfileGet(this.options());
+    if (error || !data) this.raise(response, error);
+    return data as ProfileResponse;
+  }
+
+  /** Update profile (name/display/phone/vehicles/marketing) — onboarding step + Settings. */
+  async updateProfile(body: ProfileUpdate): Promise<ProfileResponse> {
+    const { data, error, response } = await updateProfileV1MeProfilePut({
+      ...this.options(),
+      body,
+    });
+    if (error || !data) this.raise(response, error);
+    return data as ProfileResponse;
+  }
+
+  /** Complete onboarding (profile + survey + consents; sets onboarded). 400 => consent_required. */
+  async submitOnboarding(body: OnboardingRequest): Promise<ProfileResponse> {
+    const { data, error, response } = await submitOnboardingV1MeOnboardingPost({
+      ...this.options(),
+      body,
+    });
+    if (error || !data) this.raise(response, error);
+    return data as ProfileResponse;
+  }
+
+  /** Record consent events (Settings toggles, TOS re-accept). */
+  async recordConsents(consents: ConsentInput[]): Promise<ProfileResponse> {
+    const { data, error, response } = await recordConsentsV1MeConsentsPost({
+      ...this.options(),
+      body: { consents },
+    });
+    if (error || !data) this.raise(response, error);
+    return data as ProfileResponse;
   }
 }

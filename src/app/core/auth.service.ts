@@ -80,17 +80,21 @@ export class AuthService {
    */
   async continueWithEmail(email: string): Promise<{ error?: string }> {
     if (!this.supabase) return { error: 'Sign-in is not configured for this environment.' };
+    const redirect = { emailRedirectTo: `${window.location.origin}/app` };
     if (this.isAnonymous()) {
-      const { error } = await this.supabase.auth.updateUser(
-        { email },
-        { emailRedirectTo: `${window.location.origin}/app` },
-      );
-      return error ? { error: error.message } : {};
+      // Try to upgrade the anonymous session in place (keeps trips/usage on the SAME user_id).
+      const { error } = await this.supabase.auth.updateUser({ email }, redirect);
+      if (!error) return {};
+      // Collision: that email already has an account — Supabase can't merge two users, so fall
+      // back to a magic-link SIGN-IN to the existing account. (The throwaway anonymous session's
+      // local data won't carry over — that's expected when signing into a pre-existing account.)
+      const alreadyRegistered =
+        (error as { code?: string }).code === 'email_exists' ||
+        /already.*registered|already.*exists/i.test(error.message);
+      if (!alreadyRegistered) return { error: error.message };
     }
-    const { error } = await this.supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/app` },
-    });
+    // Signed-out, or anonymous with an email that already has an account → magic-link sign-in.
+    const { error } = await this.supabase.auth.signInWithOtp({ email, options: redirect });
     return error ? { error: error.message } : {};
   }
 
