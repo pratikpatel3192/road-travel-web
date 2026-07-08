@@ -23,7 +23,7 @@ export const appConfig: ApplicationConfig = {
       const auth = inject(AuthService);
       try {
         await config.load();
-        auth.init();
+        await auth.init();
       } catch (err) {
         console.error('[startup] config/auth init failed; continuing degraded', err);
       }

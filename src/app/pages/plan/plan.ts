@@ -5,6 +5,9 @@ import type { BriefingResponse, PlanTripResponse } from '@road-travel/sdk';
 
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
+import { EntitlementService } from '../../core/entitlement.service';
+import { PaywallError } from '../../core/errors';
+import { PaywallService } from '../../core/paywall.service';
 import { SettingsService } from '../../core/settings.service';
 import { TripsService } from '../../core/trips.service';
 import { AheadBanner } from './ahead-banner';
@@ -388,6 +391,8 @@ export class Plan implements OnInit {
   readonly auth = inject(AuthService);
   readonly settings = inject(SettingsService);
   readonly trips = inject(TripsService);
+  readonly entitlement = inject(EntitlementService);
+  private readonly paywall = inject(PaywallService);
 
   readonly origin = signal<PlaceValue | null>({
     name: 'San Francisco, CA',
@@ -428,6 +433,8 @@ export class Plan implements OnInit {
   });
 
   ngOnInit(): void {
+    // Know the entitlement/usage up front so gating is correct (server-authoritative; F-002).
+    void this.entitlement.refresh();
     // A trip queued from Recents/Saved: prefill the fields and plan it immediately.
     const staged = this.trips.takeStaged();
     if (!staged) return;
@@ -492,8 +499,10 @@ export class Plan implements OnInit {
       const plan = await this.api.planTrip({ ...ctx, departure_at });
       this.plan.set(plan);
       this.selected.set(null);
-    } catch {
-      // keep the current plan on a transient failure
+    } catch (e) {
+      // A scrubbed re-plan can also cross the free-tier cap — surface the paywall; otherwise keep
+      // the current plan on a transient failure.
+      if (e instanceof PaywallError) this.paywall.show(e.payload);
     } finally {
       this.replanning.set(false);
     }
@@ -540,7 +549,12 @@ export class Plan implements OnInit {
       this.plannedBase.set(base);
       this.trips.addRecent(origin, destination);
     } catch (e) {
-      this.error.set(this.describe(e));
+      if (e instanceof PaywallError) {
+        // Free-tier cap hit — show the server's paywall, not a generic error.
+        this.paywall.show(e.payload);
+      } else {
+        this.error.set(this.describe(e));
+      }
     } finally {
       this.loading.set(false);
     }

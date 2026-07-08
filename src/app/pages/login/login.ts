@@ -2,9 +2,14 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
-import { AuthService } from '../../core/auth.service';
+import { AuthService, type OAuthProvider } from '../../core/auth.service';
 
-/** Magic-link sign-in. When auth isn't configured for the env, the app runs unauthenticated. */
+/**
+ * Passwordless sign-in (F-002, ADR-0020): Apple, Google, passkey, or email magic-link. Sign-in is
+ * offered, not required — the app already runs on a silent anonymous session, and signing in links
+ * that session to a real account (upgrade preserves the user_id). When auth isn't configured for the
+ * env, the app runs unauthenticated.
+ */
 @Component({
   selector: 'app-login',
   imports: [FormsModule, RouterLink],
@@ -16,17 +21,34 @@ import { AuthService } from '../../core/auth.service';
           Sign-in isn't configured for this environment — you can use the planner directly.
         </p>
         <a routerLink="/app" class="go">Open the planner</a>
-      } @else if (sent()) {
-        <p class="note">Check your email for a sign-in link, then return here.</p>
       } @else {
-        <form (ngSubmit)="submit()">
-          <label> Email
-            <input type="email" [(ngModel)]="email" name="email" required placeholder="you@example.com" />
-          </label>
-          <button type="submit" class="go" [disabled]="loading() || !email">
-            {{ loading() ? 'Sending…' : 'Email me a link' }}
-          </button>
-        </form>
+        @if (auth.hasRealAccount()) {
+          <p class="note">You're signed in{{ auth.email() ? ' as ' + auth.email() : '' }}.</p>
+          <a routerLink="/app" class="go">Open the planner</a>
+        } @else {
+          <p class="note">Sign in to sync your trips and keep Pro across devices — or just
+            <a routerLink="/app">keep using the planner</a>.</p>
+          <div class="methods">
+            <button class="oauth" (click)="oauth('apple')">Continue with Apple</button>
+            <button class="oauth" (click)="oauth('google')">Continue with Google</button>
+            @if (auth.passkeySupported) {
+              <button class="oauth" (click)="passkey()">Continue with a passkey</button>
+            }
+          </div>
+          <div class="or"><span>or</span></div>
+          @if (sent()) {
+            <p class="note">Check your email for a sign-in link, then return here.</p>
+          } @else {
+            <form (ngSubmit)="submit()">
+              <label> Email
+                <input type="email" [(ngModel)]="email" name="email" required placeholder="you@example.com" />
+              </label>
+              <button type="submit" class="go" [disabled]="loading() || !email">
+                {{ loading() ? 'Sending…' : 'Email me a link' }}
+              </button>
+            </form>
+          }
+        }
         @if (error()) {
           <p class="error" role="alert">{{ error() }}</p>
         }
@@ -43,6 +65,34 @@ import { AuthService } from '../../core/auth.service';
       }
       h1 {
         font-size: 22px;
+      }
+      .methods {
+        display: grid;
+        gap: 8px;
+        margin: 16px 0;
+      }
+      .oauth {
+        padding: 11px;
+        border: 1px solid #d1d5db;
+        border-radius: 10px;
+        background: #fff;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .or {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #9ca3af;
+        font-size: 12px;
+        margin: 10px 0;
+      }
+      .or::before,
+      .or::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: #e5e7eb;
       }
       form {
         display: grid;
@@ -91,9 +141,19 @@ export class Login {
   async submit(): Promise<void> {
     this.error.set(null);
     this.loading.set(true);
-    const { error } = await this.auth.signInWithEmail(this.email);
+    const { error } = await this.auth.continueWithEmail(this.email);
     this.loading.set(false);
     if (error) this.error.set(error);
     else this.sent.set(true);
+  }
+
+  async oauth(provider: OAuthProvider): Promise<void> {
+    const { error } = await this.auth.continueWithOAuth(provider);
+    if (error) this.error.set(error);
+  }
+
+  async passkey(): Promise<void> {
+    const { error } = await this.auth.continueWithPasskey();
+    if (error) this.error.set(error);
   }
 }

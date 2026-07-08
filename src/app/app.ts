@@ -2,10 +2,11 @@ import { Component, inject } from '@angular/core';
 import { RouterOutlet, RouterLink } from '@angular/router';
 
 import { SettingsService } from './core/settings.service';
+import { Paywall } from './pages/plan/paywall';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink],
+  imports: [RouterOutlet, RouterLink, Paywall],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
