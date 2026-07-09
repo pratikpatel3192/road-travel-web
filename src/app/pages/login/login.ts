@@ -65,6 +65,7 @@ import { AuthService, type OAuthProvider } from '../../core/auth.service';
       }
       h1 {
         font-size: 22px;
+        color: var(--text);
       }
       .methods {
         display: grid;
@@ -73,17 +74,21 @@ import { AuthService, type OAuthProvider } from '../../core/auth.service';
       }
       .oauth {
         padding: 11px;
-        border: 1px solid #d1d5db;
+        border: 1px solid var(--border);
         border-radius: 10px;
-        background: #fff;
+        background: var(--surface);
+        color: var(--text);
         font-weight: 600;
         cursor: pointer;
+      }
+      .oauth:hover {
+        border-color: var(--accent);
       }
       .or {
         display: flex;
         align-items: center;
         gap: 10px;
-        color: #9ca3af;
+        color: var(--muted);
         font-size: 12px;
         margin: 10px 0;
       }
@@ -92,7 +97,7 @@ import { AuthService, type OAuthProvider } from '../../core/auth.service';
         content: '';
         flex: 1;
         height: 1px;
-        background: #e5e7eb;
+        background: var(--border);
       }
       form {
         display: grid;
@@ -103,18 +108,20 @@ import { AuthService, type OAuthProvider } from '../../core/auth.service';
         display: grid;
         gap: 4px;
         font-size: 13px;
-        color: #6b7280;
+        color: var(--muted);
       }
       input {
         padding: 10px;
-        border: 1px solid #d1d5db;
+        border: 1px solid var(--border);
         border-radius: 8px;
+        background: var(--surface);
+        color: var(--text);
         font: inherit;
       }
       .go {
         display: inline-block;
-        background: #111827;
-        color: #fff;
+        background: var(--accent);
+        color: var(--accent-contrast);
         border: none;
         border-radius: 8px;
         padding: 10px 18px;
@@ -122,11 +129,15 @@ import { AuthService, type OAuthProvider } from '../../core/auth.service';
         text-decoration: none;
         cursor: pointer;
       }
+      .go[disabled] {
+        opacity: 0.6;
+        cursor: default;
+      }
       .note {
-        color: #374151;
+        color: var(--muted);
       }
       .error {
-        color: #b91c1c;
+        color: #ef4444;
       }
     `,
   ],
