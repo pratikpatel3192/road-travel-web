@@ -1,0 +1,8 @@
+{
+  "apiBaseUrl": "https://api-uat.roadtravel.info",
+  "supabaseUrl": "",
+  "supabaseAnonKey": "",
+  "mapboxToken": "",
+  "revenueCatWebApiKey": "",
+  "revenueCatOfferingId": ""
+}

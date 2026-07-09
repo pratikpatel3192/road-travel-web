@@ -7,7 +7,8 @@ import { Injectable, signal } from '@angular/core';
  * is absent (no Supabase → auth disabled; no Mapbox token → SVG route fallback).
  */
 export interface AppConfig {
-  /** Base URL of road-travel-core, e.g. https://road-travel-core-dev.run.app */
+  /** Base URL of road-travel-core (ADR-0024), e.g. https://api.roadtravel.info (prod),
+   *  https://api-uat.roadtravel.info (uat), https://api-dev.localhost.com:8000 (local dev). */
   apiBaseUrl: string;
   supabaseUrl: string;
   supabaseAnonKey: string;
