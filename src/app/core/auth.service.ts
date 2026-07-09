@@ -67,9 +67,15 @@ export class AuthService {
   async continueWithOAuth(provider: OAuthProvider): Promise<{ error?: string }> {
     if (!this.supabase) return { error: 'Sign-in is not configured for this environment.' };
     const options = { redirectTo: `${window.location.origin}/app` };
-    const { error } = this.isAnonymous()
-      ? await this.supabase.auth.linkIdentity({ provider, options })
-      : await this.supabase.auth.signInWithOAuth({ provider, options });
+    if (this.isAnonymous()) {
+      // Prefer upgrading the anonymous session in place (keeps trips/usage on the SAME user_id).
+      // On success this REDIRECTS away, so we only reach past it on an immediate error — e.g.
+      // "Manual linking is disabled" on the project, or the identity already exists. Fall back to a
+      // fresh OAuth sign-in (the anonymous session's local data won't carry over — expected here).
+      const { error } = await this.supabase.auth.linkIdentity({ provider, options });
+      if (!error) return {};
+    }
+    const { error } = await this.supabase.auth.signInWithOAuth({ provider, options });
     return error ? { error: error.message } : {};
   }
 
@@ -85,15 +91,12 @@ export class AuthService {
       // Try to upgrade the anonymous session in place (keeps trips/usage on the SAME user_id).
       const { error } = await this.supabase.auth.updateUser({ email }, redirect);
       if (!error) return {};
-      // Collision: that email already has an account — Supabase can't merge two users, so fall
-      // back to a magic-link SIGN-IN to the existing account. (The throwaway anonymous session's
-      // local data won't carry over — that's expected when signing into a pre-existing account.)
-      const alreadyRegistered =
-        (error as { code?: string }).code === 'email_exists' ||
-        /already.*registered|already.*exists/i.test(error.message);
-      if (!alreadyRegistered) return { error: error.message };
+      // Upgrade-in-place failed — the email already has an account (Supabase can't merge two
+      // users), OR manual linking is disabled on the project. Either way, fall through to a normal
+      // magic-link SIGN-IN. (The throwaway anonymous session's local data won't carry over — that's
+      // expected when signing into / creating the durable account.)
     }
-    // Signed-out, or anonymous with an email that already has an account → magic-link sign-in.
+    // Signed-out, or an anonymous upgrade that couldn't be done in place → magic-link sign-in.
     const { error } = await this.supabase.auth.signInWithOtp({ email, options: redirect });
     return error ? { error: error.message } : {};
   }
