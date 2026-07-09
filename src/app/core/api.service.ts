@@ -13,6 +13,8 @@ import {
   type SaveTripRequest,
   type SavedTripModel,
   type SurveyQuestionsResponse,
+  type TrialClaimResponse,
+  claimTrialV1MeTrialClaimPost,
   createBriefingV1BriefingsPost,
   getMeV1MeGet,
   getProfileV1MeProfileGet,
@@ -26,7 +28,8 @@ import {
 
 import { AuthService } from './auth.service';
 import { ConfigService } from './config';
-import { ApiError, PaywallError } from './errors';
+import { DeviceService } from './device.service';
+import { AccountRequiredError, ApiError, PaywallError } from './errors';
 
 /**
  * Thin wrapper over the generated `@road-travel/sdk` (contracts). Injects the per-env base URL and
@@ -40,23 +43,36 @@ import { ApiError, PaywallError } from './errors';
 export class ApiService {
   private readonly config = inject(ConfigService);
   private readonly auth = inject(AuthService);
+  private readonly device = inject(DeviceService);
 
   private options() {
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = { 'X-Device-Id': this.device.id };
     const token = this.auth.token;
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    // throwOnError stays off so we can map 402 -> PaywallError ourselves.
+    // throwOnError stays off so we can map 401/402 to our own errors.
     return { baseUrl: this.config.value.apiBaseUrl, headers };
   }
 
   private raise(response: Response | undefined, error: unknown): never {
     const status = response?.status ?? 0;
+    // ADR-0025 auth wall: a value action from an anonymous/no session -> open the sign-in wall.
+    if (status === 401) throw new AccountRequiredError();
     if (status === 402) throw new PaywallError(error as PaywallResponse);
     const message =
       (error as { message?: string } | undefined)?.message ??
       (error as { detail?: string } | undefined)?.detail ??
       `Request failed (${status})`;
     throw new ApiError(status, message);
+  }
+
+  /** ADR-0025: claim the one-trial-ever grant (account + device) before starting the store trial. */
+  async claimTrial(platform = 'web'): Promise<TrialClaimResponse> {
+    const { data, error, response } = await claimTrialV1MeTrialClaimPost({
+      ...this.options(),
+      body: { device_id: this.device.id, platform },
+    });
+    if (error || !data) this.raise(response, error);
+    return data as TrialClaimResponse;
   }
 
   /** Route + sampled points (each with its ETA-hour forecast) + colored segments — for map+timeline. */

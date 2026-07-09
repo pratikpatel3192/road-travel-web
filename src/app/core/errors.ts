@@ -11,6 +11,17 @@ export class PaywallError extends Error {
   }
 }
 
+/**
+ * Thrown by ApiService on a 401 `account_required` (ADR-0025 auth wall): the value action needs a
+ * **real (non-anonymous) signed-in account**. The UI opens the sign-in wall.
+ */
+export class AccountRequiredError extends Error {
+  constructor() {
+    super('Sign in to continue');
+    this.name = 'AccountRequiredError';
+  }
+}
+
 /** A generic API failure with the HTTP status, for the plan page's error copy. */
 export class ApiError extends Error {
   constructor(

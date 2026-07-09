@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import type { PlanOption } from '@road-travel/sdk';
 
+import { ApiService } from '../../core/api.service';
 import { AuthService, type OAuthProvider } from '../../core/auth.service';
 import { BillingService } from '../../core/billing.service';
 import { EntitlementService } from '../../core/entitlement.service';
@@ -241,6 +242,7 @@ import { PaywallService } from '../../core/paywall.service';
 export class Paywall {
   readonly pw = inject(PaywallService);
   readonly auth = inject(AuthService);
+  private readonly api = inject(ApiService);
   private readonly billing = inject(BillingService);
   private readonly entitlement = inject(EntitlementService);
 
@@ -271,11 +273,23 @@ export class Paywall {
     this.busy.set(true);
     this.setStatus('');
     try {
+      // ADR-0025: record the one-trial-ever grant (account + device) BEFORE starting checkout. A
+      // rejected claim means this account/device already used its trial — the card-up-front checkout
+      // then starts the paid plan directly (no second free trial). The server confirms via webhook.
+      if ((plan.trial_days ?? 0) > 0) {
+        const claim = await this.api.claimTrial('web');
+        if (!claim.granted) {
+          this.setStatus(
+            "You've already used your free trial on this account or device — subscribing starts the paid plan.",
+          );
+        }
+      }
       await this.billing.purchase(plan);
-      this.setStatus('You’re Pro now — thank you!');
+      this.setStatus('You’re all set — enjoy Road Travel!');
+      await this.entitlement.refresh();
       setTimeout(() => this.pw.dismiss(), 1200);
     } catch (e) {
-      this.setStatus((e as Error).message ?? 'Purchase could not be completed.', true);
+      this.setStatus((e as Error).message ?? 'Checkout could not be completed.', true);
     } finally {
       this.busy.set(false);
     }

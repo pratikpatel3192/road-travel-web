@@ -1,12 +1,12 @@
 import { Component, type OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import type { BriefingResponse, PlanTripResponse } from '@road-travel/sdk';
 
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { EntitlementService } from '../../core/entitlement.service';
-import { PaywallError } from '../../core/errors';
+import { AccountRequiredError, PaywallError } from '../../core/errors';
 import { PaywallService } from '../../core/paywall.service';
 import { SettingsService } from '../../core/settings.service';
 import { TripsService } from '../../core/trips.service';
@@ -393,6 +393,7 @@ export class Plan implements OnInit {
   readonly trips = inject(TripsService);
   readonly entitlement = inject(EntitlementService);
   private readonly paywall = inject(PaywallService);
+  private readonly router = inject(Router);
 
   readonly origin = signal<PlaceValue | null>({
     name: 'San Francisco, CA',
@@ -500,9 +501,10 @@ export class Plan implements OnInit {
       this.plan.set(plan);
       this.selected.set(null);
     } catch (e) {
-      // A scrubbed re-plan can also cross the free-tier cap — surface the paywall; otherwise keep
-      // the current plan on a transient failure.
-      if (e instanceof PaywallError) this.paywall.show(e.payload);
+      // A re-plan can also hit the entitlement gate; surface the paywall / sign-in, else keep the
+      // current plan on a transient failure.
+      if (e instanceof AccountRequiredError) this.router.navigate(['/login']);
+      else if (e instanceof PaywallError) this.paywall.show(e.payload);
     } finally {
       this.replanning.set(false);
     }
@@ -549,8 +551,11 @@ export class Plan implements OnInit {
       this.plannedBase.set(base);
       this.trips.addRecent(origin, destination);
     } catch (e) {
-      if (e instanceof PaywallError) {
-        // Free-tier cap hit — show the server's paywall, not a generic error.
+      if (e instanceof AccountRequiredError) {
+        // ADR-0025 auth wall: Show Weather requires a signed-in account -> go to the sign-in page.
+        this.router.navigate(['/login']);
+      } else if (e instanceof PaywallError) {
+        // Signed in but not entitled -> show the server's store-trial paywall, not a generic error.
         this.paywall.show(e.payload);
       } else {
         this.error.set(this.describe(e));
