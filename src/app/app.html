@@ -7,6 +7,14 @@
     </div>
     <span class="logo-name">Road Travel</span>
   </a>
+  <nav class="site-nav">
+    @if (auth.hasRealAccount()) {
+      <a routerLink="/settings" class="nav-link">Settings</a>
+      <button type="button" class="nav-link" (click)="auth.signOut()">Sign out</button>
+    } @else {
+      <a routerLink="/login" class="nav-link nav-cta">Sign in</a>
+    }
+  </nav>
 </header>
 
 <router-outlet />
