@@ -19,7 +19,7 @@
   /* 6a nav links: 700/14, secondary ink, primary ink when active/hover */
   text-decoration: none;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
   background: none;
   border: none;
@@ -44,7 +44,7 @@
   border-radius: 999px;
   padding: 0.3rem 0.8rem;
   color: var(--text);
-  font-size: 0.82rem;
+  font-size: 14px;
   text-decoration: none;
   max-width: 200px;
   overflow: hidden;

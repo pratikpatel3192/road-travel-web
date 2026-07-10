@@ -26,7 +26,8 @@ import { Timeline } from './timeline';
   selector: 'app-plan',
   imports: [FormsModule, RouterLink, PlaceField, RouteMap, Timeline, BriefingCard, AheadBanner],
   template: `
-    <div class="page">
+    <div class="shell">
+      <section class="panel">
       <header class="top">
         <h1>Plan a drive</h1>
         <div class="actions">
@@ -124,11 +125,6 @@ import { Timeline } from './timeline';
 
       @if (plan(); as p) {
         <app-ahead-banner [plan]="p" [units]="settings.units()" />
-        <app-route-map
-          [plan]="p"
-          [selected]="selected()"
-          (selectedChange)="selected.set($event)"
-        />
         <div class="scrubber card">
           <div class="scrub-head">
             <span>Departure</span>
@@ -159,14 +155,56 @@ import { Timeline } from './timeline';
       @if (briefing(); as b) {
         <app-briefing-card [briefing]="b" [units]="settings.units()" />
       }
+      </section>
+
+      <!-- ADR-0026: the dominant map pane fills the remaining viewport. Always mounted — idle it
+           shows the live-location home map; after planning, the severity-colored route. -->
+      <aside class="map-pane">
+        <app-route-map
+          [plan]="plan()"
+          [userLocation]="userLocation()"
+          [selected]="selected()"
+          (selectedChange)="selected.set($event)"
+        />
+      </aside>
     </div>
   `,
   styles: [
     `
-      .page {
-        max-width: 720px;
-        margin: 0 auto;
-        padding: 18px 16px 64px;
+      /* Full-viewport two-pane shell (ADR-0026 / DESIGN_SYSTEM "fill the viewport"): content
+         panel left with its own scroll, dominant map pane filling the rest. Stacks on mobile. */
+      .shell {
+        display: grid;
+        grid-template-columns: minmax(400px, 480px) 1fr;
+        height: calc(100dvh - 73px); /* viewport minus the app header */
+        min-height: 480px;
+      }
+      .panel {
+        overflow-y: auto;
+        padding: 18px 20px 48px;
+        min-width: 0;
+      }
+      .map-pane {
+        position: relative;
+        min-height: 0;
+        border-left: 1px solid var(--border);
+      }
+      @media (max-width: 959px) {
+        .shell {
+          display: flex;
+          flex-direction: column;
+          height: auto;
+        }
+        .map-pane {
+          order: -1;
+          height: 42vh;
+          min-height: 260px;
+          border-left: none;
+          border-bottom: 1px solid var(--border);
+        }
+        .panel {
+          padding: 14px 14px 40px;
+        }
       }
       .top {
         display: flex;
@@ -175,7 +213,7 @@ import { Timeline } from './timeline';
         margin-bottom: 14px;
       }
       h1 {
-        font-size: 22px;
+        font-size: 28px;
         margin: 0;
       }
       .actions {
@@ -434,9 +472,13 @@ export class Plan implements OnInit {
     return !!o && !!d && this.trips.isSaved(o, d);
   });
 
+  /** Session-only geolocation fix for the home map + origin prefill (ADR-0026); never persisted. */
+  readonly userLocation = signal<{ latitude: number; longitude: number } | null>(null);
+
   ngOnInit(): void {
     // Know the entitlement/usage up front so gating is correct (server-authoritative; F-002).
     void this.entitlement.refresh();
+    this.locate();
     // A trip queued from Recents/Saved: prefill the fields and plan it immediately.
     const staged = this.trips.takeStaged();
     if (!staged) return;
@@ -444,6 +486,29 @@ export class Plan implements OnInit {
     this.destination.set(staged.destination);
     if (staged.departureAt) this.departureAt = this.toLocalInput(new Date(staged.departureAt));
     void this.submit();
+  }
+
+  /**
+   * ADR-0026: center the home map on the user and pre-fill the origin — permission-gated and
+   * non-blocking. Denied/insecure-context/unavailable all fall back to the default view + manual
+   * entry. Only replaces the origin while it is still the untouched demo default.
+   */
+  private locate(): void {
+    if (!('geolocation' in navigator) || !window.isSecureContext) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+        this.userLocation.set(loc);
+        const o = this.origin();
+        if (!o || (o.name === 'San Francisco, CA' && o.latitude === 37.7749)) {
+          this.origin.set({ name: 'Current location', ...loc });
+        }
+      },
+      () => {
+        /* denied or unavailable — keep defaults, never block (ADR-0026) */
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 },
+    );
   }
 
   useRecent(trip: { origin: PlaceValue; destination: PlaceValue }): void {

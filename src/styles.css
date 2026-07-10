@@ -93,14 +93,15 @@ body {
   background: var(--page-gradient);
   background-attachment: fixed;
   color: var(--text);
-  /* design 6a type: Nunito everywhere, body 700/14 */
+  /* design 6a type, bumped scale (2026-07-10): Nunito everywhere, body 700/16, ~1.5 line-height */
   font-family: Nunito, system-ui, sans-serif;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
+  line-height: 1.5;
   min-height: 100vh;
 }
 
-h1, h2, h3 { font-weight: 800; }
+h1, h2, h3 { font-weight: 800; line-height: 1.15; }
 
 button { font-family: inherit; }
 
@@ -108,7 +109,7 @@ button { font-family: inherit; }
 .btn-primary {
   background: var(--accent);
   color: var(--accent-contrast);
-  font: 800 15px Nunito, system-ui, sans-serif;
+  font: 800 17px Nunito, system-ui, sans-serif;
   padding: 13px 26px;
   border: none;
   border-radius: var(--radius-md);
@@ -119,7 +120,7 @@ button { font-family: inherit; }
 .btn-secondary {
   background: var(--btn-secondary-bg);
   color: var(--text);
-  font: 800 15px Nunito, system-ui, sans-serif;
+  font: 800 17px Nunito, system-ui, sans-serif;
   padding: 13px 26px;
   border: 1.5px solid var(--btn-secondary-border);
   border-radius: var(--radius-md);
@@ -128,6 +129,16 @@ button { font-family: inherit; }
   display: inline-block;
 }
 .btn-primary:hover, .btn-secondary:hover { text-decoration: none; filter: brightness(1.05); }
+
+/* ADR-0026 "you are here" dot (Leaflet divIcon — global because it renders outside components). */
+.rt-you {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #2a78d6;
+  border: 3px solid #ffffff;
+  box-shadow: 0 0 0 2px rgba(42, 120, 214, 0.35), 0 1px 6px rgba(0, 0, 0, 0.3);
+}
 
 /* 6a cards: white surface, #E2E8F0 border, radius 14, soft shadow — token-driven app-wide. */
 .card { box-shadow: var(--shadow-card); }

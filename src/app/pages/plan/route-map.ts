@@ -29,6 +29,10 @@ const ESRI_LABELS =
  * The route on an interactive map (Leaflet). Base style switches between Standard (OSM), Satellite and
  * Hybrid (Esri imagery + road/label overlays). The polyline is colored per-segment by severity, with
  * milestone dots two-way selection-synced to the timeline. Mirrors the iOS MapKit map + its layers menu.
+ *
+ * ADR-0026 idle mode: with no plan yet, the map is the app-home canvas — centered on the user's
+ * current location (when granted) with a "you are here" marker and a recenter control; otherwise a
+ * default regional view. The pane fills its container (full-viewport two-pane shell).
  */
 @Component({
   selector: 'app-route-map',
@@ -46,6 +50,11 @@ const ESRI_LABELS =
         >
           {{ expanded() ? '⤡' : '⤢' }}
         </button>
+        @if (userLocation()) {
+          <button type="button" class="expand" (click)="recenter()" aria-label="Recenter on your location" title="Your location">
+            ◎
+          </button>
+        }
         <span class="sep"></span>
         <button type="button" [class.on]="settings.mapStyle() === 'standard'" (click)="settings.setMapStyle('standard')">
           Map
@@ -61,8 +70,13 @@ const ESRI_LABELS =
   `,
   styles: [
     `
+      :host {
+        display: block;
+        height: 100%;
+      }
       .wrap {
         position: relative;
+        height: 100%;
       }
       .wrap.expanded {
         position: fixed;
@@ -71,10 +85,9 @@ const ESRI_LABELS =
         background: var(--bg);
       }
       .map {
-        height: 300px;
+        height: 100%;
+        min-height: 280px;
         width: 100%;
-        border-radius: var(--radius);
-        border: 1px solid var(--border);
         overflow: hidden;
         background: var(--surface-2);
       }
@@ -126,8 +139,10 @@ const ESRI_LABELS =
   ],
 })
 export class RouteMap implements OnDestroy {
-  readonly plan = input.required<PlanTripResponse>();
+  readonly plan = input<PlanTripResponse | null>(null);
   readonly selected = input<number | null>(null);
+  /** ADR-0026: browser-geolocation fix for the idle "you are here" marker; never persisted. */
+  readonly userLocation = input<{ latitude: number; longitude: number } | null>(null);
   readonly selectedChange = output<number | null>();
   private readonly mapEl = viewChild.required<ElementRef<HTMLDivElement>>('mapEl');
 
@@ -138,6 +153,8 @@ export class RouteMap implements OnDestroy {
   private baseLayer: L.TileLayer | null = null;
   private overlayLayers: L.TileLayer[] = [];
   private routeLayer: L.LayerGroup | null = null;
+  private userMarker: L.Marker | null = null;
+  private centeredOnUser = false;
   private bounds: L.LatLngBounds | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private readonly markers = new Map<number, { marker: L.Marker; sev: Severity; emoji: string }>();
@@ -145,6 +162,7 @@ export class RouteMap implements OnDestroy {
   constructor() {
     effect(() => {
       const plan = this.plan();
+      this.userLocation(); // idle-mode marker/center track the fix as it arrives
       const el = this.mapEl().nativeElement;
       setTimeout(() => this.render(el, plan), 0);
     });
@@ -172,12 +190,27 @@ export class RouteMap implements OnDestroy {
     if (this.expanded()) this.expanded.set(false);
   }
 
-  private render(el: HTMLElement, plan: PlanTripResponse): void {
+  private render(el: HTMLElement, plan: PlanTripResponse | null): void {
     if (!this.map) {
       this.map = L.map(el, { scrollWheelZoom: false }).setView([37, -120], 6);
       this.applyLayers();
       this.resizeObserver = new ResizeObserver(() => this.fit());
       this.resizeObserver.observe(el);
+    }
+    this.syncUserMarker();
+    if (!plan) {
+      // Idle (home) mode: no route yet. Center once on the user's location when it arrives;
+      // denied/unavailable keeps the default regional view (ADR-0026 fallback — never blocks).
+      this.routeLayer?.remove();
+      this.routeLayer = null;
+      this.markers.clear();
+      this.bounds = null;
+      const loc = this.userLocation();
+      if (loc && !this.centeredOnUser) {
+        this.centeredOnUser = true;
+        this.map.setView([loc.latitude, loc.longitude], 12, { animate: false });
+      }
+      return;
     }
     this.routeLayer?.remove();
     const layer = L.layerGroup().addTo(this.map);
@@ -212,6 +245,31 @@ export class RouteMap implements OnDestroy {
     this.bounds = bounds.isValid() ? bounds : null;
     this.fit();
     this.applySelection();
+  }
+
+  /** "You are here": a pulsing brand-blue dot; kept in sync with the geolocation fix. */
+  private syncUserMarker(): void {
+    const map = this.map;
+    if (!map) return;
+    const loc = this.userLocation();
+    if (!loc) {
+      this.userMarker?.remove();
+      this.userMarker = null;
+      return;
+    }
+    const icon = L.divIcon({
+      className: '',
+      html: '<div class="rt-you" role="img" aria-label="You are here"></div>',
+      iconSize: [18, 18],
+      iconAnchor: [9, 9],
+    });
+    if (this.userMarker) this.userMarker.setLatLng([loc.latitude, loc.longitude]).setIcon(icon);
+    else this.userMarker = L.marker([loc.latitude, loc.longitude], { icon, keyboard: false, zIndexOffset: 900 }).addTo(map);
+  }
+
+  recenter(): void {
+    const loc = this.userLocation();
+    if (loc && this.map) this.map.setView([loc.latitude, loc.longitude], 12);
   }
 
   /** (Re)build the base map and hybrid overlays from the current map-style setting. */

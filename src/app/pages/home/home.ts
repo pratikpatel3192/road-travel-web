@@ -89,12 +89,12 @@ import { RouterLink } from '@angular/router';
       }
       h1 {
         margin: 0;
-        font: 800 52px/1.05 Nunito, system-ui, sans-serif;
+        font: 800 60px/1.05 Nunito, system-ui, sans-serif;
         color: var(--text);
       }
       .tagline {
         margin: 0;
-        font: 700 20px Nunito, system-ui, sans-serif;
+        font: 700 22px Nunito, system-ui, sans-serif;
         color: var(--hero-tagline);
       }
       .ctas {
@@ -129,7 +129,7 @@ import { RouterLink } from '@angular/router';
       }
       @media (max-width: 720px) {
         .hero { grid-template-columns: 1fr; padding: 36px 24px; }
-        h1 { font-size: 38px; }
+        h1 { font-size: 42px; }
         .art { max-width: 260px; }
       }
     `,
