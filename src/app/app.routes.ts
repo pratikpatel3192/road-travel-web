@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 
-import { authGuard } from './core/auth.guard';
+import { authGuard, realAccountGuard } from './core/auth.guard';
 import { Home } from './pages/home/home';
 import { Privacy } from './pages/privacy/privacy';
 import { Support } from './pages/support/support';
@@ -14,8 +14,17 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   { path: 'login', loadComponent: () => import('./pages/login/login').then((m) => m.Login) },
-  { path: 'settings', loadComponent: () => import('./pages/settings/settings').then((m) => m.Settings) },
-  { path: 'saved', loadComponent: () => import('./pages/saved/saved').then((m) => m.Saved) },
+  // ADR-0025 §1: saved trips + Settings are LOGIN-ONLY (real account; the anonymous session doesn't count).
+  {
+    path: 'settings',
+    loadComponent: () => import('./pages/settings/settings').then((m) => m.Settings),
+    canActivate: [realAccountGuard],
+  },
+  {
+    path: 'saved',
+    loadComponent: () => import('./pages/saved/saved').then((m) => m.Saved),
+    canActivate: [realAccountGuard],
+  },
   { path: 'privacy', component: Privacy },
   { path: 'support', component: Support },
   { path: '**', redirectTo: '' },

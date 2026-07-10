@@ -41,33 +41,34 @@ import { Timeline } from './timeline';
               {{ isCurrentSaved() ? '★' : '☆' }}
             </button>
           }
-          <div class="menu-wrap">
-            <button
-              class="icon"
-              [class.on]="recentsOpen()"
-              (click)="recentsOpen.set(!recentsOpen())"
-              [disabled]="!trips.recents().length"
-              aria-label="Recent trips"
-              title="Recent trips"
-            >
-              🕘
-            </button>
-            @if (recentsOpen() && trips.recents().length) {
-              <ul class="menu" role="menu">
-                @for (r of trips.recents(); track r.at) {
-                  <li role="menuitem" (click)="useRecent(r)">
-                    {{ short(r.origin.name) }} → {{ short(r.destination.name) }}
-                  </li>
-                }
-              </ul>
-            }
-          </div>
-          <a class="icon" routerLink="/saved" aria-label="My trips" title="My trips">🔖</a>
-          <a class="icon" routerLink="/settings" aria-label="Settings" title="Settings">⚙️</a>
-          @if (auth.configured() && !auth.hasRealAccount()) {
-            <!-- Guests run on a silent ANONYMOUS session, so isAuthenticated() is true for them
-                 too — gate on hasRealAccount() or signed-out users see a bogus "Sign out". The
-                 signed-in affordances (email chip / Settings / Sign out) live in the app header. -->
+          @if (!auth.configured() || auth.hasRealAccount()) {
+            <!-- ADR-0025 §1: Recent / Saved / Settings are LOGIN-ONLY — hidden from guests (the
+                 silent anonymous session doesn't count; their routes are walled by realAccountGuard). -->
+            <div class="menu-wrap">
+              <button
+                class="icon"
+                [class.on]="recentsOpen()"
+                (click)="recentsOpen.set(!recentsOpen())"
+                [disabled]="!trips.recents().length"
+                aria-label="Recent trips"
+                title="Recent trips"
+              >
+                🕘
+              </button>
+              @if (recentsOpen() && trips.recents().length) {
+                <ul class="menu" role="menu">
+                  @for (r of trips.recents(); track r.at) {
+                    <li role="menuitem" (click)="useRecent(r)">
+                      {{ short(r.origin.name) }} → {{ short(r.destination.name) }}
+                    </li>
+                  }
+                </ul>
+              }
+            </div>
+            <a class="icon" routerLink="/saved" aria-label="My trips" title="My trips">🔖</a>
+            <a class="icon" routerLink="/settings" aria-label="Settings" title="Settings">⚙️</a>
+          } @else {
+            <!-- Guests see a sign-in nudge instead; the header carries the same CTA app-wide. -->
             <a class="link" routerLink="/login">Sign in</a>
           }
         </div>

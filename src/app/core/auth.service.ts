@@ -5,6 +5,18 @@ import { ConfigService } from './config';
 
 export type OAuthProvider = 'apple' | 'google';
 
+/** localStorage key for the last-activity stamp behind the 7-day inactivity rule. */
+const LAST_ACTIVE_KEY = 'rt.lastActiveAt';
+/** ADR-0025 §6: a web session idle longer than this is dropped and the user signs in again. */
+const INACTIVITY_LIMIT_MS = 7 * 24 * 60 * 60 * 1000;
+/** Re-stamping on every token read would thrash localStorage — once a minute is plenty. */
+const STAMP_THROTTLE_MS = 60 * 1000;
+
+/** Pure so the 7-day rule is directly testable: true when the stored session must be dropped. */
+export function isInactivityExpired(lastActiveMs: number, nowMs: number): boolean {
+  return lastActiveMs > 0 && nowMs - lastActiveMs > INACTIVITY_LIMIT_MS;
+}
+
 /**
  * Supabase auth for the freemium funnel (F-002, ADR-0019/0020). The access token (a Supabase JWT)
  * is attached as a Bearer on every API call; road-travel-core verifies it (ADR-0010).
@@ -45,9 +57,39 @@ export class AuthService {
     this.configured.set(true);
     this.supabase.auth.onAuthStateChange((_event, session) => this._session.set(session));
 
+    // ADR-0025 §6: web sessions expire after 7 days of INACTIVITY. Enforced at load: if the last
+    // activity stamp is older than the limit, purge the stored session before reading it, so the
+    // user lands signed out (a fresh anonymous session bootstraps below for browsing).
+    if (isInactivityExpired(this.lastActive(), Date.now())) {
+      await this.supabase.auth.signOut();
+    }
+    this.stampActivity();
+
     const { data } = await this.supabase.auth.getSession();
     this._session.set(data.session);
     if (!data.session) await this.bootstrapAnonymous();
+  }
+
+  private lastActive(): number {
+    try {
+      return Number(localStorage.getItem(LAST_ACTIVE_KEY) ?? 0) || 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  private lastStampMs = 0;
+
+  /** Record activity (throttled) — every authenticated API call keeps the 7-day window open. */
+  private stampActivity(): void {
+    const now = Date.now();
+    if (now - this.lastStampMs < STAMP_THROTTLE_MS) return;
+    this.lastStampMs = now;
+    try {
+      localStorage.setItem(LAST_ACTIVE_KEY, String(now));
+    } catch {
+      /* storage may be unavailable (private mode) — the rule just won't persist */
+    }
   }
 
   /** Silent anonymous sign-in so the API works without the person signing up (ADR-0019). */
@@ -131,6 +173,8 @@ export class AuthService {
   }
 
   get token(): string | null {
+    // Reading the token = an authenticated call is about to happen — that's "activity".
+    this.stampActivity();
     return this._session()?.access_token ?? null;
   }
 
