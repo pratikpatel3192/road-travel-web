@@ -1,5 +1,9 @@
 .site-header {
-  padding: 2rem 2rem 0;
+  /* design 6a header: surface card with border, logo left, nav right (kit section 1) */
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  padding: 14px 24px;
   display: flex;
   align-items: center;
 }
@@ -12,10 +16,11 @@
 }
 
 .nav-link {
+  /* 6a nav links: 700/14, secondary ink, primary ink when active/hover */
   text-decoration: none;
   color: var(--muted);
-  font-size: 0.9rem;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 700;
   background: none;
   border: none;
   padding: 0;

@@ -58,26 +58,26 @@ import { ProfileService } from '../../core/profile.service';
   `,
   styles: [
     `
-      .card { background: var(--surface,#fff); border: 1px solid var(--border,#e5e7eb);
+      .card { background: var(--surface); border: 1px solid var(--border);
         border-radius: var(--radius,14px); padding: 16px; margin-bottom: 14px; }
       h2 { font-size: 15px; margin: 0 0 12px; }
       .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-      label { display: grid; gap: 4px; font-size: 12px; color: var(--muted,#6b7280); }
-      input { padding: 9px 10px; border: 1px solid var(--border,#d1d5db); border-radius: 9px;
-        font: inherit; background: var(--surface,#fff); color: var(--text,#111827); }
+      label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+      input { padding: 9px 10px; border: 1px solid var(--border); border-radius: 9px;
+        font: inherit; background: var(--surface); color: var(--text); }
       .lbl { display: block; font-size: 13px; font-weight: 600; margin: 14px 0 6px; }
       .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-      .chip { padding: 7px 12px; border: 1px solid var(--border,#d1d5db); border-radius: 999px;
-        background: var(--surface,#fff); color: inherit; font-size: 13px; cursor: pointer; }
-      .chip.on { background: var(--accent,#2563eb); border-color: var(--accent,#2563eb); color: #fff; }
+      .chip { padding: 7px 12px; border: 1px solid var(--border); border-radius: 999px;
+        background: var(--surface); color: inherit; font-size: 13px; cursor: pointer; }
+      .chip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
       .check { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 13px; }
       .check input { width: auto; }
-      .save { margin-top: 14px; background: var(--accent,#2563eb); color: #fff; border: none;
+      .save { margin-top: 14px; background: var(--accent); color: var(--accent-contrast); border: none;
         border-radius: 10px; padding: 10px 18px; font-weight: 600; cursor: pointer; }
       .save:disabled { opacity: .6; }
-      .msg { font-size: 13px; margin: 12px 0 0; color: var(--muted,#6b7280); }
+      .msg { font-size: 13px; margin: 12px 0 0; color: var(--muted); }
       .msg.err { color: #b91c1c; }
-      .muted { color: var(--muted,#6b7280); font-size: 13px; }
+      .muted { color: var(--muted); font-size: 13px; }
     `,
   ],
 })

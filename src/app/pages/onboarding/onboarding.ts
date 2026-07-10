@@ -89,32 +89,32 @@ import { ProfileService } from '../../core/profile.service';
     `
       .overlay { position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.5);
         display: grid; place-items: center; padding: 16px; overflow: auto; }
-      .sheet { width: 100%; max-width: 500px; background: var(--surface,#fff); color: var(--text,#111827);
-        border: 1px solid var(--border,#e5e7eb); border-radius: 18px; padding: 28px 24px;
+      .sheet { width: 100%; max-width: 500px; background: var(--surface); color: var(--text);
+        border: 1px solid var(--border); border-radius: 18px; padding: 28px 24px;
         box-shadow: 0 24px 60px rgba(0,0,0,.3); }
       .brand-logo { margin-bottom: 14px; }
       h2 { margin: 0 0 6px; font-size: 24px; }
-      .sub { margin: 0 0 20px; color: var(--muted,#6b7280); font-size: 14px; line-height: 1.4; }
+      .sub { margin: 0 0 20px; color: var(--muted); font-size: 14px; line-height: 1.4; }
       .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-      label { display: grid; gap: 4px; font-size: 12px; color: var(--muted,#6b7280); }
-      input[type=text], input, input[type=tel] { padding: 9px 10px; border: 1px solid var(--border,#d1d5db);
-        border-radius: 9px; font: inherit; background: var(--surface,#fff); color: inherit; }
+      label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+      input[type=text], input, input[type=tel] { padding: 9px 10px; border: 1px solid var(--border);
+        border-radius: 9px; font: inherit; background: var(--surface); color: inherit; }
       .block { margin-top: 20px; }
       .lbl { display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
       .chips { display: flex; flex-wrap: wrap; gap: 8px; row-gap: 10px; }
-      .chip { padding: 7px 12px; border: 1px solid var(--border,#d1d5db); border-radius: 999px;
-        background: var(--surface,#fff); color: inherit; font-size: 13px; cursor: pointer; }
-      .chip.on { background: var(--accent,#2563eb); border-color: var(--accent,#2563eb); color: #fff; }
+      .chip { padding: 7px 12px; border: 1px solid var(--border); border-radius: 999px;
+        background: var(--surface); color: inherit; font-size: 13px; cursor: pointer; }
+      .chip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
       .check { display: flex; flex-direction: row; align-items: center; gap: 8px; margin-top: 18px;
-        font-size: 13px; color: var(--text,#111827); }
+        font-size: 13px; color: var(--text); }
       .check.required { font-weight: 600; }
       .check input { width: auto; }
       .err { color: #b91c1c; font-size: 13px; margin: 10px 0 0; }
       .actions { display: flex; justify-content: space-between; gap: 10px; margin-top: 18px; }
-      .cta { background: var(--accent,#2563eb); color: #fff; border: none; border-radius: 11px;
+      .cta { background: var(--accent); color: var(--accent-contrast); border: none; border-radius: 11px;
         padding: 11px 20px; font-weight: 700; cursor: pointer; }
       .cta:disabled, .ghost:disabled { opacity: .5; cursor: default; }
-      .ghost { background: none; border: none; color: var(--muted,#6b7280); cursor: pointer; font-size: 13px; }
+      .ghost { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 13px; }
     `,
   ],
 })

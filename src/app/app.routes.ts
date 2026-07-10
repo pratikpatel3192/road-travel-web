@@ -1,13 +1,14 @@
 import { Routes } from '@angular/router';
 
 import { authGuard, realAccountGuard } from './core/auth.guard';
+import { Home } from './pages/home/home';
 import { Privacy } from './pages/privacy/privacy';
 import { Support } from './pages/support/support';
 
 export const routes: Routes = [
-  // The product is live — no coming-soon landing. Marketing/legal live on the apex domain
-  // (ADR-0024); the app's front door is the planner itself (guests may browse, ADR-0025 §1).
-  { path: '', redirectTo: 'app', pathMatch: 'full' },
+  // Design-6a marketing hero (NOT the old coming-soon teaser): wordmark + tagline + Get the app /
+  // Open web app. The planner stays the product surface at /app (guests may browse, ADR-0025 §1).
+  { path: '', component: Home },
   {
     path: 'app',
     loadComponent: () => import('./pages/plan/plan').then((m) => m.Plan),

@@ -100,9 +100,9 @@ import { PaywallService } from '../../core/paywall.service';
         position: relative;
         width: 100%;
         max-width: 400px;
-        background: var(--surface, #fff);
-        color: var(--text, #111827);
-        border: 1px solid var(--border, #e5e7eb);
+        background: var(--surface);
+        color: var(--text);
+        border: 1px solid var(--border);
         border-radius: 18px;
         padding: 22px 20px;
         box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
@@ -115,7 +115,7 @@ import { PaywallService } from '../../core/paywall.service';
         background: none;
         font-size: 16px;
         cursor: pointer;
-        color: var(--text, #111827);
+        color: var(--text);
       }
       h2 {
         margin: 0 0 6px;
@@ -123,7 +123,7 @@ import { PaywallService } from '../../core/paywall.service';
       }
       .msg {
         margin: 0 0 16px;
-        color: var(--muted, #6b7280);
+        color: var(--muted);
         font-size: 14px;
       }
       .plans {
@@ -137,25 +137,25 @@ import { PaywallService } from '../../core/paywall.service';
         gap: 2px;
         text-align: left;
         padding: 14px 16px;
-        border: 2px solid var(--border, #e5e7eb);
+        border: 2px solid var(--border);
         border-radius: 14px;
-        background: var(--surface, #fff);
+        background: var(--surface);
         color: inherit;
         cursor: pointer;
       }
       .plan.hero {
-        border-color: var(--accent, #2563eb);
+        border-color: var(--accent);
       }
       .plan.sel {
-        outline: 2px solid var(--accent, #2563eb);
+        outline: 2px solid var(--accent);
         outline-offset: 1px;
       }
       .badge {
         position: absolute;
         top: -10px;
         right: 12px;
-        background: var(--accent, #2563eb);
-        color: #fff;
+        background: var(--accent);
+        color: var(--accent-contrast);
         font-size: 11px;
         font-weight: 700;
         padding: 2px 8px;
@@ -169,14 +169,14 @@ import { PaywallService } from '../../core/paywall.service';
         font-size: 18px;
       }
       .trial {
-        color: var(--accent, #2563eb);
+        color: var(--accent);
         font-size: 13px;
         font-weight: 600;
       }
       .cta {
         width: 100%;
-        background: var(--accent, #2563eb);
-        color: #fff;
+        background: var(--accent);
+        color: var(--accent-contrast);
         border: none;
         border-radius: 12px;
         padding: 13px;
@@ -194,9 +194,9 @@ import { PaywallService } from '../../core/paywall.service';
       }
       .oauth {
         padding: 11px;
-        border: 1px solid var(--border, #d1d5db);
+        border: 1px solid var(--border);
         border-radius: 10px;
-        background: var(--surface, #fff);
+        background: var(--surface);
         color: inherit;
         font-weight: 600;
         cursor: pointer;
@@ -208,27 +208,27 @@ import { PaywallService } from '../../core/paywall.service';
       .email input {
         flex: 1;
         padding: 10px;
-        border: 1px solid var(--border, #d1d5db);
+        border: 1px solid var(--border);
         border-radius: 10px;
         font: inherit;
       }
       .email button {
         padding: 0 12px;
-        border: 1px solid var(--border, #d1d5db);
+        border: 1px solid var(--border);
         border-radius: 10px;
-        background: var(--surface, #fff);
+        background: var(--surface);
         color: inherit;
         cursor: pointer;
       }
       .hint {
         font-size: 13px;
-        color: var(--muted, #6b7280);
+        color: var(--muted);
         margin: 0 0 10px;
       }
       .status {
         font-size: 13px;
         margin: 10px 0 0;
-        color: var(--muted, #6b7280);
+        color: var(--muted);
       }
       .status.err {
         color: #b91c1c;
@@ -238,7 +238,7 @@ import { PaywallService } from '../../core/paywall.service';
         margin: 12px auto 0;
         background: none;
         border: none;
-        color: var(--muted, #6b7280);
+        color: var(--muted);
         cursor: pointer;
         font-size: 13px;
       }
