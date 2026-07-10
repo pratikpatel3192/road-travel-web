@@ -3,15 +3,17 @@ import type { PlanOption } from '@road-travel/sdk';
 
 import { ApiService } from '../../core/api.service';
 import { AuthService, type OAuthProvider } from '../../core/auth.service';
-import { BillingService } from '../../core/billing.service';
 import { EntitlementService } from '../../core/entitlement.service';
 import { PaywallService } from '../../core/paywall.service';
 
 /**
- * The paywall modal (F-002). Rendered app-wide; appears when a 402 hands a `PaywallResponse` to
- * PaywallService. It renders the server payload verbatim — plans (annual-default + 7-day trial first,
- * monthly second), reason message — and drives the RevenueCat Web Billing purchase. Subscribing
- * requires a real account, so an anonymous user is offered passwordless sign-in inline first.
+ * The store-trial paywall modal (ADR-0025). Rendered app-wide; appears when a 402
+ * (`subscription_required`) hands a `PaywallResponse` to PaywallService. It renders the server
+ * payload verbatim — plans (annual-default first, monthly second) and the reason message — and
+ * starts **Stripe Checkout** (card up front). The **server** decides the 7-day trial (one-ever, per
+ * account AND device), so the trial is only advertised when `/v1/me.trial_eligible` says so, and
+ * `is_pro` only flips via the signed Stripe webhook. Checkout needs a real account, so an anonymous
+ * user is offered passwordless sign-in inline first.
  */
 @Component({
   selector: 'app-paywall',
@@ -36,7 +38,7 @@ import { PaywallService } from '../../core/paywall.service';
                 }
                 <span class="period">{{ plan.period === 'annual' ? 'Annual' : 'Monthly' }}</span>
                 <span class="price">{{ plan.price }}</span>
-                @if ((plan.trial_days ?? 0) > 0) {
+                @if ((plan.trial_days ?? 0) > 0 && trialOffered()) {
                   <span class="trial">{{ plan.trial_days }}-day free trial</span>
                 }
               </button>
@@ -243,7 +245,6 @@ export class Paywall {
   readonly pw = inject(PaywallService);
   readonly auth = inject(AuthService);
   private readonly api = inject(ApiService);
-  private readonly billing = inject(BillingService);
   private readonly entitlement = inject(EntitlementService);
 
   readonly selected = signal<string | null>(null);
@@ -252,10 +253,13 @@ export class Paywall {
   readonly isError = signal(false);
   readonly email = signal('');
 
+  /** The server grants a trial only when this account+device hasn't used one — label honestly. */
+  readonly trialOffered = computed(() => this.entitlement.trialEligible());
+
   readonly ctaLabel = computed(() => {
-    const p = this.pw.payload();
-    const plan = p?.plans.find((x) => x.product_id === this.selected());
-    return plan?.trial_days ? `Start ${plan.trial_days}-day free trial` : 'Subscribe';
+    const plan = this.pw.payload()?.plans.find((x) => x.product_id === this.selected());
+    const days = plan?.trial_days ?? 0;
+    return days > 0 && this.trialOffered() ? `Start ${days}-day free trial` : 'Subscribe';
   });
 
   select(plan: PlanOption): void {
@@ -273,24 +277,13 @@ export class Paywall {
     this.busy.set(true);
     this.setStatus('');
     try {
-      // ADR-0025: record the one-trial-ever grant (account + device) BEFORE starting checkout. A
-      // rejected claim means this account/device already used its trial — the card-up-front checkout
-      // then starts the paid plan directly (no second free trial). The server confirms via webhook.
-      if ((plan.trial_days ?? 0) > 0) {
-        const claim = await this.api.claimTrial('web');
-        if (!claim.granted) {
-          this.setStatus(
-            "You've already used your free trial on this account or device — subscribing starts the paid plan.",
-          );
-        }
-      }
-      await this.billing.purchase(plan);
-      this.setStatus('You’re all set — enjoy Road Travel!');
-      await this.entitlement.refresh();
-      setTimeout(() => this.pw.dismiss(), 1200);
+      // ADR-0025: the SERVER decides the trial (one-ever, bound to account + device) and returns a
+      // Stripe Checkout URL. Card is collected up front; `is_pro` only flips via the signed webhook
+      // once Stripe confirms. We leave the SPA here, so no need to clear `busy`.
+      const session = await this.api.createCheckoutSession(plan.period);
+      window.location.href = session.url;
     } catch (e) {
-      this.setStatus((e as Error).message ?? 'Checkout could not be completed.', true);
-    } finally {
+      this.setStatus((e as Error).message ?? 'Could not start checkout.', true);
       this.busy.set(false);
     }
   }

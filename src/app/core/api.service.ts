@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import {
   type BriefingRequest,
   type BriefingResponse,
+  type CheckoutSessionResponse,
   type ConsentInput,
   type MeResponse,
   type OnboardingRequest,
@@ -16,6 +17,7 @@ import {
   type TrialClaimResponse,
   claimTrialV1MeTrialClaimPost,
   createBriefingV1BriefingsPost,
+  createCheckoutSessionV1BillingCheckoutSessionPost,
   getMeV1MeGet,
   getProfileV1MeProfileGet,
   getSurveyQuestionsV1SurveyQuestionsGet,
@@ -59,13 +61,29 @@ export class ApiService {
     if (status === 401) throw new AccountRequiredError();
     if (status === 402) throw new PaywallError(error as PaywallResponse);
     const message =
+      // The core's standard envelope is `{ error: { code, message } }`.
+      (error as { error?: { message?: string } } | undefined)?.error?.message ??
       (error as { message?: string } | undefined)?.message ??
       (error as { detail?: string } | undefined)?.detail ??
       `Request failed (${status})`;
     throw new ApiError(status, message);
   }
 
-  /** ADR-0025: claim the one-trial-ever grant (account + device) before starting the store trial. */
+  /**
+   * ADR-0025: start web checkout. The **server** decides whether this account+device gets the
+   * 7-day trial (it claims the one-trial-ever grant), collects the card up front, and returns the
+   * Stripe Checkout URL to redirect to. `is_pro` only flips via the signed Stripe webhook.
+   */
+  async createCheckoutSession(period: 'annual' | 'monthly'): Promise<CheckoutSessionResponse> {
+    const { data, error, response } = await createCheckoutSessionV1BillingCheckoutSessionPost({
+      ...this.options(),
+      body: { period },
+    });
+    if (error || !data) this.raise(response, error);
+    return data as CheckoutSessionResponse;
+  }
+
+  /** Claim the one-trial-ever grant directly (used by the iOS StoreKit flow; web goes via checkout). */
   async claimTrial(platform = 'web'): Promise<TrialClaimResponse> {
     const { data, error, response } = await claimTrialV1MeTrialClaimPost({
       ...this.options(),
