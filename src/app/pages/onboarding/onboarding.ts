@@ -32,12 +32,6 @@ import { ProfileService } from '../../core/profile.service';
             <label>Last name*
               <input [value]="lastName()" (input)="lastName.set($any($event.target).value)" />
             </label>
-            <label>Display name
-              <input [value]="displayName()" (input)="displayName.set($any($event.target).value)" />
-            </label>
-            <label>Phone
-              <input type="tel" [value]="phone()" (input)="phone.set($any($event.target).value)" />
-            </label>
           </div>
 
           <div class="block">
@@ -95,22 +89,23 @@ import { ProfileService } from '../../core/profile.service';
     `
       .overlay { position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.5);
         display: grid; place-items: center; padding: 16px; overflow: auto; }
-      .sheet { width: 100%; max-width: 460px; background: var(--surface,#fff); color: var(--text,#111827);
-        border: 1px solid var(--border,#e5e7eb); border-radius: 18px; padding: 22px 20px;
+      .sheet { width: 100%; max-width: 500px; background: var(--surface,#fff); color: var(--text,#111827);
+        border: 1px solid var(--border,#e5e7eb); border-radius: 18px; padding: 28px 24px;
         box-shadow: 0 24px 60px rgba(0,0,0,.3); }
-      h2 { margin: 0 0 4px; font-size: 22px; }
-      .sub { margin: 0 0 14px; color: var(--muted,#6b7280); font-size: 13px; }
-      .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .brand-logo { margin-bottom: 14px; }
+      h2 { margin: 0 0 6px; font-size: 24px; }
+      .sub { margin: 0 0 20px; color: var(--muted,#6b7280); font-size: 14px; line-height: 1.4; }
+      .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
       label { display: grid; gap: 4px; font-size: 12px; color: var(--muted,#6b7280); }
       input[type=text], input, input[type=tel] { padding: 9px 10px; border: 1px solid var(--border,#d1d5db);
         border-radius: 9px; font: inherit; background: var(--surface,#fff); color: inherit; }
-      .block { margin-top: 14px; }
-      .lbl { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
-      .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+      .block { margin-top: 20px; }
+      .lbl { display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+      .chips { display: flex; flex-wrap: wrap; gap: 8px; row-gap: 10px; }
       .chip { padding: 7px 12px; border: 1px solid var(--border,#d1d5db); border-radius: 999px;
         background: var(--surface,#fff); color: inherit; font-size: 13px; cursor: pointer; }
       .chip.on { background: var(--accent,#2563eb); border-color: var(--accent,#2563eb); color: #fff; }
-      .check { display: flex; flex-direction: row; align-items: center; gap: 8px; margin-top: 14px;
+      .check { display: flex; flex-direction: row; align-items: center; gap: 8px; margin-top: 18px;
         font-size: 13px; color: var(--text,#111827); }
       .check.required { font-weight: 600; }
       .check input { width: auto; }
@@ -131,8 +126,6 @@ export class Onboarding {
 
   readonly firstName = signal('');
   readonly lastName = signal('');
-  readonly displayName = signal('');
-  readonly phone = signal('');
   readonly vehicles = signal<Set<string>>(new Set());
   readonly vehicleTypes = signal<ProfileResponse['available_vehicle_types']>([]);
   readonly questions = signal<SurveyQuestionModel[]>([]);
@@ -227,8 +220,6 @@ export class Onboarding {
     await this.submit({
       first_name: this.firstName().trim(),
       last_name: this.lastName().trim(),
-      display_name: this.displayName().trim() || null,
-      phone: this.phone().trim() || null,
       vehicles: [...this.vehicles()],
       survey: this.surveyPayload(),
       consents: this.consents(),

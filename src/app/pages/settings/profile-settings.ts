@@ -1,14 +1,14 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import type { ProfileResponse, SurveyQuestionModel } from '@road-travel/sdk';
+import type { ProfileResponse } from '@road-travel/sdk';
 
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { ProfileService } from '../../core/profile.service';
 
 /**
- * Profile section of Settings (F-003): edit name/display/phone, vehicles, marketing consent, and
- * finish a skipped survey. Reuses PUT /v1/me/profile + the survey endpoints. Shown only when signed
- * in with a real account (anonymous users have nothing to edit yet).
+ * Profile section of Settings (F-003): edit name/display/phone, vehicles, and marketing consent via
+ * PUT /v1/me/profile. The one-time sign-up survey lives ONLY in onboarding — it is not re-shown
+ * here. Shown only when signed in with a real account.
  */
 @Component({
   selector: 'app-profile-settings',
@@ -40,17 +40,6 @@ import { ProfileService } from '../../core/profile.service';
               </button>
             }
           </div>
-
-          @for (q of questions(); track q.key) {
-            <span class="lbl">{{ q.prompt }}</span>
-            <div class="chips">
-              @for (o of q.options; track o.value) {
-                <button type="button" class="chip" [class.on]="isChosen(q, o.value)" (click)="choose(q, o.value)">
-                  {{ o.label }}
-                </button>
-              }
-            </div>
-          }
 
           <label class="check">
             <input type="checkbox" [checked]="marketing()" (change)="marketing.set($any($event.target).checked)" />
@@ -103,8 +92,6 @@ export class ProfileSettings implements OnInit {
   readonly phone = signal('');
   readonly vehicles = signal<Set<string>>(new Set());
   readonly vehicleTypes = signal<ProfileResponse['available_vehicle_types']>([]);
-  readonly questions = signal<SurveyQuestionModel[]>([]);
-  private readonly answers = signal<Record<string, string | string[]>>({});
   readonly marketing = signal(false);
   readonly loaded = signal(false);
   readonly busy = signal(false);
@@ -114,10 +101,7 @@ export class ProfileSettings implements OnInit {
   async ngOnInit(): Promise<void> {
     if (!this.auth.hasRealAccount()) return;
     try {
-      const [profile, survey] = await Promise.all([
-        this.api.getProfile(),
-        this.api.getSurveyQuestions(),
-      ]);
+      const profile = await this.api.getProfile();
       this.firstName.set(profile.first_name ?? '');
       this.lastName.set(profile.last_name ?? '');
       this.displayName.set(profile.display_name ?? '');
@@ -125,8 +109,6 @@ export class ProfileSettings implements OnInit {
       this.vehicles.set(new Set(profile.vehicles));
       this.vehicleTypes.set(profile.available_vehicle_types);
       this.marketing.set(profile.marketing_opt_in);
-      this.questions.set(survey.questions);
-      this.answers.set((profile.survey_answers ?? {}) as Record<string, string | string[]>);
       this.loaded.set(true);
     } catch {
       this.loaded.set(true);
@@ -139,22 +121,6 @@ export class ProfileSettings implements OnInit {
     this.vehicles.set(next);
   }
 
-  isChosen(q: SurveyQuestionModel, value: string): boolean {
-    const a = this.answers()[q.key];
-    return q.type === 'multi' ? Array.isArray(a) && a.includes(value) : a === value;
-  }
-
-  choose(q: SurveyQuestionModel, value: string): void {
-    const map = { ...this.answers() };
-    if (q.type === 'multi') {
-      const cur = new Set(Array.isArray(map[q.key]) ? (map[q.key] as string[]) : []);
-      cur.has(value) ? cur.delete(value) : cur.add(value);
-      map[q.key] = [...cur];
-    } else {
-      map[q.key] = map[q.key] === value ? '' : value;
-    }
-    this.answers.set(map);
-  }
 
   async save(): Promise<void> {
     this.busy.set(true);
@@ -169,18 +135,6 @@ export class ProfileSettings implements OnInit {
         vehicles: [...this.vehicles()],
         marketing_opt_in: this.marketing(),
       });
-      // Survey answers have no PUT endpoint (only onboarding writes them), so finish/edit the survey
-      // via the onboarding endpoint, re-affirming TOS+Privacy (append-only, harmless when re-recorded).
-      const survey = this.surveyPayload();
-      if (Object.keys(survey).length) {
-        await this.api.submitOnboarding({
-          survey,
-          consents: [
-            { consent_type: 'tos', granted: true },
-            { consent_type: 'privacy', granted: true },
-          ],
-        });
-      }
       this.message.set('Saved.');
       this.isError.set(false);
       void this.profile.refresh(); // header identity chip picks up the new name
@@ -192,11 +146,4 @@ export class ProfileSettings implements OnInit {
     }
   }
 
-  private surveyPayload(): Record<string, string | string[]> {
-    const out: Record<string, string | string[]> = {};
-    for (const [k, v] of Object.entries(this.answers())) {
-      if (Array.isArray(v) ? v.length : v) out[k] = v;
-    }
-    return out;
-  }
 }
