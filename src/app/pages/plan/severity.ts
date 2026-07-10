@@ -50,6 +50,10 @@ export function weatherEmoji(symbol?: string, conditionText?: string): string {
   if (has('heavyrain', 'rain', 'drizzle', 'shower')) return '🌧️';
   if (has('fog', 'haze', 'mist', 'smoke')) return '🌫️';
   if (has('wind', 'breez')) return '💨';
+  // ADR-0027: night symbols must never render a sun — check cloud.moon BEFORE the 'partly' text
+  // fallback (night partly-cloudy has conditionText "Partly Cloudy" but symbol cloud.moon.fill).
+  if (has('cloud.moon')) return '☁️';
+  if (has('moon.stars')) return '🌙';
   if (has('cloud.sun', 'partly')) return '🌤️';
   if (has('cloud', 'overcast')) return '☁️'; // includes "mostly cloudy" + night clouds
   if (has('moon')) return '🌙';
