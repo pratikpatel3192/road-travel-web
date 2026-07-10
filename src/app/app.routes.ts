@@ -1,13 +1,13 @@
 import { Routes } from '@angular/router';
 
 import { authGuard, realAccountGuard } from './core/auth.guard';
-import { Home } from './pages/home/home';
 import { Privacy } from './pages/privacy/privacy';
 import { Support } from './pages/support/support';
 
 export const routes: Routes = [
-  { path: '', component: Home },
-  // The planner + auth are lazy so the marketing site stays light (the SDK + Mapbox load on demand).
+  // The product is live — no coming-soon landing. Marketing/legal live on the apex domain
+  // (ADR-0024); the app's front door is the planner itself (guests may browse, ADR-0025 §1).
+  { path: '', redirectTo: 'app', pathMatch: 'full' },
   {
     path: 'app',
     loadComponent: () => import('./pages/plan/plan').then((m) => m.Plan),
