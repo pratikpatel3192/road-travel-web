@@ -42,8 +42,9 @@ import { Timeline } from './timeline';
             </button>
           }
           @if (!auth.configured() || auth.hasRealAccount()) {
-            <!-- ADR-0025 §1: Recent / Saved / Settings are LOGIN-ONLY — hidden from guests (the
-                 silent anonymous session doesn't count; their routes are walled by realAccountGuard). -->
+            <!-- ADR-0025 §1: Recent / Saved are LOGIN-ONLY — hidden from guests (their routes are
+                 walled by realAccountGuard). Identity, Settings, and sign-in/out live ONLY in the
+                 app header, so this toolbar stays plan-specific with no duplicate affordances. -->
             <div class="menu-wrap">
               <button
                 class="icon"
@@ -66,10 +67,6 @@ import { Timeline } from './timeline';
               }
             </div>
             <a class="icon" routerLink="/saved" aria-label="My trips" title="My trips">🔖</a>
-            <a class="icon" routerLink="/settings" aria-label="Settings" title="Settings">⚙️</a>
-          } @else {
-            <!-- Guests see a sign-in nudge instead; the header carries the same CTA app-wide. -->
-            <a class="link" routerLink="/login">Sign in</a>
           }
         </div>
       </header>

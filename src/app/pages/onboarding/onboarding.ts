@@ -4,6 +4,7 @@ import type { ConsentInput, ProfileResponse, SurveyQuestionModel } from '@road-t
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { EntitlementService } from '../../core/entitlement.service';
+import { ProfileService } from '../../core/profile.service';
 
 /**
  * First-time onboarding form (F-003, ADR-0023). Shown app-wide once a user signs in with a real
@@ -122,6 +123,7 @@ export class Onboarding {
   private readonly api = inject(ApiService);
   private readonly auth = inject(AuthService);
   private readonly entitlement = inject(EntitlementService);
+  private readonly profile = inject(ProfileService);
 
   readonly firstName = signal('');
   readonly lastName = signal('');
@@ -239,6 +241,7 @@ export class Onboarding {
     try {
       await this.api.submitOnboarding(body);
       await this.entitlement.refresh(); // /v1/me.onboarded flips true -> modal hides
+      void this.profile.refresh(); // header identity chip picks up the just-entered name
       this.dismissed.set(true);
     } catch (e) {
       this.error.set((e as Error).message ?? 'Could not save. Please try again.');

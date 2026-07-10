@@ -3,6 +3,7 @@ import type { ProfileResponse, SurveyQuestionModel } from '@road-travel/sdk';
 
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
+import { ProfileService } from '../../core/profile.service';
 
 /**
  * Profile section of Settings (F-003): edit name/display/phone, vehicles, marketing consent, and
@@ -94,6 +95,7 @@ import { AuthService } from '../../core/auth.service';
 export class ProfileSettings implements OnInit {
   private readonly api = inject(ApiService);
   readonly auth = inject(AuthService);
+  private readonly profile = inject(ProfileService);
 
   readonly firstName = signal('');
   readonly lastName = signal('');
@@ -181,6 +183,7 @@ export class ProfileSettings implements OnInit {
       }
       this.message.set('Saved.');
       this.isError.set(false);
+      void this.profile.refresh(); // header identity chip picks up the new name
     } catch (e) {
       this.message.set((e as Error).message ?? 'Could not save.');
       this.isError.set(true);
