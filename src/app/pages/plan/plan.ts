@@ -64,8 +64,11 @@ import { Timeline } from './timeline';
           </div>
           <a class="icon" routerLink="/saved" aria-label="My trips" title="My trips">🔖</a>
           <a class="icon" routerLink="/settings" aria-label="Settings" title="Settings">⚙️</a>
-          @if (auth.configured() && auth.isAuthenticated()) {
-            <button class="link" (click)="signOut()">Sign out</button>
+          @if (auth.configured() && !auth.hasRealAccount()) {
+            <!-- Guests run on a silent ANONYMOUS session, so isAuthenticated() is true for them
+                 too — gate on hasRealAccount() or signed-out users see a bogus "Sign out". The
+                 signed-in affordances (email chip / Settings / Sign out) live in the app header. -->
+            <a class="link" routerLink="/login">Sign in</a>
           }
         </div>
       </header>
@@ -563,10 +566,6 @@ export class Plan implements OnInit {
     } finally {
       this.loading.set(false);
     }
-  }
-
-  async signOut(): Promise<void> {
-    await this.auth.signOut();
   }
 
   private describe(e: unknown): string {

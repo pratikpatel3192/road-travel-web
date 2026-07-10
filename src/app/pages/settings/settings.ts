@@ -1,11 +1,12 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { AuthService } from '../../core/auth.service';
 import { SettingsService, type ThemeMode } from '../../core/settings.service';
 import { PlaceField } from '../plan/place-field';
 import { ProfileSettings } from './profile-settings';
 
-/** The Settings screen — profile, appearance, units, and Home/Work favorites (iOS parity). */
+/** The Settings screen — account, profile, appearance, units, and Home/Work favorites (iOS parity). */
 @Component({
   selector: 'app-settings',
   imports: [RouterLink, PlaceField, ProfileSettings],
@@ -15,6 +16,28 @@ import { ProfileSettings } from './profile-settings';
         <a routerLink="/app" class="back" aria-label="Back">←</a>
         <h1>Settings</h1>
       </header>
+
+      @if (auth.configured()) {
+        <section class="card">
+          <h2>Account</h2>
+          @if (auth.hasRealAccount()) {
+            <div class="acct">
+              <div class="acct-who">
+                <p class="acct-email">{{ auth.email() }}</p>
+                <p class="acct-note">Your profile, trips, and Pro follow this account.</p>
+              </div>
+              <button type="button" class="acct-btn" (click)="auth.signOut()">Sign out</button>
+            </div>
+          } @else {
+            <!-- Guests run on a silent anonymous session — say so, and say what signing in adds. -->
+            <p class="acct-note">
+              You're browsing as a guest. Sign in to unlock your profile, personalization, and Pro
+              across your devices.
+            </p>
+            <a routerLink="/login" class="acct-btn acct-cta">Sign in</a>
+          }
+        </section>
+      }
 
       <app-profile-settings />
 
@@ -161,10 +184,57 @@ import { ProfileSettings } from './profile-settings';
       .fav-field + .fav-label {
         margin-top: 12px;
       }
+      .acct {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .acct-who {
+        flex: 1;
+        min-width: 0;
+      }
+      .acct-email {
+        margin: 0;
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--text);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .acct-note {
+        margin: 2px 0 0;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .acct-btn {
+        flex-shrink: 0;
+        padding: 8px 14px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--surface-2);
+        color: var(--text);
+        font: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+      }
+      .acct-btn:hover {
+        border-color: var(--accent);
+      }
+      .acct-cta {
+        display: inline-block;
+        margin-top: 10px;
+        background: var(--accent);
+        color: var(--accent-contrast);
+        border-color: var(--accent);
+      }
     `,
   ],
 })
 export class Settings {
+  readonly auth = inject(AuthService);
   readonly settings = inject(SettingsService);
   readonly themes: { value: ThemeMode; label: string }[] = [
     { value: 'system', label: 'System' },

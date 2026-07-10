@@ -9,6 +9,9 @@
   </a>
   <nav class="site-nav">
     @if (auth.hasRealAccount()) {
+      <!-- The email chip is the app-wide "you are signed in (as X)" signal — without it, signing
+           in looks like nothing happened, since guests get a silent anonymous session anyway. -->
+      <a routerLink="/settings" class="nav-id" [title]="auth.email()">{{ auth.email() }}</a>
       <a routerLink="/settings" class="nav-link">Settings</a>
       <button type="button" class="nav-link" (click)="auth.signOut()">Sign out</button>
     } @else {

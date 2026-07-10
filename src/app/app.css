@@ -34,6 +34,25 @@
 
 .nav-cta:hover { border-color: var(--accent); color: var(--accent); }
 
+.nav-id {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+  color: var(--text);
+  font-size: 0.82rem;
+  text-decoration: none;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-id:hover { border-color: var(--accent); }
+
+@media (max-width: 520px) {
+  .nav-id { max-width: 120px; }
+}
+
 .logo {
   display: flex;
   align-items: center;
