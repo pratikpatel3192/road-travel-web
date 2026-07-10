@@ -5,7 +5,28 @@
     <title>Road Travel</title>
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+
+    <!-- Brand kit (docs/BRANDING.md): SVG favicon first, PNG fallbacks; dark variants follow the
+         OS scheme (favicon surfaces can't see the in-app theme toggle). -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" media="(prefers-color-scheme: light)" />
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32-dark.png" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" type="image/png" sizes="48x48" href="favicon-48.png" media="(prefers-color-scheme: light)" />
+    <link rel="icon" type="image/png" sizes="48x48" href="favicon-48-dark.png" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png" />
+    <link rel="apple-touch-icon" href="pwa-192.png" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="theme-color" content="#e9f1f9" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f1722" media="(prefers-color-scheme: dark)" />
+
+    <!-- Social cards -->
+    <meta property="og:title" content="Road Travel" />
+    <meta property="og:description" content="Weather along your route, time-shifted to your ETA — with an AI briefing." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:image" content="/og-image-night.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="/og-image.png" />
     <!-- Apply the saved appearance before first paint to avoid a light/dark flash. -->
     <script>
       try {

@@ -18,6 +18,10 @@ import { ProfileService } from '../../core/profile.service';
     @if (visible()) {
       <div class="overlay">
         <div class="sheet" role="dialog" aria-modal="true">
+          <img class="brand-logo brand-logo-light" src="logo-horizontal-light-2x.png"
+               srcset="logo-horizontal-light-2x.png 2x" alt="Road Travel" />
+          <img class="brand-logo brand-logo-dark" src="logo-horizontal-dark-2x.png"
+               srcset="logo-horizontal-dark-2x.png 2x" alt="Road Travel" />
           <h2>Welcome to Road Travel</h2>
           <p class="sub">A few quick details to personalize your drives. You can skip and finish later.</p>
 

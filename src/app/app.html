@@ -1,11 +1,9 @@
 <header class="site-header">
-  <a routerLink="/" class="logo">
-    <div class="logo-mark">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M2 8h12M8 2l6 6-6 6" stroke="#0d0f12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </div>
-    <span class="logo-name">Road Travel</span>
+  <a routerLink="/" class="logo" aria-label="Road Travel home">
+    <img class="brand-logo brand-logo-light" src="logo-horizontal-light-2x.png"
+         srcset="logo-horizontal-light-2x.png 2x" alt="Road Travel" />
+    <img class="brand-logo brand-logo-dark" src="logo-horizontal-dark-2x.png"
+         srcset="logo-horizontal-dark-2x.png 2x" alt="Road Travel" />
   </a>
   <nav class="site-nav">
     @if (auth.hasRealAccount()) {

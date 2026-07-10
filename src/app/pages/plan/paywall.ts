@@ -22,6 +22,10 @@ import { PaywallService } from '../../core/paywall.service';
       <div class="overlay" (click)="dismiss()">
         <div class="sheet" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
           <button class="close" (click)="dismiss()" aria-label="Close">✕</button>
+                <img class="brand-logo brand-logo-light" src="logo-horizontal-light-2x.png"
+           srcset="logo-horizontal-light-2x.png 2x" alt="Road Travel" />
+      <img class="brand-logo brand-logo-dark" src="logo-horizontal-dark-2x.png"
+           srcset="logo-horizontal-dark-2x.png 2x" alt="Road Travel" />
           <h2>Go Pro</h2>
           <p class="msg">{{ p.message }}</p>
 

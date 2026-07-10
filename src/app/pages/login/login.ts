@@ -15,6 +15,10 @@ import { AuthService, type OAuthProvider } from '../../core/auth.service';
   imports: [FormsModule, RouterLink],
   template: `
     <div class="login">
+      <img class="brand-logo brand-logo-light" src="logo-horizontal-light-2x.png"
+           srcset="logo-horizontal-light-2x.png 2x" alt="Road Travel" />
+      <img class="brand-logo brand-logo-dark" src="logo-horizontal-dark-2x.png"
+           srcset="logo-horizontal-dark-2x.png 2x" alt="Road Travel" />
       <h1>Sign in</h1>
       @if (!auth.configured()) {
         <p class="note">

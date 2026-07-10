@@ -58,5 +58,21 @@ body {
   min-height: 100vh;
 }
 
+/* Brand logo (docs/BRANDING.md): every surface renders BOTH day/night <img>s and CSS shows exactly
+   one, resolved the SAME way as the palette above — forced [data-theme] wins, else the OS scheme.
+   Usage: <img class="brand-logo brand-logo-light" ...> + <img class="brand-logo brand-logo-dark" ...> */
+.brand-logo {
+  height: 28px;
+  width: auto;
+  display: inline-block;
+}
+.brand-logo-dark { display: none; }
+:root[data-theme='dark'] .brand-logo-light { display: none; }
+:root[data-theme='dark'] .brand-logo-dark { display: inline-block; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .brand-logo-light { display: none; }
+  :root:not([data-theme]) .brand-logo-dark { display: inline-block; }
+}
+
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
