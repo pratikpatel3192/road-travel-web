@@ -188,6 +188,11 @@ import { Timeline } from './timeline';
         position: relative;
         min-height: 0;
         border-left: 1px solid var(--border);
+        /* Contain Leaflet's internal z-indexes (panes 400-700, controls 1000) in their own
+           stacking context — without this the map paints OVER app modals (onboarding z-90,
+           paywall z-100). */
+        z-index: 0;
+        isolation: isolate;
       }
       @media (max-width: 959px) {
         .shell {
