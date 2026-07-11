@@ -46,8 +46,33 @@ export class AuthService {
   /** Signed in with a real (non-anonymous) identity — the only state allowed to subscribe. */
   readonly hasRealAccount = computed(() => this.isAuthenticated() && !this.isAnonymous());
 
+  /** Auth-callback error from the URL (OAuth/magic-link redirects) — shown app-wide once. */
+  readonly authError = signal<string | null>(null);
+
+  /** Surface Supabase auth-callback errors instead of silently dropping the URL fragment. */
+  private captureCallbackError(): void {
+    try {
+      const hash = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
+      const query = new URLSearchParams(window.location.search || '');
+      const code = hash.get('error_code') ?? query.get('error_code');
+      const desc = hash.get('error_description') ?? query.get('error_description');
+      if (!code && !desc) return;
+      this.authError.set(
+        code === 'email_exists'
+          ? 'This email already has a Road Travel account. Sign in with an email link instead — ' +
+            'you can connect Google to it later in Settings.'
+          : (desc ?? 'Sign-in failed. Please try again.').replace(/\+/g, ' '),
+      );
+      // Drop the error params so a reload doesn't re-show it.
+      history.replaceState(null, '', window.location.pathname);
+    } catch {
+      /* URL parsing is best-effort */
+    }
+  }
+
   /** Called once after config loads (app initializer). Bootstraps an anonymous session. */
   async init(): Promise<void> {
+    this.captureCallbackError();
     const { supabaseUrl, supabaseAnonKey } = this.config.value;
     if (!supabaseUrl || !supabaseAnonKey) {
       this.configured.set(false);
@@ -108,7 +133,12 @@ export class AuthService {
    */
   async continueWithOAuth(provider: OAuthProvider): Promise<{ error?: string }> {
     if (!this.supabase) return { error: 'Sign-in is not configured for this environment.' };
-    const options = { redirectTo: `${window.location.origin}/app` };
+    const options = {
+      redirectTo: `${window.location.origin}/app`,
+      // Always show the account chooser — silently reusing the last-authorized Google account
+      // makes multi-account users sign in as the wrong identity with no way to switch.
+      queryParams: { prompt: 'select_account' },
+    };
     if (this.isAnonymous()) {
       // Prefer upgrading the anonymous session in place (keeps trips/usage on the SAME user_id).
       // On success this REDIRECTS away, so we only reach past it on an immediate error — e.g.

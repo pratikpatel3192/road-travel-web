@@ -20,6 +20,13 @@
   </nav>
 </header>
 
+@if (auth.authError(); as err) {
+  <div class="auth-error" role="alert">
+    <span>{{ err }}</span>
+    <button type="button" (click)="auth.authError.set(null)" aria-label="Dismiss">✕</button>
+  </div>
+}
+
 <router-outlet />
 
 <!-- App-wide paywall overlay (F-002): shown when a 402 free-tier cap fires. -->
