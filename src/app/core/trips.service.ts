@@ -44,6 +44,11 @@ export class TripsService {
   readonly staged = signal<StagedTrip | null>(null);
 
   private loadedFor: string | null = null;
+  // In-flight guards so concurrent callers (the session effect + the Saved page both call
+  // refresh) share ONE network round-trip and ONE migration — otherwise the legacy push runs
+  // twice and duplicates every trip.
+  private refreshInFlight: Promise<void> | null = null;
+  private migration: Promise<boolean> | null = null;
 
   constructor() {
     // React to the session: load (cache-first) when a real account appears, clear on sign-out.
@@ -64,7 +69,17 @@ export class TripsService {
   }
 
   /** Pull the authoritative list (after the one-time legacy migration, if still pending). */
-  async refresh(): Promise<void> {
+  refresh(): Promise<void> {
+    // Coalesce concurrent refreshes into one — the second caller awaits the first's result.
+    if (!this.refreshInFlight) {
+      this.refreshInFlight = this.runRefresh().finally(() => {
+        this.refreshInFlight = null;
+      });
+    }
+    return this.refreshInFlight;
+  }
+
+  private async runRefresh(): Promise<void> {
     const userId = this.auth.userId;
     if (!userId) return;
     this.loading.set(true);
@@ -148,7 +163,13 @@ export class TripsService {
    * Deduped against the server list (by endpoint names) so a partially-failed run that retries
    * on the next load can never create duplicates. Returns whether anything was pushed.
    */
-  private async migrateLegacy(userId: string, existing: SavedTripModel[]): Promise<boolean> {
+  private migrateLegacy(userId: string, existing: SavedTripModel[]): Promise<boolean> {
+    // One migration per session even if refreshes overlap (the second awaits the first).
+    if (!this.migration) this.migration = this.runMigration(userId, existing);
+    return this.migration;
+  }
+
+  private async runMigration(userId: string, existing: SavedTripModel[]): Promise<boolean> {
     try {
       localStorage.removeItem(LEGACY_RECENTS_KEY); // recents are simply gone (ADR-0029)
       if (localStorage.getItem(migratedKey(userId))) return false;
