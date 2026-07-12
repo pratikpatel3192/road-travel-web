@@ -9,6 +9,7 @@ import {
   type PaywallResponse,
   type PlanTripRequest,
   type PlanTripResponse,
+  type PortalSessionResponse,
   type ProfileResponse,
   type ProfileUpdate,
   type SaveTripRequest,
@@ -18,6 +19,7 @@ import {
   claimTrialV1MeTrialClaimPost,
   createBriefingV1BriefingsPost,
   createCheckoutSessionV1BillingCheckoutSessionPost,
+  createPortalSessionV1BillingPortalSessionPost,
   getMeV1MeGet,
   getProfileV1MeProfileGet,
   getSurveyQuestionsV1SurveyQuestionsGet,
@@ -81,6 +83,18 @@ export class ApiService {
     });
     if (error || !data) this.raise(response, error);
     return data as CheckoutSessionResponse;
+  }
+
+  /**
+   * ADR-0028: open Stripe subscription management. Only valid when `/v1/me.subscription.management`
+   * is `'stripe'` (409 otherwise); the server derives the portal `return_url` — no client URLs.
+   */
+  async createPortalSession(): Promise<PortalSessionResponse> {
+    const { data, error, response } = await createPortalSessionV1BillingPortalSessionPost(
+      this.options(),
+    );
+    if (error || !data) this.raise(response, error);
+    return data as PortalSessionResponse;
   }
 
   /** Claim the one-trial-ever grant directly (used by the iOS StoreKit flow; web goes via checkout). */

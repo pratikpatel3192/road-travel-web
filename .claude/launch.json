@@ -6,6 +6,16 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["start"],
       "port": 4200
+    },
+    {
+      "name": "web-prod",
+      "runtimeExecutable": "/usr/bin/python3",
+      "runtimeArgs": [
+        "/private/tmp/claude-502/-Users-pratikpatel-Documents-GitHub-Road-Travel/76a18cb4-3bdc-4c49-b67f-f7526ddd547d/scratchpad/spa_server.py",
+        "dist/road-travel-web/browser",
+        "4300"
+      ],
+      "port": 4300
     }
   ]
 }
