@@ -132,12 +132,15 @@ export class AuthService {
    */
   async continueWithOAuth(provider: OAuthProvider): Promise<{ error?: string }> {
     if (!this.supabase) return { error: 'Sign-in is not configured for this environment.' };
-    const options = {
+    const options: { redirectTo: string; queryParams?: Record<string, string> } = {
       redirectTo: `${window.location.origin}/app`,
-      // Always show the account chooser — silently reusing the last-authorized Google account
-      // makes multi-account users sign in as the wrong identity with no way to switch.
-      queryParams: { prompt: 'select_account' },
     };
+    // `prompt=select_account` is a Google param — always show its account chooser so multi-account
+    // users don't get silently signed in as the wrong identity. Apple has no such param and its
+    // web OAuth needs a Services ID (not the app bundle id) configured in Supabase.
+    if (provider === 'google') {
+      options.queryParams = { prompt: 'select_account' };
+    }
     // Never linkIdentity here: linking tried to upgrade the anonymous session in place, but an
     // "Identity is already linked to another user" failure only surfaces AFTER the provider
     // round-trip — past the point where any fallback could run — so every RETURNING user
