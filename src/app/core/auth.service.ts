@@ -127,9 +127,8 @@ export class AuthService {
   // --- Sign-in / upgrade (offered, not forced; required only to subscribe) ------------------------
 
   /**
-   * Continue with Apple/Google. If the current session is anonymous this **links** the provider to
-   * the same user (upgrade, preserving `user_id`); otherwise it's a fresh OAuth sign-in. Redirects
-   * away and back, so it resolves on return.
+   * Continue with Apple/Google — always a plain OAuth sign-in. Redirects away and back, so it
+   * resolves on return.
    */
   async continueWithOAuth(provider: OAuthProvider): Promise<{ error?: string }> {
     if (!this.supabase) return { error: 'Sign-in is not configured for this environment.' };
@@ -139,14 +138,11 @@ export class AuthService {
       // makes multi-account users sign in as the wrong identity with no way to switch.
       queryParams: { prompt: 'select_account' },
     };
-    if (this.isAnonymous()) {
-      // Prefer upgrading the anonymous session in place (keeps trips/usage on the SAME user_id).
-      // On success this REDIRECTS away, so we only reach past it on an immediate error — e.g.
-      // "Manual linking is disabled" on the project, or the identity already exists. Fall back to a
-      // fresh OAuth sign-in (the anonymous session's local data won't carry over — expected here).
-      const { error } = await this.supabase.auth.linkIdentity({ provider, options });
-      if (!error) return {};
-    }
+    // Never linkIdentity here: linking tried to upgrade the anonymous session in place, but an
+    // "Identity is already linked to another user" failure only surfaces AFTER the provider
+    // round-trip — past the point where any fallback could run — so every RETURNING user
+    // dead-ended on that error. Since ADR-0025 removed the anonymous free tier, the guest session
+    // holds nothing worth preserving; replacing it with the real sign-in is correct.
     const { error } = await this.supabase.auth.signInWithOAuth({ provider, options });
     return error ? { error: error.message } : {};
   }

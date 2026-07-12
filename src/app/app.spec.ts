@@ -21,6 +21,7 @@ class FakeAuth {
   readonly isAnonymous = computed(() => !!this._user()?.anon);
   readonly hasRealAccount = computed(() => this.isAuthenticated() && !this.isAnonymous());
   readonly email = computed(() => this._user()?.email ?? null);
+  readonly authError = signal<string | null>(null);
   signOutCalls = 0;
 
   signInAs(email: string): void {
