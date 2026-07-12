@@ -43,30 +43,8 @@ import { Timeline } from './timeline';
             </button>
           }
           @if (!auth.configured() || auth.hasRealAccount()) {
-            <!-- ADR-0025 §1: Recent / Saved are LOGIN-ONLY — hidden from guests (their routes are
-                 walled by realAccountGuard). Identity, Settings, and sign-in/out live ONLY in the
-                 app header, so this toolbar stays plan-specific with no duplicate affordances. -->
-            <div class="menu-wrap">
-              <button
-                class="icon"
-                [class.on]="recentsOpen()"
-                (click)="recentsOpen.set(!recentsOpen())"
-                [disabled]="!trips.recents().length"
-                aria-label="Recent trips"
-                title="Recent trips"
-              >
-                🕘
-              </button>
-              @if (recentsOpen() && trips.recents().length) {
-                <ul class="menu" role="menu">
-                  @for (r of trips.recents(); track r.at) {
-                    <li role="menuitem" (click)="useRecent(r)">
-                      {{ short(r.origin.name) }} → {{ short(r.destination.name) }}
-                    </li>
-                  }
-                </ul>
-              }
-            </div>
+            <!-- ADR-0025 §1: My Trips is LOGIN-ONLY — hidden from guests (the route is walled by
+                 realAccountGuard). ADR-0029 removed Recents; Saved is the server's list. -->
             <a class="icon" routerLink="/saved" aria-label="My trips" title="My trips">🔖</a>
           }
         </div>
@@ -451,7 +429,6 @@ export class Plan implements OnInit {
   });
 
   departureAt = this.defaultDeparture();
-  readonly recentsOpen = signal(false);
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
@@ -516,30 +493,30 @@ export class Plan implements OnInit {
     );
   }
 
-  useRecent(trip: { origin: PlaceValue; destination: PlaceValue }): void {
-    this.origin.set(trip.origin);
-    this.destination.set(trip.destination);
-    this.recentsOpen.set(false);
-    void this.submit();
-  }
-
   /** Fill the destination with a favorite place (Home/Work). Origin keeps whatever the user set. */
   useFavorite(place: PlaceValue): void {
     this.destination.set(place);
   }
 
-  saveTrip(): void {
+  async saveTrip(): Promise<void> {
     const origin = this.origin();
     const destination = this.destination();
     if (!origin || !destination) return;
     const p = this.plan();
-    this.trips.toggleSave({
-      origin,
-      destination,
-      departureAt: new Date(this.departureAt).toISOString(),
-      distanceMeters: p?.distance_meters,
-      worstSeverity: p?.worst_severity as Severity | undefined,
-    });
+    try {
+      // Server-authoritative save/unsave (ADR-0029); the star reflects the server list.
+      await this.trips.toggleSave({
+        origin,
+        destination,
+        departureAt: new Date(this.departureAt).toISOString(),
+        distanceMeters: p?.distance_meters,
+        durationSeconds: p?.duration_seconds,
+        worstSeverity: p?.worst_severity as Severity | undefined,
+      });
+    } catch (e) {
+      if (e instanceof AccountRequiredError) this.router.navigate(['/login']);
+      else this.error.set('Could not update the saved trip. Please try again.');
+    }
   }
 
   short(name: string): string {
@@ -620,7 +597,6 @@ export class Plan implements OnInit {
       this.briefing.set(briefing);
       this.plannedContext = { origin, destination };
       this.plannedBase.set(base);
-      this.trips.addRecent(origin, destination);
     } catch (e) {
       if (e instanceof AccountRequiredError) {
         // ADR-0025 auth wall: Show Weather requires a signed-in account -> go to the sign-in page.

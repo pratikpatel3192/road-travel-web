@@ -1,12 +1,12 @@
 import { Component, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import type { SavedTripModel } from '@road-travel/sdk';
 
 import { SettingsService } from '../../core/settings.service';
 import { TripsService } from '../../core/trips.service';
-import type { PlaceValue } from '../plan/place-field';
 import { SEVERITY_COLOR, type Severity, formatDistance } from '../plan/severity';
 
-/** "My trips" — saved and recent trips, mirroring the iOS SavedTripsView. Tap one to reopen it. */
+/** "My trips" — the server-authoritative saved list (ADR-0029; no recents). Tap one to reopen. */
 @Component({
   selector: 'app-saved',
   imports: [RouterLink],
@@ -21,32 +21,20 @@ import { SEVERITY_COLOR, type Severity, formatDistance } from '../plan/severity'
       @if (trips.saved().length) {
         @for (t of trips.saved(); track t.id) {
           <div class="row">
-            <button class="open" (click)="open(t.origin, t.destination, t.departureAt)">
-              <span class="badge" [style.background]="color(t.worstSeverity)"></span>
-              <span class="names">{{ short(t.origin.name) }} → {{ short(t.destination.name) }}</span>
-              @if (t.distanceMeters) {
-                <span class="sub">{{ dist(t.distanceMeters) }}</span>
+            <button class="open" (click)="open(t)">
+              <span class="badge" [style.background]="color(t.worst_severity)"></span>
+              <span class="names">{{ short(t.origin_name) }} → {{ short(t.destination_name) }}</span>
+              @if (t.distance_meters) {
+                <span class="sub">{{ dist(t.distance_meters) }}</span>
               }
             </button>
-            <button class="del" (click)="trips.remove(t.id)" aria-label="Delete saved trip">✕</button>
+            <button class="del" (click)="remove(t.id)" aria-label="Delete saved trip">✕</button>
           </div>
         }
+      } @else if (trips.loading()) {
+        <p class="empty">Loading your trips…</p>
       } @else {
         <p class="empty">No saved trips yet. Plan a drive and tap the star to save it.</p>
-      }
-
-      <h2>Recent</h2>
-      @if (trips.recents().length) {
-        @for (r of trips.recents(); track r.at) {
-          <div class="row">
-            <button class="open" (click)="open(r.origin, r.destination)">
-              <span class="names">{{ short(r.origin.name) }} → {{ short(r.destination.name) }}</span>
-            </button>
-            <button class="del" (click)="trips.removeRecent(r.at)" aria-label="Remove recent trip">✕</button>
-          </div>
-        }
-      } @else {
-        <p class="empty">No recent trips.</p>
       }
     </div>
   `,
@@ -153,9 +141,32 @@ export class Saved {
   private readonly settings = inject(SettingsService);
   private readonly router = inject(Router);
 
-  open(origin: PlaceValue, destination: PlaceValue, departureAt?: string): void {
-    this.trips.stage({ origin, destination, departureAt });
+  constructor() {
+    // Fresh server state whenever the page opens (deletes from other devices show up).
+    void this.trips.refresh();
+  }
+
+  /** Re-open a saved trip: stage its endpoints (server-provided coordinates) and re-plan. */
+  open(t: SavedTripModel): void {
+    if (t.origin_latitude == null || t.destination_latitude == null) return;
+    this.trips.stage({
+      origin: {
+        name: t.origin_name,
+        latitude: t.origin_latitude,
+        longitude: t.origin_longitude ?? 0,
+      },
+      destination: {
+        name: t.destination_name,
+        latitude: t.destination_latitude,
+        longitude: t.destination_longitude ?? 0,
+      },
+      departureAt: t.departure_at,
+    });
     this.router.navigate(['/app']);
+  }
+
+  remove(id: string): void {
+    void this.trips.remove(id);
   }
 
   short(name: string): string {
@@ -164,7 +175,7 @@ export class Saved {
   dist(m: number): string {
     return formatDistance(m, this.settings.units());
   }
-  color(s?: Severity): string {
-    return s ? SEVERITY_COLOR[s] : 'var(--border)';
+  color(s?: string | null): string {
+    return s ? SEVERITY_COLOR[s as Severity] : 'var(--border)';
   }
 }

@@ -14,10 +14,13 @@ import {
   type ProfileUpdate,
   type SaveTripRequest,
   type SavedTripModel,
+  type SavedTripsResponse,
   type SurveyQuestionsResponse,
   type TrialClaimResponse,
   claimTrialV1MeTrialClaimPost,
   createBriefingV1BriefingsPost,
+  deleteTripV1TripsTripIdDelete,
+  listTripsV1TripsGet,
   createCheckoutSessionV1BillingCheckoutSessionPost,
   createPortalSessionV1BillingPortalSessionPost,
   getMeV1MeGet,
@@ -131,11 +134,27 @@ export class ApiService {
     return data as MeResponse;
   }
 
-  /** Save a planned trip for cross-device sync; a 402 here is the save-cap paywall (F-002). */
+  /** Save a planned trip for cross-device sync (login-only; flat anti-abuse ceiling only). */
   async saveTrip(body: SaveTripRequest): Promise<SavedTripModel> {
     const { data, error, response } = await saveTripV1TripsPost({ ...this.options(), body });
     if (error || !data) this.raise(response, error);
     return data as SavedTripModel;
+  }
+
+  /** The caller's saved trips, newest first (server-authoritative My Trips, ADR-0029). */
+  async listTrips(): Promise<SavedTripsResponse> {
+    const { data, error, response } = await listTripsV1TripsGet(this.options());
+    if (error || !data) this.raise(response, error);
+    return data as SavedTripsResponse;
+  }
+
+  /** Delete one of the caller's saved trips. Missing/foreign ids 404 (surfaced as ApiError). */
+  async deleteTrip(tripId: string): Promise<void> {
+    const { error, response } = await deleteTripV1TripsTripIdDelete({
+      ...this.options(),
+      path: { trip_id: tripId },
+    });
+    if (response && !response.ok) this.raise(response, error);
   }
 
   // --- F-003 onboarding / profile / survey / consent ---------------------------------------------
