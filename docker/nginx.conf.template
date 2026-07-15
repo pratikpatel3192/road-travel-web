@@ -5,16 +5,50 @@ server {
     root   /usr/share/nginx/html;
     index  index.html;
 
-    # SPA: unknown client-side routes fall back to the app shell.
+    # --- Security response headers (SEC-03 / SEC-06) ---------------------------------------------
+    # A conservative, functionality-safe set. The CSP intentionally omits `default-src` so it never
+    # blocks the app's cross-origin calls (core API, Supabase, geocoder, Google Fonts): it only
+    # asserts the directives that can't break resource loading — clickjacking (`frame-ancestors`),
+    # base-tag injection (`base-uri`), plugins (`object-src`), and form targets (`form-action`). A
+    # strict nonce-based script-src/connect-src CSP is tracked as follow-up hardening (needs a build
+    # test). `always` applies them to error responses too. NOTE: nginx `add_header` does NOT inherit
+    # into a location that declares its own `add_header`, so the two no-store locations below repeat
+    # this block via the shared snippet comment.
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "geolocation=(self), camera=(), microphone=(), payment=()" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header Content-Security-Policy "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'" always;
+
+    # SPA: unknown client-side routes fall back to the app shell (inherits the headers above).
     location / {
         try_files $uri $uri/ /index.html;
     }
 
-    # Never cache the runtime config or the app shell (deploys must take effect immediately).
-    location = /config.json { add_header Cache-Control "no-store"; }
-    location = /index.html  { add_header Cache-Control "no-store"; }
+    # Never cache the runtime config or the app shell (deploys must take effect immediately). These
+    # locations set their own add_header, so the security headers above are re-declared here (nginx
+    # header inheritance is replace-not-merge).
+    location = /config.json {
+        add_header Cache-Control "no-store" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "geolocation=(self), camera=(), microphone=(), payment=()" always;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header Content-Security-Policy "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'" always;
+    }
+    location = /index.html {
+        add_header Cache-Control "no-store" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "geolocation=(self), camera=(), microphone=(), payment=()" always;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header Content-Security-Policy "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'" always;
+    }
 
-    # Long-cache the fingerprinted static assets.
+    # Long-cache the fingerprinted static assets (inherits the server-level security headers).
     location /assets/ { try_files $uri =404; }
 
     gzip on;
