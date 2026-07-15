@@ -66,7 +66,7 @@ import { ProfileService } from '../../core/profile.service';
 
           <label class="check required">
             <input type="checkbox" [checked]="agreed()" (change)="agreed.set($any($event.target).checked)" />
-            <span>I agree to the <a href="/privacy" target="_blank">Terms &amp; Privacy Policy</a> *</span>
+            <span>I agree to the <a href="/privacy" target="_blank" rel="noopener">Terms &amp; Privacy Policy</a> *</span>
           </label>
           <label class="check">
             <input type="checkbox" [checked]="marketing()" (change)="marketing.set($any($event.target).checked)" />
