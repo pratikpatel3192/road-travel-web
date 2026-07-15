@@ -1,0 +1,13 @@
+node_modules
+/dist
+.git
+.github
+.angular
+.vscode
+.DS_Store
+*.log
+.env
+.env.*
+.vercelignore
+vercel.json
+serve.py
