@@ -1,0 +1,94 @@
+name: deploy-web-cloudrun
+
+# Deploy road-travel-web to Cloud Run, keyless (Workload Identity Federation — no SA JSON keys).
+#   main / master  -> prod
+#   release/x.x.x  -> uat
+#   feature/**     -> no deploy (PR only)
+# Also runnable by hand (Actions -> Run workflow). Per-env config lives in the GitHub *Environment*:
+#   Variables: GCP_PROJECT_ID, GCP_REGION, GCP_AR_REPO, GCP_WIF_PROVIDER, GCP_DEPLOY_SA,
+#              GCP_RUNTIME_SA, CONFIG_API_BASE_URL, CONFIG_SUPABASE_URL, CONFIG_SUPABASE_ANON_KEY
+# The image is env-agnostic; the SPA's runtime config.json is generated at container start from the
+# CONFIG_* env vars (ADR-0024). The (publishable) Mapbox token is mounted from Secret Manager.
+
+on:
+  push:
+    branches: [main, master, "release/**"]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        type: choice
+        options: [uat, prod]
+        required: true
+
+permissions:
+  contents: read
+  id-token: write        # REQUIRED for Workload Identity Federation
+
+concurrency:
+  group: deploy-web-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  resolve-env:
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.pick.outputs.environment }}
+    steps:
+      - id: pick
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            ENV="${{ github.event.inputs.environment }}"
+          elif [ "${{ github.ref }}" = "refs/heads/main" ] || [ "${{ github.ref }}" = "refs/heads/master" ]; then
+            ENV="prod"
+          else
+            ENV="uat"
+          fi
+          echo "environment=$ENV" >> "$GITHUB_OUTPUT"
+          echo "Resolved environment: $ENV"
+
+  deploy:
+    needs: resolve-env
+    runs-on: ubuntu-latest
+    environment: ${{ needs.resolve-env.outputs.environment }}   # prod approval gate enforced here
+    env:
+      ENVIRONMENT: ${{ needs.resolve-env.outputs.environment }}
+      SERVICE: road-travel-web-${{ needs.resolve-env.outputs.environment }}
+    steps:
+      - uses: actions/checkout@v4          # @road-travel/sdk is vendored (vendor/sdk) — no submodule
+
+      - id: auth
+        name: Authenticate to Google Cloud (keyless / WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build & push image (Docker on the runner -> Artifact Registry)
+        run: |
+          IMAGE="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.GCP_AR_REPO }}/${SERVICE}:${{ github.sha }}"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+          gcloud auth configure-docker "${{ vars.GCP_REGION }}-docker.pkg.dev" --quiet
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy "${SERVICE}" \
+            --image "$IMAGE" \
+            --region "${{ vars.GCP_REGION }}" \
+            --platform managed \
+            --service-account "${{ vars.GCP_RUNTIME_SA }}" \
+            --allow-unauthenticated \
+            --port 8080 --cpu 1 --memory 256Mi \
+            --min-instances 0 --max-instances 5 --concurrency 80 \
+            --set-env-vars "CONFIG_API_BASE_URL=${{ vars.CONFIG_API_BASE_URL }},CONFIG_SUPABASE_URL=${{ vars.CONFIG_SUPABASE_URL }},CONFIG_SUPABASE_ANON_KEY=${{ vars.CONFIG_SUPABASE_ANON_KEY }}" \
+            --set-secrets "CONFIG_MAPBOX_TOKEN=road-travel-core-prod-routing-api-key:latest"
+          # CONFIG_* are PUBLISHABLE client-side values baked into the served config.json at runtime.
+          # The Mapbox token is reused from core's routing secret (prod). For a separate uat env,
+          # point --set-secrets at that env's own token slot.
+
+      - name: Show service URL
+        run: gcloud run services describe "${SERVICE}" --region "${{ vars.GCP_REGION }}" --format='value(status.url)'
