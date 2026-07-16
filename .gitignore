@@ -42,3 +42,6 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# per-env runtime config (real values local only; see public/config.example.json)
+/public/config.json

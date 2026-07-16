@@ -1,0 +1,22 @@
+server {
+    listen       ${PORT};
+    listen  [::]:${PORT};
+    server_name  _;
+    root   /usr/share/nginx/html;
+    index  index.html;
+
+    # SPA: unknown client-side routes fall back to the app shell.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Never cache the runtime config or the app shell (deploys must take effect immediately).
+    location = /config.json { add_header Cache-Control "no-store"; }
+    location = /index.html  { add_header Cache-Control "no-store"; }
+
+    # Long-cache the fingerprinted static assets.
+    location /assets/ { try_files $uri =404; }
+
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+}

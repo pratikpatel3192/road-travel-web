@@ -1,22 +1,163 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Palette mirrors the iOS app (Core/Settings/Theme + asset catalog): blue accent, a soft blue-tinted
+   background that is never pure white, surface cards above it. Light by default; dark either forced
+   via [data-theme="dark"] (the in-app Appearance setting) or, when no override is set, by the OS. */
 :root {
-  --bg: #0d0f12;
-  --surface: #14171c;
-  --border: #222530;
-  --accent: #e8a838;
-  --text: #e8eaf0;
-  --muted: #7a7f8e;
-  --body-muted: #b0b4c0;
-  --radius: 12px;
+  /* design 6a (docs/DESIGN_SYSTEM.md + branding/web-kit-6a.html) — tokens only; components must
+     reference variables, never hex. Light first; dark below via [data-theme] / OS scheme. */
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius-lg: 14px;
+  --radius-xl: 16px;
+  --radius: 14px;               /* legacy alias (cards) */
+  --shadow-card: 0 1px 3px rgba(27, 58, 92, 0.06);
+  --sev-clear: #16a34a;
+  --sev-caution: #f59e0b;
+  --sev-severe: #dc2626;
+
+  /* Light */
+  --page-gradient: #F0F3F7;
+  --bg: #F0F3F7;                /* page background */
+  --surface: #FFFFFF;           /* cards / header */
+  --surface-2: #F4F8FD;         /* inputs / wells */
+  --ink: #1B3A5C;
+  --ink-2: #5E7B99;
+  --text: var(--ink);
+  --muted: var(--ink-2);
+  --body-muted: var(--ink-2);
+  --border: #E2E8F0;
+  --border-strong: #B9CCDD;
+  --muted-bg: #DEE3EA;
+  --hero-gradient: linear-gradient(#F4F8FD, #C9DCEF);
+  --hero-border: #dbe5ee;
+  --hero-tagline: #4A6076;
+  --accent: #1B3A5C;            /* primary action = ink (6a primary button) */
+  --accent-contrast: #FFFFFF;
+  --btn-secondary-bg: rgba(255, 255, 255, 0.75);
+  --btn-secondary-border: #B9CCDD;
+  --link: #2a78d6;
+  --link-hover: #1b5aa8;
+  color-scheme: light;
+}
+
+/* Dark — deep navy gradient page, inverted primary button. Shared by the explicit override and the
+   system default. */
+:root[data-theme='dark'] {
+  --page-gradient: linear-gradient(#2A4E75, #122A44);
+  --bg: #122A44;
+  --surface: #16304F;
+  --surface-2: rgba(255, 255, 255, 0.08);
+  --ink: #FFFFFF;
+  --ink-2: rgba(255, 255, 255, 0.75);
+  --border: rgba(255, 255, 255, 0.22);
+  --border-strong: rgba(255, 255, 255, 0.35);
+  --muted-bg: rgba(255, 255, 255, 0.12);
+  --hero-gradient: linear-gradient(#2A4E75, #122A44);
+  --hero-border: transparent;
+  --hero-tagline: #B9CCDD;
+  --accent: #FFFFFF;
+  --accent-contrast: #1B3A5C;
+  --btn-secondary-bg: rgba(255, 255, 255, 0.12);
+  --btn-secondary-border: rgba(255, 255, 255, 0.35);
+  --link: #9FB6CE;
+  --link-hover: #FFFFFF;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --page-gradient: linear-gradient(#2A4E75, #122A44);
+    --bg: #122A44;
+    --surface: #16304F;
+    --surface-2: rgba(255, 255, 255, 0.08);
+    --ink: #FFFFFF;
+    --ink-2: rgba(255, 255, 255, 0.75);
+    --border: rgba(255, 255, 255, 0.22);
+    --border-strong: rgba(255, 255, 255, 0.35);
+    --muted-bg: rgba(255, 255, 255, 0.12);
+    --hero-gradient: linear-gradient(#2A4E75, #122A44);
+    --hero-border: transparent;
+    --hero-tagline: #B9CCDD;
+    --accent: #FFFFFF;
+    --accent-contrast: #1B3A5C;
+    --btn-secondary-bg: rgba(255, 255, 255, 0.12);
+    --btn-secondary-border: rgba(255, 255, 255, 0.35);
+    --link: #9FB6CE;
+    --link-hover: #FFFFFF;
+    color-scheme: dark;
+  }
 }
 
 body {
-  background: var(--bg);
+  background: var(--page-gradient);
+  background-attachment: fixed;
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  /* design 6a type, bumped scale (2026-07-10): Nunito everywhere, body 700/16, ~1.5 line-height */
+  font-family: Nunito, system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.5;
   min-height: 100vh;
 }
 
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
+h1, h2, h3 { font-weight: 800; line-height: 1.15; }
+
+button { font-family: inherit; }
+
+/* 6a buttons: primary = ink-on-light / white-on-dark (via --accent); secondary = translucent. */
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font: 800 17px Nunito, system-ui, sans-serif;
+  padding: 13px 26px;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+.btn-secondary {
+  background: var(--btn-secondary-bg);
+  color: var(--text);
+  font: 800 17px Nunito, system-ui, sans-serif;
+  padding: 13px 26px;
+  border: 1.5px solid var(--btn-secondary-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+.btn-primary:hover, .btn-secondary:hover { text-decoration: none; filter: brightness(1.05); }
+
+/* ADR-0026 "you are here" dot (Leaflet divIcon — global because it renders outside components). */
+.rt-you {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #2a78d6;
+  border: 3px solid #ffffff;
+  box-shadow: 0 0 0 2px rgba(42, 120, 214, 0.35), 0 1px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* 6a cards: white surface, #E2E8F0 border, radius 14, soft shadow — token-driven app-wide. */
+.card { box-shadow: var(--shadow-card); }
+
+/* Brand logo (docs/BRANDING.md): every surface renders BOTH day/night <img>s and CSS shows exactly
+   one, resolved the SAME way as the palette above — forced [data-theme] wins, else the OS scheme.
+   Usage: <img class="brand-logo brand-logo-light" ...> + <img class="brand-logo brand-logo-dark" ...> */
+.brand-logo {
+  height: 28px;
+  width: auto;
+  display: inline-block;
+}
+.brand-logo-dark { display: none; }
+:root[data-theme='dark'] .brand-logo-light { display: none; }
+:root[data-theme='dark'] .brand-logo-dark { display: inline-block; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .brand-logo-light { display: none; }
+  :root:not([data-theme]) .brand-logo-dark { display: inline-block; }
+}
+
+a { color: var(--link); text-decoration: none; }
+a:hover { color: var(--link-hover); text-decoration: underline; }

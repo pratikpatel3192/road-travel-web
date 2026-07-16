@@ -1,15 +1,39 @@
 <header class="site-header">
-  <a routerLink="/" class="logo">
-    <div class="logo-mark">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M2 8h12M8 2l6 6-6 6" stroke="#0d0f12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </div>
-    <span class="logo-name">Road Travel</span>
+  <a routerLink="/" class="logo" aria-label="Road Travel home">
+    <img class="brand-logo brand-logo-light" src="logo-horizontal-light-2x.png"
+         srcset="logo-horizontal-light-2x.png 2x" alt="Road Travel" />
+    <img class="brand-logo brand-logo-dark" src="logo-horizontal-dark-2x.png"
+         srcset="logo-horizontal-dark-2x.png 2x" alt="Road Travel" />
   </a>
+  <nav class="site-nav">
+    @if (auth.hasRealAccount()) {
+      <!-- The identity chip is the app-wide "you are signed in (as X)" signal — without it, signing
+           in looks like nothing happened, since guests get a silent anonymous session anyway.
+           Shows the profile name when one is set (F-003), otherwise the account email. -->
+      <a routerLink="/settings" class="nav-id" [title]="auth.email()">{{ profile.headerName() }}</a>
+      <a routerLink="/saved" class="nav-link">My trips</a>
+      <a routerLink="/settings" class="nav-link">Settings</a>
+      <button type="button" class="nav-link" (click)="auth.signOut()">Sign out</button>
+    } @else {
+      <a routerLink="/login" class="nav-link nav-cta">Sign in</a>
+    }
+  </nav>
 </header>
 
+@if (auth.authError(); as err) {
+  <div class="auth-error" role="alert">
+    <span>{{ err }}</span>
+    <button type="button" (click)="auth.authError.set(null)" aria-label="Dismiss">✕</button>
+  </div>
+}
+
 <router-outlet />
+
+<!-- App-wide paywall overlay (F-002): shown when a 402 free-tier cap fires. -->
+<app-paywall />
+
+<!-- App-wide onboarding form (F-003): shown after sign-in when not yet onboarded. -->
+<app-onboarding />
 
 <footer class="site-footer">
   <p>&copy; 2026 Road Travel &nbsp;·&nbsp;
