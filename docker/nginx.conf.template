@@ -21,6 +21,14 @@ server {
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     add_header Content-Security-Policy "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'" always;
 
+    # Apple Universal Links: serve the AASA as application/json (the file has no extension, so nginx
+    # would otherwise send octet-stream) and keep the SPA fallback from swallowing it. Apple fetches
+    # this over HTTPS with no redirect. Inherits the server-level security headers (no add_header here).
+    location = /.well-known/apple-app-site-association {
+        default_type application/json;
+        try_files $uri =404;
+    }
+
     # SPA: unknown client-side routes fall back to the app shell (inherits the headers above).
     location / {
         try_files $uri $uri/ /index.html;
