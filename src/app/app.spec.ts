@@ -81,4 +81,24 @@ describe('App header auth affordance', () => {
     expect(nav.textContent).toContain('Sign in');
     expect(nav.textContent).not.toContain('driver@example.com');
   });
+
+  // T-021: the App Store link used to live only on the (now-removed) marketing home page. It must
+  // now render in the persistent header on every route, for guests and signed-in accounts alike.
+  it('renders the App Store link in the header for a guest (T-021)', () => {
+    const el = render();
+    const link = el.querySelector<HTMLAnchorElement>('.site-nav a.nav-store')!;
+    expect(link).toBeTruthy();
+    expect(link.getAttribute('href')).toBe('https://apps.apple.com/app/id6785563236');
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.getAttribute('rel')).toContain('noopener');
+    expect(link.textContent).toContain('Get the iOS app');
+  });
+
+  it('keeps the App Store link visible for a signed-in account (T-021)', () => {
+    auth.signInAs('driver@example.com');
+    const el = render();
+    const link = el.querySelector<HTMLAnchorElement>('.site-nav a.nav-store');
+    expect(link?.getAttribute('href')).toBe('https://apps.apple.com/app/id6785563236');
+    expect(link?.getAttribute('target')).toBe('_blank');
+  });
 });

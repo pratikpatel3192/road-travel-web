@@ -39,6 +39,15 @@
 
 .nav-cta:hover { border-color: var(--accent); color: var(--accent); }
 
+/* App Store link (T-021): a nav-cta pill with an Apple glyph, marking it as an external store link
+   rather than an in-app destination. The glyph inherits currentColor so it swaps with the theme. */
+.nav-store {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.apple-glyph { display: block; }
+
 .nav-id {
   border: 1px solid var(--border);
   border-radius: 999px;
