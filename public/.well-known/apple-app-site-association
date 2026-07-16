@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["424DV494GD.com.weatherroute.app"],
+        "components": [
+          {
+            "/": "/auth-callback",
+            "comment": "Supabase magic-link / auth callback opens the iOS app"
+          }
+        ]
+      }
+    ]
+  }
+}
