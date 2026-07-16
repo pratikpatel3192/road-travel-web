@@ -1,19 +1,21 @@
 import { Routes } from '@angular/router';
 
 import { authGuard, realAccountGuard } from './core/auth.guard';
-import { Home } from './pages/home/home';
 import { Privacy } from './pages/privacy/privacy';
 import { Support } from './pages/support/support';
 
 export const routes: Routes = [
-  // Design-6a marketing hero (NOT the old coming-soon teaser): wordmark + tagline + Get the app /
-  // Open web app. The planner stays the product surface at /app (guests may browse, ADR-0025 §1).
-  { path: '', component: Home },
+  // The root IS the product: the trip planner renders directly at / (T-021). The old marketing home
+  // page is gone — land users straight in the planner. Guests may browse (authGuard passes an
+  // anonymous session, ADR-0025 §1); the wall is at the value action, not the front door.
   {
-    path: 'app',
+    path: '',
     loadComponent: () => import('./pages/plan/plan').then((m) => m.Plan),
     canActivate: [authGuard],
   },
+  // Back-compat: the planner used to live at /app. Keep old bookmarks/links resolving to the new
+  // root instead of 404ing (T-021). Exact-match so it can't shadow any future /app/* route.
+  { path: 'app', redirectTo: '', pathMatch: 'full' },
   { path: 'login', loadComponent: () => import('./pages/login/login').then((m) => m.Login) },
   // ADR-0025 §1: saved trips + Settings are LOGIN-ONLY (real account; the anonymous session doesn't count).
   {
