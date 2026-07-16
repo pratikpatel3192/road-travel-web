@@ -3,7 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import type { SavedTripModel } from '@road-travel/sdk';
 
 import { SettingsService } from '../../core/settings.service';
-import { TripsService } from '../../core/trips.service';
+import { type RecentTrip, TripsService } from '../../core/trips.service';
 import { SEVERITY_COLOR, type Severity, formatDistance } from '../plan/severity';
 
 /** "My trips" — the server-authoritative saved list (ADR-0029; no recents). Tap one to reopen. */
@@ -16,6 +16,22 @@ import { SEVERITY_COLOR, type Severity, formatDistance } from '../plan/severity'
         <a routerLink="/app" class="back" aria-label="Back">←</a>
         <h1>My trips</h1>
       </header>
+
+      @if (trips.recent().length) {
+        <h2>Recent</h2>
+        @for (t of trips.recent(); track key(t)) {
+          <div class="row">
+            <button class="open" (click)="openRecent(t)">
+              <span class="badge" [style.background]="color(t.worstSeverity)"></span>
+              <span class="names">{{ short(t.origin.name) }} → {{ short(t.destination.name) }}</span>
+              @if (t.distanceMeters) {
+                <span class="sub">{{ dist(t.distanceMeters) }}</span>
+              }
+            </button>
+            <button class="del" (click)="removeRecent(t)" aria-label="Remove recent trip">✕</button>
+          </div>
+        }
+      }
 
       <h2>Saved</h2>
       @if (trips.saved().length) {
@@ -167,6 +183,18 @@ export class Saved {
 
   remove(id: string): void {
     void this.trips.remove(id);
+  }
+
+  /** Recent trips (local): re-open by staging the stored endpoints + re-planning. */
+  key(t: RecentTrip): string {
+    return `${t.origin.name}→${t.destination.name}`;
+  }
+  openRecent(t: RecentTrip): void {
+    this.trips.stage({ origin: t.origin, destination: t.destination, departureAt: t.departureAt });
+    this.router.navigate(['/app']);
+  }
+  removeRecent(t: RecentTrip): void {
+    this.trips.removeRecent(this.key(t));
   }
 
   short(name: string): string {
