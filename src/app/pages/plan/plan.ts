@@ -597,6 +597,14 @@ export class Plan implements OnInit {
       this.briefing.set(briefing);
       this.plannedContext = { origin, destination };
       this.plannedBase.set(base);
+      // My Trips → Recent (local history): remember every trip you plan.
+      this.trips.recordRecent({
+        origin,
+        destination,
+        departureAt: departure_at,
+        distanceMeters: plan.distance_meters,
+        worstSeverity: plan.worst_severity,
+      });
     } catch (e) {
       if (e instanceof AccountRequiredError) {
         // ADR-0025 auth wall: Show Weather requires a signed-in account -> go to the sign-in page.
