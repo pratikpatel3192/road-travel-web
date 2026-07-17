@@ -14,6 +14,7 @@ import { TripsService } from '../../core/trips.service';
 import { AheadBanner } from './ahead-banner';
 import { BriefingCard } from './briefing-card';
 import { PlaceField, type PlaceValue } from './place-field';
+import { BriefingMemory, tripIdentityKey } from './rebrief';
 import { RouteMap } from './route-map';
 import { type Severity, formatDuration } from './severity';
 import { StopList } from './stop-list';
@@ -151,7 +152,12 @@ import {
         />
       }
       @if (briefing(); as b) {
-        <app-briefing-card [briefing]="b" [units]="settings.units()" />
+        <!-- F-001 v2 US-13: a tapped claim sentence selects its sample on the timeline + map. -->
+        <app-briefing-card
+          [briefing]="b"
+          [units]="settings.units()"
+          (claimSelect)="selected.set($event)"
+        />
       }
       </section>
 
@@ -492,6 +498,10 @@ export class Plan implements OnInit {
   // waypoints + dwell (ADR-0031 §3), so stop edits know when to re-plan + refresh the briefing.
   private plannedWaypointsKey = '';
   private stopsTimer: ReturnType<typeof setTimeout> | undefined;
+  // F-001 v2 (US-11): the last briefing's facts, keyed by full trip identity (endpoints +
+  // departure + waypoints/dwell). Re-briefing the SAME trip sends them as `previous_facts` so the
+  // server returns a grounded diff; any identity change means a different trip — nothing is sent.
+  private readonly briefingMemory = new BriefingMemory();
 
   readonly canSubmit = computed(() => !!this.origin() && !!this.destination());
 
@@ -645,18 +655,31 @@ export class Plan implements OnInit {
     if (!base || !ctx) return;
     const departureAt = new Date(base.getTime() + this.departureOffset() * 60_000).toISOString();
     const waypoints = toWaypoints(this.stops());
+    // US-11: previous_facts ride along ONLY when this is still the same trip the remembered
+    // briefing was generated for (a stop/dwell edit or scrubbed departure = a different trip).
+    const identity = tripIdentityKey({ ...ctx, departureAt, waypoints });
+    const previousFacts = this.briefingMemory.previousFactsFor(identity);
     this.replanning.set(true);
     try {
       const [plan, briefing] = await Promise.all([
         this.api.planTrip(buildPlanRequest({ ...ctx, departureAt, waypoints })),
         opts.refreshBriefing
           ? this.api.createBriefing(
-              buildBriefingRequest({ ...ctx, departureAt, waypoints, units: this.settings.units() }),
+              buildBriefingRequest({
+                ...ctx,
+                departureAt,
+                waypoints,
+                units: this.settings.units(),
+                previousFacts,
+              }),
             )
           : Promise.resolve(null),
       ]);
       this.plan.set(plan);
-      if (briefing) this.briefing.set(briefing);
+      if (briefing) {
+        this.briefing.set(briefing);
+        this.briefingMemory.remember(identity, briefing.facts);
+      }
       this.plannedWaypointsKey = waypointsKey(waypoints);
       this.selected.set(null);
     } catch (e) {
@@ -704,15 +727,27 @@ export class Plan implements OnInit {
     const departureAt = base.toISOString();
     // F-006: the plan AND the briefing carry the same waypoints (the briefing narrates the stops).
     const waypoints = toWaypoints(this.stops());
+    // US-11 re-brief: submitting the SAME trip again (same endpoints/departure/stops) carries the
+    // prior facts so the server can diff; any changed input is a new trip — nothing is sent.
+    const identity = tripIdentityKey({ origin, destination, departureAt, waypoints });
+    const previousFacts = this.briefingMemory.previousFactsFor(identity);
     try {
       const [plan, briefing] = await Promise.all([
         this.api.planTrip(buildPlanRequest({ origin, destination, departureAt, waypoints })),
         this.api.createBriefing(
-          buildBriefingRequest({ origin, destination, departureAt, waypoints, units: this.settings.units() }),
+          buildBriefingRequest({
+            origin,
+            destination,
+            departureAt,
+            waypoints,
+            units: this.settings.units(),
+            previousFacts,
+          }),
         ),
       ]);
       this.plan.set(plan);
       this.briefing.set(briefing);
+      this.briefingMemory.remember(identity, briefing.facts);
       this.plannedContext = { origin, destination };
       this.plannedBase.set(base);
       this.plannedWaypointsKey = waypointsKey(waypoints);

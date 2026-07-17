@@ -1,13 +1,29 @@
-import { Component, computed, input } from '@angular/core';
-import type { BriefingResponse } from '@road-travel/sdk';
+import { Component, computed, input, linkedSignal, output } from '@angular/core';
+import type { BriefingResponse, ClaimModel } from '@road-travel/sdk';
 
 import { SEVERITY_COLOR, SEVERITY_LABEL, type Severity, formatDistance } from './severity';
+
+/** The engine's F-001 v2 verdict scale (US-6) — always server-decided, never derived here. */
+type Verdict = NonNullable<BriefingResponse['verdict']>;
+
+const VERDICT_LABEL: Record<Verdict, string> = {
+  clear: 'Clear',
+  caution: 'Caution',
+  'consider-waiting': 'Consider waiting',
+};
 
 /**
  * The AI trip briefing (F-001): the grounded natural-language text plus a structured facts summary.
  * Text is rendered as PLAIN TEXT only (never as HTML) — the backend already grounds + sanitizes it
  * (ADR-0003/0010), and interpolation keeps it inert here. WeatherKit attribution is required on any
  * screen showing weather (App Review).
+ *
+ * F-001 v2 progressive disclosure (US-6/7): verdict chip + verdict line → two-sentence `brief`
+ * (default) → "More" expands the full `text` → the raw timeline below stays the deepest layer.
+ * "Updated" badge when a re-brief's `diff` is material (US-11); subtle stale note when the
+ * forecast horizon is long (the prose carries the sentence — the icon is the glanceable signal).
+ * US-13: full-prose sentences whose claim has sample refs are tappable — `claimSelect` emits the
+ * claim's start sample index for the plan page's existing timeline/map selection sync.
  */
 @Component({
   selector: 'app-briefing-card',
@@ -15,14 +31,63 @@ import { SEVERITY_COLOR, SEVERITY_LABEL, type Severity, formatDistance } from '.
     @if (briefing(); as b) {
       <section class="briefing">
         <header>
-          <span class="badge" [style.background]="color(b.facts.overall_severity)">
-            {{ label(b.facts.overall_severity) }}
-          </span>
+          @if (!b.verdict) {
+            <!-- pre-v2 fallback: severity badge (still server data — never derived client-side) -->
+            <span class="badge" [style.background]="color(b.facts.overall_severity)">
+              {{ label(b.facts.overall_severity) }}
+            </span>
+          }
           <h2>Your briefing</h2>
+          @if (b.diff?.material) {
+            <!-- US-11: the forecast moved materially since the last briefing of this same trip;
+                 the prose itself already leads with what changed. -->
+            <span class="updated" title="The forecast changed since your last briefing">Updated</span>
+          }
         </header>
 
+        @if (b.verdict; as v) {
+          <div class="verdict-row">
+            <span [class]="'chip v-' + v">{{ verdictLabel(v) }}</span>
+            @if (b.verdict_line) {
+              <span class="verdict-line">{{ b.verdict_line }}</span>
+            }
+          </div>
+        }
+
+        @if (b.stale) {
+          <!-- US-11 staleness: glanceable icon + one line; the prose carries the full sentence. -->
+          <p class="stale-note">
+            <span class="stale-icon" aria-hidden="true">🕒</span>
+            forecast &gt;12 h out — re-check before leaving
+          </p>
+        }
+
         <!-- plain-text only: bound via interpolation, never innerHTML -->
-        <p class="prose">{{ b.text }}</p>
+        @if (!expanded() && brief(); as short) {
+          <p class="prose">{{ short }}</p>
+        } @else if (claims(); as sentences) {
+          <p class="prose">
+            @for (c of sentences; track $index) {
+              <span
+                class="claim"
+                [class.linked]="c.start_index != null"
+                [attr.role]="c.start_index != null ? 'button' : null"
+                [attr.tabindex]="c.start_index != null ? 0 : null"
+                [attr.title]="c.start_index != null ? 'Show this stretch on the timeline' : null"
+                (click)="inspect(c)"
+                (keydown.enter)="inspect(c)"
+                >{{ c.text }}</span
+              >{{ ' ' }}
+            }
+          </p>
+        } @else {
+          <p class="prose">{{ b.text }}</p>
+        }
+        @if (brief()) {
+          <button class="more" type="button" (click)="expanded.set(!expanded())">
+            {{ expanded() ? 'Less' : 'More' }}
+          </button>
+        }
 
         @if (b.facts.hazards.length) {
           <ul class="hazards">
@@ -79,11 +144,85 @@ import { SEVERITY_COLOR, SEVERITY_LABEL, type Severity, formatDistance } from '.
         padding: 3px 8px;
         border-radius: 999px;
       }
+      .updated {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--accent);
+        border: 1px solid var(--accent);
+        padding: 2px 8px;
+        border-radius: 999px;
+      }
+      .verdict-row {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        margin: 0 0 10px;
+      }
+      /* Verdict chip — the existing severity token colors (clear/caution/severe). */
+      .chip {
+        flex: 0 0 auto;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        padding: 3px 10px;
+        border-radius: 999px;
+        white-space: nowrap;
+      }
+      .chip.v-clear {
+        background: var(--sev-clear);
+      }
+      .chip.v-caution {
+        background: var(--sev-caution);
+      }
+      .chip.v-consider-waiting {
+        background: var(--sev-severe);
+      }
+      .verdict-line {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text);
+      }
+      .stale-note {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--muted);
+        margin: 0 0 10px;
+      }
+      .stale-icon {
+        line-height: 1;
+      }
       .prose {
         font-size: 15px;
         line-height: 1.5;
         color: var(--text);
+        margin: 0 0 6px;
+      }
+      /* US-13: only sentences WITH a sample-range ref read as tappable. */
+      .claim.linked {
+        cursor: pointer;
+        text-decoration: underline;
+        text-decoration-style: dotted;
+        text-decoration-color: var(--accent);
+        text-underline-offset: 3px;
+      }
+      .claim.linked:hover,
+      .claim.linked:focus-visible {
+        color: var(--accent);
+        outline: none;
+      }
+      .more {
+        background: none;
+        border: none;
+        padding: 0;
         margin: 0 0 12px;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--accent);
+        cursor: pointer;
       }
       .hazards {
         list-style: none;
@@ -134,9 +273,36 @@ import { SEVERITY_COLOR, SEVERITY_LABEL, type Severity, formatDistance } from '.
 export class BriefingCard {
   readonly briefing = input.required<BriefingResponse>();
   readonly units = input<'imperial' | 'metric'>('imperial');
+  /** US-13 tap-to-inspect: a clicked claim's start sample index (timeline/map selection sync). */
+  readonly claimSelect = output<number>();
+
+  /** Full-text disclosure — collapses back to the brief whenever a NEW briefing arrives. */
+  readonly expanded = linkedSignal<BriefingResponse, boolean>({
+    source: this.briefing,
+    computation: () => false,
+  });
 
   readonly hazardCount = computed(() => this.briefing().facts.hazards.length);
 
+  /** The two-sentence layer, only when it is genuinely shallower than the full text. */
+  readonly brief = computed(() => {
+    const b = this.briefing();
+    return b.brief && b.brief !== b.text ? b.brief : null;
+  });
+
+  /** Claim sentences for the expanded prose — null when absent (render `text` plain instead). */
+  readonly claims = computed(() => {
+    const c = this.briefing().claims;
+    return c?.length ? c : null;
+  });
+
+  inspect(c: ClaimModel): void {
+    if (c.start_index != null) this.claimSelect.emit(c.start_index);
+  }
+
+  verdictLabel(v: Verdict): string {
+    return VERDICT_LABEL[v];
+  }
   color(sev: Severity): string {
     return SEVERITY_COLOR[sev];
   }

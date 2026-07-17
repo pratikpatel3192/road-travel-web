@@ -94,6 +94,10 @@ export type BriefingRequest = {
      */
     step_meters?: number | null;
     /**
+     * The prior briefing's `facts` for this trip (v2 US-11 re-brief): when set, the response includes a grounded diff and the prose leads with what changed.
+     */
+    previous_facts?: BriefingFactsModel | null;
+    /**
      * Units
      */
     units?: 'imperial' | 'metric';
@@ -130,6 +134,51 @@ export type BriefingResponse = {
      * Generated At
      */
     generated_at: string;
+    /**
+     * Verdict
+     *
+     * Deterministic engine verdict (US-6); maps 1:1 from severity.
+     */
+    verdict?: 'clear' | 'caution' | 'consider-waiting';
+    /**
+     * Verdict Line
+     *
+     * ≤ ~12-word opening line consistent with `verdict`.
+     */
+    verdict_line?: string;
+    /**
+     * Brief
+     *
+     * Two-sentence depth of the progressive disclosure (verdict line + key stretch).
+     */
+    brief?: string;
+    /**
+     * Claims
+     *
+     * Sentence→sample references (US-13).
+     */
+    claims?: Array<ClaimModel>;
+    /**
+     * Crossings
+     */
+    crossings?: Array<CrossingModel>;
+    departure_window?: DepartureWindowModel | null;
+    /**
+     * Present when the request carried `previous_facts` (US-11).
+     */
+    diff?: FactsDiffModel | null;
+    /**
+     * Forecast Horizon Hours
+     *
+     * Hours between generation and departure (staleness signal, US-11).
+     */
+    forecast_horizon_hours?: number;
+    /**
+     * Stale
+     *
+     * True when forecast_horizon_hours ≥ the server's staleness horizon (config, default 12 h) — the prose then carries a re-check line.
+     */
+    stale?: boolean;
 };
 
 /**
@@ -162,6 +211,27 @@ export type CheckoutSessionResponse = {
      * Free-trial days the server granted (0 = account/device already used it).
      */
     trial_days: number;
+};
+
+/**
+ * ClaimModel
+ *
+ * One sentence of the briefing with its optional sample-range reference (US-13
+ * tap-to-inspect). Sentences without a mappable claim carry null indices.
+ */
+export type ClaimModel = {
+    /**
+     * Text
+     */
+    text: string;
+    /**
+     * Start Index
+     */
+    start_index?: number | null;
+    /**
+     * End Index
+     */
+    end_index?: number | null;
 };
 
 /**
@@ -231,6 +301,42 @@ export type CoordinateModel = {
 };
 
 /**
+ * CrossingModel
+ *
+ * A state change the raw numbers hide (US-10), bracketed by two sample indices.
+ */
+export type CrossingModel = {
+    /**
+     * Kind
+     */
+    kind: 'sunset' | 'sunrise' | 'freezing_onset' | 'freezing_clear' | 'rain_to_snow' | 'snow_to_rain';
+    /**
+     * From Index
+     */
+    from_index: number;
+    /**
+     * To Index
+     */
+    to_index: number;
+    /**
+     * From Eta
+     */
+    from_eta: string;
+    /**
+     * To Eta
+     */
+    to_eta: string;
+    /**
+     * From Distance Meters
+     */
+    from_distance_meters: number;
+    /**
+     * To Distance Meters
+     */
+    to_distance_meters: number;
+};
+
+/**
  * DeleteResponse
  *
  * GDPR/CCPA delete — MVP marks the account for deletion; a background job erases it.
@@ -252,6 +358,51 @@ export type DeleteResponse = {
      * Detail
      */
     detail: string;
+};
+
+/**
+ * DepartureOptionModel
+ */
+export type DepartureOptionModel = {
+    /**
+     * Shift Minutes
+     */
+    shift_minutes: number;
+    /**
+     * Exposure Score
+     *
+     * Σ weight(severity): clear 0 / caution 1 / severe 3.
+     */
+    exposure_score: number;
+    /**
+     * Worst Severity
+     */
+    worst_severity: 'clear' | 'caution' | 'severe';
+};
+
+/**
+ * DepartureWindowModel
+ *
+ * Engine evaluation of ±3 h departure shifts (US-8). `suggestion` exists ONLY when material —
+ * a briefing may narrate a timing option strictly from this object.
+ */
+export type DepartureWindowModel = {
+    /**
+     * Material
+     */
+    material: boolean;
+    base: DepartureOptionModel;
+    suggestion?: DepartureOptionModel | null;
+    /**
+     * Improvement
+     *
+     * Base − suggestion score (0 when immaterial).
+     */
+    improvement?: number;
+    /**
+     * Options
+     */
+    options?: Array<DepartureOptionModel>;
 };
 
 /**
@@ -278,6 +429,56 @@ export type ExportResponse = {
      * What will happen and roughly when.
      */
     detail: string;
+};
+
+/**
+ * FactsDiffEntryModel
+ */
+export type FactsDiffEntryModel = {
+    /**
+     * Hazard
+     */
+    hazard: 'rain' | 'snow' | 'ice' | 'fog' | 'wind' | 'heat' | 'cold';
+    /**
+     * Kind
+     */
+    kind: 'appeared' | 'gone' | 'earlier' | 'later' | 'intensified' | 'eased';
+    /**
+     * Delta Minutes
+     */
+    delta_minutes?: number | null;
+    /**
+     * From Severity
+     */
+    from_severity?: 'clear' | 'caution' | 'severe' | null;
+    /**
+     * To Severity
+     */
+    to_severity?: 'clear' | 'caution' | 'severe' | null;
+};
+
+/**
+ * FactsDiffModel
+ *
+ * What changed vs `previous_facts` (US-11) — grounding for the 'Update:' line.
+ */
+export type FactsDiffModel = {
+    /**
+     * Entries
+     */
+    entries: Array<FactsDiffEntryModel>;
+    /**
+     * Material
+     */
+    material: boolean;
+    /**
+     * Overall From
+     */
+    overall_from: 'clear' | 'caution' | 'severe';
+    /**
+     * Overall To
+     */
+    overall_to: 'clear' | 'caution' | 'severe';
 };
 
 /**

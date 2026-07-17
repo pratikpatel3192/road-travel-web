@@ -1,4 +1,9 @@
-import type { BriefingRequest, PlanTripRequest, WaypointModel } from '@road-travel/sdk';
+import type {
+  BriefingFactsModel,
+  BriefingRequest,
+  PlanTripRequest,
+  WaypointModel,
+} from '@road-travel/sdk';
 
 import type { PlaceValue } from './place-field';
 
@@ -87,13 +92,18 @@ export function buildPlanRequest(args: {
   return body;
 }
 
-/** `/v1/briefings` body — MUST carry the same waypoints as the plan (the briefing narrates them). */
+/**
+ * `/v1/briefings` body — MUST carry the same waypoints as the plan (the briefing narrates them).
+ * F-001 v2 (US-11): `previousFacts` — the prior response's `facts`, ONLY when re-briefing the same
+ * trip identity (see rebrief.ts) — makes the server return a grounded `diff` and lead with it.
+ */
 export function buildBriefingRequest(args: {
   origin: PlaceValue;
   destination: PlaceValue;
   departureAt: string;
   units: 'imperial' | 'metric';
   waypoints?: readonly WaypointModel[];
+  previousFacts?: BriefingFactsModel;
 }): BriefingRequest {
   const body: BriefingRequest = {
     origin: args.origin,
@@ -102,6 +112,7 @@ export function buildBriefingRequest(args: {
     units: args.units,
   };
   if (args.waypoints?.length) body.waypoints = [...args.waypoints];
+  if (args.previousFacts) body.previous_facts = args.previousFacts;
   return body;
 }
 
