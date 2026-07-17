@@ -27,6 +27,15 @@ export function formatDistance(meters: number, units: 'imperial' | 'metric'): st
     : `${Math.round(meters * MI_PER_M)} mi`;
 }
 
+/** "6 h 20 m" / "45 m" — compact duration for the trip summary (drive + stops; F-006). */
+export function formatDuration(seconds: number): string {
+  const totalMinutes = Math.round(seconds / 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h <= 0) return `${m} m`;
+  return m > 0 ? `${h} h ${m} m` : `${h} h`;
+}
+
 export function formatWind(kph: number, units: 'imperial' | 'metric'): string {
   return units === 'metric' ? `${Math.round(kph)} km/h` : `${Math.round(kph * 0.621371)} mph`;
 }

@@ -16,7 +16,13 @@ export interface PlaceValue {
   selector: 'app-place-field',
   template: `
     <div class="field">
-      <span class="dot" [class.origin]="kind() === 'origin'" [class.dest]="kind() === 'destination'"></span>
+      <span
+        class="dot"
+        [class.origin]="kind() === 'origin'"
+        [class.dest]="kind() === 'destination'"
+        [class.stop]="kind() === 'stop'"
+        >{{ kind() === 'stop' ? index() : '' }}</span
+      >
       <input
         #input
         type="text"
@@ -68,6 +74,19 @@ export interface PlaceValue {
       .dot.dest {
         background: transparent;
         border: 3px solid var(--sev-severe);
+      }
+      /* F-006 stop rows: a numbered badge instead of the plain origin/destination dot. */
+      .dot.stop {
+        width: 16px;
+        height: 16px;
+        margin-left: -2px;
+        background: var(--accent);
+        color: var(--accent-contrast);
+        display: grid;
+        place-items: center;
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1;
       }
       input {
         flex: 1;
@@ -123,7 +142,9 @@ export interface PlaceValue {
   ],
 })
 export class PlaceField {
-  readonly kind = input<'origin' | 'destination'>('origin');
+  readonly kind = input<'origin' | 'destination' | 'stop'>('origin');
+  /** 1-based stop number, rendered inside the badge (kind 'stop' only; F-006). */
+  readonly index = input<number | null>(null);
   readonly placeholder = input('Search a place');
   readonly place = model<PlaceValue | null>(null);
 

@@ -24,6 +24,9 @@ import { SEVERITY_COLOR, type Severity, formatDistance } from '../plan/severity'
             <button class="open" (click)="openRecent(t)">
               <span class="badge" [style.background]="color(t.worstSeverity)"></span>
               <span class="names">{{ short(t.origin.name) }} → {{ short(t.destination.name) }}</span>
+              @if (t.waypoints?.length; as n) {
+                <span class="sub">{{ n }} {{ n === 1 ? 'stop' : 'stops' }}</span>
+              }
               @if (t.distanceMeters) {
                 <span class="sub">{{ dist(t.distanceMeters) }}</span>
               }
@@ -40,6 +43,9 @@ import { SEVERITY_COLOR, type Severity, formatDistance } from '../plan/severity'
             <button class="open" (click)="open(t)">
               <span class="badge" [style.background]="color(t.worst_severity)"></span>
               <span class="names">{{ short(t.origin_name) }} → {{ short(t.destination_name) }}</span>
+              @if (t.waypoints?.length; as n) {
+                <span class="sub">{{ n }} {{ n === 1 ? 'stop' : 'stops' }}</span>
+              }
               @if (t.distance_meters) {
                 <span class="sub">{{ dist(t.distance_meters) }}</span>
               }
@@ -162,7 +168,10 @@ export class Saved {
     void this.trips.refresh();
   }
 
-  /** Re-open a saved trip: stage its endpoints (server-provided coordinates) and re-plan. */
+  /**
+   * Re-open a saved trip: stage its endpoints (server-provided coordinates) — stops + dwell
+   * included (F-006 US-4) — and re-plan.
+   */
   open(t: SavedTripModel): void {
     if (t.origin_latitude == null || t.destination_latitude == null) return;
     this.trips.stage({
@@ -177,6 +186,7 @@ export class Saved {
         longitude: t.destination_longitude ?? 0,
       },
       departureAt: t.departure_at,
+      waypoints: t.waypoints,
     });
     this.router.navigate(['/app']);
   }
@@ -190,7 +200,12 @@ export class Saved {
     return `${t.origin.name}→${t.destination.name}`;
   }
   openRecent(t: RecentTrip): void {
-    this.trips.stage({ origin: t.origin, destination: t.destination, departureAt: t.departureAt });
+    this.trips.stage({
+      origin: t.origin,
+      destination: t.destination,
+      departureAt: t.departureAt,
+      waypoints: t.waypoints,
+    });
     this.router.navigate(['/app']);
   }
   removeRecent(t: RecentTrip): void {

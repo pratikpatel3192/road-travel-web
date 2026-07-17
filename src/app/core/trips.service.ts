@@ -1,5 +1,5 @@
 import { Injectable, effect, inject, signal } from '@angular/core';
-import type { SavedTripModel } from '@road-travel/sdk';
+import type { SavedTripModel, WaypointModel } from '@road-travel/sdk';
 
 import type { PlaceValue } from '../pages/plan/place-field';
 import { ApiService } from './api.service';
@@ -10,6 +10,8 @@ export interface StagedTrip {
   origin: PlaceValue;
   destination: PlaceValue;
   departureAt?: string;
+  /** F-006: a saved multi-stop trip re-opens WITH its stops + dwell. */
+  waypoints?: WaypointModel[];
 }
 
 /**
@@ -23,6 +25,8 @@ export interface RecentTrip {
   departureAt?: string;
   distanceMeters?: number;
   worstSeverity?: string;
+  /** F-006: re-opening a recent multi-stop trip restores its stops + dwell. */
+  waypoints?: WaypointModel[];
   recordedAt: string;
 }
 const RECENT_LIMIT = 15;
@@ -132,7 +136,10 @@ export class TripsService {
     distanceMeters?: number;
     durationSeconds?: number;
     worstSeverity?: string;
+    /** F-006: stops + dwell persist with the trip (ADR-0030). */
+    waypoints?: WaypointModel[];
   }): Promise<boolean> {
+    // Identity stays endpoint-based (ADR-0031: only an origin/destination change is a new trip).
     const existing = this.findByEndpoints(trip.origin, trip.destination);
     if (existing) {
       await this.remove(existing.id);
@@ -145,6 +152,7 @@ export class TripsService {
       distance_meters: trip.distanceMeters ?? 0,
       duration_seconds: trip.durationSeconds ?? 0,
       worst_severity: trip.worstSeverity ?? 'clear',
+      waypoints: trip.waypoints ?? [],
     });
     this.saved.set([saved, ...this.saved()]);
     this.syncCache();
@@ -247,6 +255,7 @@ export class TripsService {
     departureAt?: string;
     distanceMeters?: number;
     worstSeverity?: string;
+    waypoints?: WaypointModel[];
   }): void {
     const userId = this.auth.userId;
     if (!userId) return;

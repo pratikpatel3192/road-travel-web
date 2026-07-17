@@ -144,6 +144,8 @@ export class RouteMap implements OnDestroy {
   /** ADR-0026: browser-geolocation fix for the idle "you are here" marker; never persisted. */
   readonly userLocation = input<{ latitude: number; longitude: number } | null>(null);
   readonly selectedChange = output<number | null>();
+  /** F-006: a long-press (~500 ms mouse/touch hold) asks the planner to add a stop here. */
+  readonly stopRequest = output<{ latitude: number; longitude: number }>();
   private readonly mapEl = viewChild.required<ElementRef<HTMLDivElement>>('mapEl');
 
   readonly settings = inject(SettingsService);
@@ -157,7 +159,11 @@ export class RouteMap implements OnDestroy {
   private centeredOnUser = false;
   private bounds: L.LatLngBounds | null = null;
   private resizeObserver: ResizeObserver | null = null;
-  private readonly markers = new Map<number, { marker: L.Marker; sev: Severity; emoji: string }>();
+  private readonly markers = new Map<
+    number,
+    { marker: L.Marker; sev: Severity; emoji: string; stop: number | null }
+  >();
+  private unbindLongPress: (() => void) | null = null;
 
   constructor() {
     effect(() => {
@@ -196,6 +202,7 @@ export class RouteMap implements OnDestroy {
       this.applyLayers();
       this.resizeObserver = new ResizeObserver(() => this.fit());
       this.resizeObserver.observe(el);
+      this.unbindLongPress = this.bindLongPress(this.map, el);
     }
     this.syncUserMarker();
     if (!plan) {
@@ -229,17 +236,20 @@ export class RouteMap implements OnDestroy {
     }
 
     // A weather pin at every milestone: the condition emoji in a white badge ringed by severity
-    // color (first = origin, last = destination). Click-to-select stays synced with the timeline.
+    // color (first = origin, last = destination). Stop-marked samples (F-006) get a numbered pin
+    // instead, above the weather pins. Click-to-select stays synced with the timeline.
     for (const s of plan.samples) {
       const sev = (s.weather?.severity as Severity) ?? 'clear';
       const emoji = weatherEmoji(s.weather?.condition_symbol, s.weather?.condition_text);
+      const stop = s.waypoint_index ?? null;
       const marker = L.marker([s.latitude, s.longitude], {
-        icon: this.pinIcon(emoji, sev, false),
+        icon: stop != null ? this.stopIcon(stop + 1, sev, false) : this.pinIcon(emoji, sev, false),
         keyboard: false,
+        zIndexOffset: stop != null ? 500 : 0,
       });
       marker.on('click', () => this.selectedChange.emit(s.index));
       marker.addTo(layer);
-      this.markers.set(s.index, { marker, sev, emoji });
+      this.markers.set(s.index, { marker, sev, emoji, stop });
     }
 
     this.bounds = bounds.isValid() ? bounds : null;
@@ -310,11 +320,98 @@ export class RouteMap implements OnDestroy {
 
   private applySelection(): void {
     const sel = this.selected();
-    this.markers.forEach(({ marker, sev, emoji }, idx) => {
+    this.markers.forEach(({ marker, sev, emoji, stop }, idx) => {
       const on = idx === sel;
-      marker.setIcon(this.pinIcon(emoji, sev, on));
-      marker.setZIndexOffset(on ? 1000 : 0);
+      marker.setIcon(stop != null ? this.stopIcon(stop + 1, sev, on) : this.pinIcon(emoji, sev, on));
+      marker.setZIndexOffset(on ? 1000 : stop != null ? 500 : 0);
     });
+  }
+
+  /**
+   * F-006 stop pin: the 1-based stop number on the accent badge, ringed by the stop's arrival
+   * severity — visually distinct from the emoji weather pins and the endpoint samples.
+   */
+  private stopIcon(n: number, sev: Severity, selected: boolean): L.DivIcon {
+    const size = selected ? 34 : 27;
+    const border = selected ? 4 : 3;
+    const font = selected ? 16 : 13;
+    const html =
+      `<div style="width:${size}px;height:${size}px;border-radius:50%;` +
+      `display:flex;align-items:center;justify-content:center;` +
+      `background:var(--accent);color:var(--accent-contrast);` +
+      `border:${border}px solid ${SEVERITY_COLOR[sev]};box-shadow:0 1px 4px rgba(0,0,0,0.35);` +
+      `font-size:${font}px;font-weight:700;line-height:1;">${n}</div>`;
+    return L.divIcon({
+      html,
+      className: 'wx-stop-pin',
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+    });
+  }
+
+  /**
+   * F-006: a ~500 ms press-and-hold (mouse or touch, unified via pointer events) emits a
+   * `stopRequest` at the pressed coordinate. Any drag (>8 px), pinch, map move, or early release
+   * cancels — normal pan/zoom/click interactions are untouched. Returns an unbinder.
+   */
+  private bindLongPress(map: L.Map, el: HTMLElement): () => void {
+    let timer: number | undefined;
+    let cleanup: (() => void) | null = null;
+
+    const cancel = () => {
+      clearTimeout(timer);
+      timer = undefined;
+      cleanup?.();
+      cleanup = null;
+    };
+
+    const onPointerDown = (e: PointerEvent) => {
+      // Primary pointer only (left button / single touch); a second finger cancels below.
+      if (!e.isPrimary || (e.pointerType === 'mouse' && e.button !== 0)) return;
+      cancel();
+      const start = { x: e.clientX, y: e.clientY };
+      const point = L.DomEvent.getMousePosition(e, el);
+
+      const onMove = (m: PointerEvent) => {
+        if (Math.hypot(m.clientX - start.x, m.clientY - start.y) > 8) cancel();
+      };
+      const onEnd = () => cancel();
+      el.addEventListener('pointermove', onMove);
+      el.addEventListener('pointerup', onEnd);
+      el.addEventListener('pointercancel', onEnd);
+      el.addEventListener('pointerdown', onEnd); // a second pointer (pinch) cancels
+      map.on('movestart zoomstart', onEnd);
+      cleanup = () => {
+        el.removeEventListener('pointermove', onMove);
+        el.removeEventListener('pointerup', onEnd);
+        el.removeEventListener('pointercancel', onEnd);
+        el.removeEventListener('pointerdown', onEnd);
+        map.off('movestart zoomstart', onEnd);
+      };
+
+      timer = window.setTimeout(() => {
+        cancel();
+        const ll = map.containerPointToLatLng(point);
+        this.stopRequest.emit({ latitude: ll.lat, longitude: ll.lng });
+      }, 500);
+    };
+
+    // While a hold is pending, swallow the browser/native context menu (Android long-press,
+    // desktop right-click passes through because it never arms the timer).
+    const onContextMenu = (e: Event) => {
+      if (timer !== undefined) {
+        e.preventDefault();
+        cancel();
+      }
+    };
+
+    el.addEventListener('pointerdown', onPointerDown);
+    el.addEventListener('contextmenu', onContextMenu);
+    return () => {
+      cancel();
+      el.removeEventListener('pointerdown', onPointerDown);
+      el.removeEventListener('contextmenu', onContextMenu);
+    };
   }
 
   /** A weather-emoji map pin: white badge, severity-colored ring, enlarged when selected. */
@@ -338,6 +435,8 @@ export class RouteMap implements OnDestroy {
   ngOnDestroy(): void {
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
+    this.unbindLongPress?.();
+    this.unbindLongPress = null;
     this.map?.remove();
     this.map = null;
   }

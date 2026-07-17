@@ -7,6 +7,7 @@ import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { EntitlementService } from '../../core/entitlement.service';
 import { AccountRequiredError, PaywallError } from '../../core/errors';
+import { GeocodeService } from '../../core/geocode.service';
 import { PaywallService } from '../../core/paywall.service';
 import { SettingsService } from '../../core/settings.service';
 import { TripsService } from '../../core/trips.service';
@@ -14,8 +15,19 @@ import { AheadBanner } from './ahead-banner';
 import { BriefingCard } from './briefing-card';
 import { PlaceField, type PlaceValue } from './place-field';
 import { RouteMap } from './route-map';
-import { type Severity } from './severity';
+import { type Severity, formatDuration } from './severity';
+import { StopList } from './stop-list';
 import { Timeline } from './timeline';
+import {
+  MAX_STOPS,
+  type StopDraft,
+  buildBriefingRequest,
+  buildPlanRequest,
+  fromWaypoints,
+  newStop,
+  toWaypoints,
+  waypointsKey,
+} from './waypoints';
 
 /**
  * The planning experience, mirroring the iOS app: an inputs card with two place-search fields (no
@@ -24,7 +36,7 @@ import { Timeline } from './timeline';
  */
 @Component({
   selector: 'app-plan',
-  imports: [FormsModule, RouterLink, PlaceField, RouteMap, Timeline, BriefingCard, AheadBanner],
+  imports: [FormsModule, RouterLink, PlaceField, StopList, RouteMap, Timeline, BriefingCard, AheadBanner],
   template: `
     <div class="shell">
       <section class="panel">
@@ -60,6 +72,8 @@ import { Timeline } from './timeline';
         <div class="divider">
           <button class="swap" type="button" (click)="swap()" aria-label="Swap origin and destination">⇅</button>
         </div>
+        <!-- F-006: up to 3 ordered stops between origin and destination; every edit re-plans. -->
+        <app-stop-list [stops]="stops()" (stopsChange)="onStopsChange($event)" />
         <app-place-field
           kind="destination"
           placeholder="Destination"
@@ -103,6 +117,12 @@ import { Timeline } from './timeline';
 
       @if (plan(); as p) {
         <app-ahead-banner [plan]="p" [units]="settings.units()" />
+        <!-- F-006 trip summary: driving time + total dwell + arrival, all SERVER values
+             (arrival_at already includes dwell; duration_seconds stays driving-only). -->
+        <div class="summary card">
+          <span class="sum-drive">{{ summaryLabel(p) }}</span>
+          <span class="sum-arrive">arrive <strong>{{ arriveLabel(p) }}</strong></span>
+        </div>
         <div class="scrubber card">
           <div class="scrub-head">
             <span>Departure</span>
@@ -143,6 +163,7 @@ import { Timeline } from './timeline';
           [userLocation]="userLocation()"
           [selected]="selected()"
           (selectedChange)="selected.set($event)"
+          (stopRequest)="addStopFromMap($event)"
         />
       </aside>
     </div>
@@ -373,6 +394,25 @@ import { Timeline } from './timeline';
         display: block;
         margin-top: 16px;
       }
+      .summary {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+        padding: 11px 14px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .sum-drive {
+        font-variant-numeric: tabular-nums;
+      }
+      .sum-arrive strong {
+        color: var(--text);
+        font-size: 14px;
+        font-variant-numeric: tabular-nums;
+      }
       .scrubber {
         margin-top: 12px;
         padding: 12px 14px;
@@ -415,6 +455,7 @@ export class Plan implements OnInit {
   readonly trips = inject(TripsService);
   readonly entitlement = inject(EntitlementService);
   private readonly paywall = inject(PaywallService);
+  private readonly geocode = inject(GeocodeService);
   private readonly router = inject(Router);
 
   readonly origin = signal<PlaceValue | null>({
@@ -430,6 +471,9 @@ export class Plan implements OnInit {
 
   departureAt = this.defaultDeparture();
 
+  /** F-006: the ordered stop rows (max 3). Incomplete rows (no place yet) don't plan. */
+  readonly stops = signal<StopDraft[]>([]);
+
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly plan = signal<PlanTripResponse | null>(null);
@@ -444,6 +488,10 @@ export class Plan implements OnInit {
   private readonly plannedBase = signal<Date | null>(null);
   private plannedContext: { origin: PlaceValue; destination: PlaceValue } | null = null;
   private scrubTimer: ReturnType<typeof setTimeout> | undefined;
+  // F-006: what the shown plan/briefing were generated with — trip identity now includes the
+  // waypoints + dwell (ADR-0031 §3), so stop edits know when to re-plan + refresh the briefing.
+  private plannedWaypointsKey = '';
+  private stopsTimer: ReturnType<typeof setTimeout> | undefined;
 
   readonly canSubmit = computed(() => !!this.origin() && !!this.destination());
 
@@ -461,11 +509,13 @@ export class Plan implements OnInit {
     // Know the entitlement/usage up front so gating is correct (server-authoritative; F-002).
     void this.entitlement.refresh();
     this.locate();
-    // A trip queued from Recents/Saved: prefill the fields and plan it immediately.
+    // A trip queued from Recents/Saved: prefill the fields (stops included — a saved multi-stop
+    // trip re-plans as a multi-stop trip, F-006 US-4) and plan it immediately.
     const staged = this.trips.takeStaged();
     if (!staged) return;
     this.origin.set(staged.origin);
     this.destination.set(staged.destination);
+    this.stops.set(fromWaypoints(staged.waypoints));
     if (staged.departureAt) this.departureAt = this.toLocalInput(new Date(staged.departureAt));
     void this.submit();
   }
@@ -505,6 +555,7 @@ export class Plan implements OnInit {
     const p = this.plan();
     try {
       // Server-authoritative save/unsave (ADR-0029); the star reflects the server list.
+      // F-006: stops + dwell persist with the trip and are restored on re-open (ADR-0030).
       await this.trips.toggleSave({
         origin,
         destination,
@@ -512,6 +563,7 @@ export class Plan implements OnInit {
         distanceMeters: p?.distance_meters,
         durationSeconds: p?.duration_seconds,
         worstSeverity: p?.worst_severity as Severity | undefined,
+        waypoints: toWaypoints(this.stops()),
       });
     } catch (e) {
       if (e instanceof AccountRequiredError) this.router.navigate(['/login']);
@@ -521,6 +573,22 @@ export class Plan implements OnInit {
 
   short(name: string): string {
     return name.split(',')[0];
+  }
+
+  /**
+   * F-006 trip summary: "6 h 20 m drive + 45 m stops" from the SERVER's driving-only
+   * `duration_seconds` and `total_dwell_seconds` — the client never computes its own ETAs
+   * (ADR-0011).
+   */
+  summaryLabel(p: PlanTripResponse): string {
+    const drive = `${formatDuration(p.duration_seconds)} drive`;
+    const dwell = p.total_dwell_seconds ?? 0;
+    return dwell > 0 ? `${drive} + ${formatDuration(dwell)} stops` : drive;
+  }
+
+  /** The server's `arrival_at` (dwell already included) as a local wall-clock time. */
+  arriveLabel(p: PlanTripResponse): string {
+    return new Date(p.arrival_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
   readonly shiftedLabel = computed(() => {
@@ -538,15 +606,58 @@ export class Plan implements OnInit {
     this.scrubTimer = setTimeout(() => this.replan(), 300);
   }
 
-  private async replan(): Promise<void> {
+  /**
+   * F-006: every effective stop edit (add/remove/reorder/dwell) re-plans, debounced so slamming
+   * the dwell picker fires one request. Edits that don't change the planned waypoints (e.g. an
+   * empty row added/removed) are ignored. A stop edit also refreshes the briefing — trip identity
+   * includes waypoints + dwell, so the shown briefing is stale (F-001 US-3 / ADR-0031 §3).
+   */
+  onStopsChange(next: StopDraft[]): void {
+    this.stops.set(next);
+    if (!this.plannedContext) return; // nothing planned yet — stops apply on the next submit
+    if (waypointsKey(toWaypoints(next)) === this.plannedWaypointsKey) return;
+    clearTimeout(this.stopsTimer);
+    this.stopsTimer = setTimeout(() => void this.replan({ refreshBriefing: true }), 400);
+  }
+
+  /**
+   * F-006: map long-press drops a stop at the pressed location while a trip is planned or being
+   * planned (and under the cap). The name comes from reverse geocoding (fast; a failure falls
+   * back to a "Stop N (lat, lon)" label), then the edit flows through {@link onStopsChange}.
+   */
+  async addStopFromMap(loc: { latitude: number; longitude: number }): Promise<void> {
+    if (this.stops().length >= MAX_STOPS) return;
+    if (!this.plan() && !this.loading() && !this.canSubmit()) return;
+    const found = await this.geocode.reverse(loc.latitude, loc.longitude);
+    const name =
+      found?.name ??
+      `Stop ${this.stops().length + 1} (${loc.latitude.toFixed(3)}, ${loc.longitude.toFixed(3)})`;
+    if (this.stops().length >= MAX_STOPS) return; // re-check after the await
+    this.onStopsChange([
+      ...this.stops(),
+      newStop({ name, latitude: loc.latitude, longitude: loc.longitude }),
+    ]);
+  }
+
+  private async replan(opts: { refreshBriefing?: boolean } = {}): Promise<void> {
     const base = this.plannedBase();
     const ctx = this.plannedContext;
     if (!base || !ctx) return;
-    const departure_at = new Date(base.getTime() + this.departureOffset() * 60_000).toISOString();
+    const departureAt = new Date(base.getTime() + this.departureOffset() * 60_000).toISOString();
+    const waypoints = toWaypoints(this.stops());
     this.replanning.set(true);
     try {
-      const plan = await this.api.planTrip({ ...ctx, departure_at });
+      const [plan, briefing] = await Promise.all([
+        this.api.planTrip(buildPlanRequest({ ...ctx, departureAt, waypoints })),
+        opts.refreshBriefing
+          ? this.api.createBriefing(
+              buildBriefingRequest({ ...ctx, departureAt, waypoints, units: this.settings.units() }),
+            )
+          : Promise.resolve(null),
+      ]);
       this.plan.set(plan);
+      if (briefing) this.briefing.set(briefing);
+      this.plannedWaypointsKey = waypointsKey(waypoints);
       this.selected.set(null);
     } catch (e) {
       // A re-plan can also hit the entitlement gate; surface the paywall / sign-in, else keep the
@@ -562,6 +673,9 @@ export class Plan implements OnInit {
     const o = this.origin();
     this.origin.set(this.destination());
     this.destination.set(o);
+    // Reversing the trip reverses the stop order too (F-006 — order is part of the route). Like
+    // the endpoint swap itself, this applies on the next submit; it never re-plans by itself.
+    this.stops.set([...this.stops()].reverse());
   }
 
   private defaultDeparture(): string {
@@ -587,23 +701,29 @@ export class Plan implements OnInit {
     this.departureOffset.set(0);
 
     const base = new Date(this.departureAt);
-    const departure_at = base.toISOString();
+    const departureAt = base.toISOString();
+    // F-006: the plan AND the briefing carry the same waypoints (the briefing narrates the stops).
+    const waypoints = toWaypoints(this.stops());
     try {
       const [plan, briefing] = await Promise.all([
-        this.api.planTrip({ origin, destination, departure_at }),
-        this.api.createBriefing({ origin, destination, departure_at, units: this.settings.units() }),
+        this.api.planTrip(buildPlanRequest({ origin, destination, departureAt, waypoints })),
+        this.api.createBriefing(
+          buildBriefingRequest({ origin, destination, departureAt, waypoints, units: this.settings.units() }),
+        ),
       ]);
       this.plan.set(plan);
       this.briefing.set(briefing);
       this.plannedContext = { origin, destination };
       this.plannedBase.set(base);
+      this.plannedWaypointsKey = waypointsKey(waypoints);
       // My Trips → Recent (local history): remember every trip you plan.
       this.trips.recordRecent({
         origin,
         destination,
-        departureAt: departure_at,
+        departureAt,
         distanceMeters: plan.distance_meters,
         worstSeverity: plan.worst_severity,
+        waypoints,
       });
     } catch (e) {
       if (e instanceof AccountRequiredError) {

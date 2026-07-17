@@ -79,6 +79,12 @@ export type BriefingRequest = {
      */
     departure_at: string;
     /**
+     * Waypoints
+     *
+     * Ordered via points (F-006) — the briefing narrates the full multi-leg trip with dwell-shifted ETAs.
+     */
+    waypoints?: Array<WaypointModel>;
+    /**
      * Step Meters
      */
     step_meters?: number | null;
@@ -537,6 +543,12 @@ export type PlanTripRequest = {
      */
     departure_at: string;
     /**
+     * Waypoints
+     *
+     * Ordered via points (F-006, up to 3), routed as one waypoint sequence.
+     */
+    waypoints?: Array<WaypointModel>;
+    /**
      * Step Meters
      *
      * Optional route-sampling step override (meters). Omit for the adaptive spacing (15 mi on short routes, easing to 40 mi on long ones).
@@ -555,6 +567,8 @@ export type PlanTripResponse = {
     departure_at: string;
     /**
      * Arrival At
+     *
+     * Includes driving time AND every stop's dwell (F-006).
      */
     arrival_at: string;
     /**
@@ -563,8 +577,22 @@ export type PlanTripResponse = {
     distance_meters: number;
     /**
      * Duration Seconds
+     *
+     * Driving time only (excludes dwell).
      */
     duration_seconds: number;
+    /**
+     * Waypoints
+     *
+     * The trip's ordered via points, echoed back (F-006).
+     */
+    waypoints?: Array<WaypointModel>;
+    /**
+     * Total Dwell Seconds
+     *
+     * Sum of all waypoint dwell (arrival_at already includes it).
+     */
+    total_dwell_seconds?: number;
     /**
      * Worst Severity
      *
@@ -746,6 +774,24 @@ export type RouteSampleModel = {
      * Null when the forecast fetch for this sample's cell failed.
      */
     weather?: WeatherSnapshotModel | null;
+    /**
+     * Leg Index
+     *
+     * Which origin→stop/stop→stop/stop→destination leg this sample is on.
+     */
+    leg_index?: number;
+    /**
+     * Waypoint Index
+     *
+     * Set on the sample marking a stop: index into the trip's waypoints.
+     */
+    waypoint_index?: number | null;
+    /**
+     * Dwell Seconds
+     *
+     * Planned stop duration at this sample (stop-marked samples only).
+     */
+    dwell_seconds?: number;
 };
 /**
  * SaveTripRequest
@@ -772,6 +818,10 @@ export type SaveTripRequest = {
      * Worst Severity
      */
     worst_severity: string;
+    /**
+     * Waypoints
+     */
+    waypoints?: Array<WaypointModel>;
 };
 /**
  * SavedTripModel
@@ -821,6 +871,10 @@ export type SavedTripModel = {
      * Destination Longitude
      */
     destination_longitude?: number | null;
+    /**
+     * Waypoints
+     */
+    waypoints?: Array<WaypointModel>;
 };
 /**
  * SavedTripsResponse
@@ -1038,6 +1092,34 @@ export type VehicleTypeModel = {
      * Sort
      */
     sort: number;
+};
+/**
+ * WaypointModel
+ *
+ * An ordered via point with an optional planned stop (F-006).
+ *
+ * ``dwell_minutes`` is restricted to the product presets; every sample after the stop has its
+ * ETA shifted by the cumulative dwell so the ETA-matched forecast stays true.
+ */
+export type WaypointModel = {
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Latitude
+     */
+    latitude: number;
+    /**
+     * Longitude
+     */
+    longitude: number;
+    /**
+     * Dwell Minutes
+     *
+     * Planned stop duration; one of the presets 0/15/30/45/60.
+     */
+    dwell_minutes?: 0 | 15 | 30 | 45 | 60;
 };
 /**
  * WeatherSnapshotModel
@@ -1340,6 +1422,8 @@ export type RevenuecatWebhookV1WebhooksRevenuecatPostData = {
     headers?: {
         /**
          * Authorization
+         *
+         * RevenueCat shared-secret authorization value (required).
          */
         authorization?: string | null;
     };
@@ -1366,6 +1450,8 @@ export type StripeWebhookV1WebhooksStripePostData = {
     headers?: {
         /**
          * Stripe-Signature
+         *
+         * Stripe HMAC signature header `t=<ts>,v1=<hex>` (required).
          */
         'stripe-signature'?: string | null;
     };

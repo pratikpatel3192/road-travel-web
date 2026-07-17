@@ -55,10 +55,14 @@ export declare const exportAccountV1AccountExportPost: <ThrowOnError extends boo
 export declare const deleteAccountV1AccountDelete: <ThrowOnError extends boolean = false>(options?: Options<DeleteAccountV1AccountDeleteData, ThrowOnError>) => RequestResult<DeleteAccountV1AccountDeleteResponses, unknown, ThrowOnError>;
 /**
  * RevenueCat entitlement webhook (signature-verified, idempotent)
+ *
+ * Called by RevenueCat, not by app clients. **Not** JWT-authenticated: it is authorized by a shared secret that RevenueCat sends verbatim in the `Authorization` header (set in the RevenueCat dashboard) and compared in constant time. Fail-closed outside `local`, and idempotent. SEC-25: documented here so the auth mechanism is visible in the contract.
  */
 export declare const revenuecatWebhookV1WebhooksRevenuecatPost: <ThrowOnError extends boolean = false>(options: Options<RevenuecatWebhookV1WebhooksRevenuecatPostData, ThrowOnError>) => RequestResult<RevenuecatWebhookV1WebhooksRevenuecatPostResponses, RevenuecatWebhookV1WebhooksRevenuecatPostErrors, ThrowOnError>;
 /**
  * Stripe web-billing entitlement webhook (signature-verified, idempotent)
+ *
+ * Called by Stripe, not by app clients. **Not** JWT-authenticated: authorized by the `Stripe-Signature` header — an HMAC-SHA256 over `"{t}.{raw_body}"` with the webhook signing secret, compared in constant time, with a replay-window check on `t` (SEC-08). Fail-closed outside `local`, idempotent. SEC-25: documented so the auth is visible in the contract.
  */
 export declare const stripeWebhookV1WebhooksStripePost: <ThrowOnError extends boolean = false>(options?: Options<StripeWebhookV1WebhooksStripePostData, ThrowOnError>) => RequestResult<StripeWebhookV1WebhooksStripePostResponses, StripeWebhookV1WebhooksStripePostErrors, ThrowOnError>;
 /**

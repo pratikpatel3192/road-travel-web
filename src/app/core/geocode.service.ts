@@ -32,6 +32,25 @@ export class GeocodeService {
     }
   }
 
+  /**
+   * Reverse geocode a coordinate to a display name (F-006 map long-press → stop). Same Photon
+   * service as `search`; null on any failure — callers fall back to a coordinate label.
+   */
+  async reverse(latitude: number, longitude: number): Promise<GeoResult | null> {
+    try {
+      const res = await fetch(
+        `https://photon.komoot.io/reverse?lat=${latitude}&lon=${longitude}&limit=1`,
+        { headers: { Accept: 'application/json' } },
+      );
+      if (!res.ok) return null;
+      const json = await res.json();
+      const feature = json?.features?.[0];
+      return feature ? this.toResult(feature) : null;
+    } catch {
+      return null;
+    }
+  }
+
   private toResult(feature: unknown): GeoResult | null {
     const f = feature as {
       geometry?: { coordinates?: [number, number] };

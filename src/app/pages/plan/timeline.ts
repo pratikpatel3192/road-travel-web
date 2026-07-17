@@ -2,6 +2,7 @@ import { Component, ElementRef, effect, inject, input, output } from '@angular/c
 import type { PlanTripResponse } from '@road-travel/sdk';
 
 import { SEVERITY_COLOR, type Severity, formatTemp, formatWind, weatherEmoji } from './severity';
+import { formatDwell } from './waypoints';
 
 /**
  * Scrollable space-time strip: one card per route sample, showing the forecast for the hour the
@@ -20,13 +21,24 @@ import { SEVERITY_COLOR, type Severity, formatTemp, formatWind, weatherEmoji } f
           tabindex="0"
           [attr.data-idx]="s.index"
           [class.sel]="s.index === selected()"
-          [style.borderColor]="dot(s.weather?.severity)"
+          [class.stop]="s.waypoint_index != null"
+          [style.borderColor]="s.waypoint_index != null ? null : dot(s.weather?.severity)"
           (click)="selectedChange.emit(s.index)"
           (mouseenter)="selectedChange.emit(s.index)"
           (focus)="selectedChange.emit(s.index)"
         >
-          <div class="mi">{{ mi(s.distance_from_start_meters) }} mi</div>
-          <div class="eta">{{ time(s.eta) }}</div>
+          @if (s.waypoint_index != null) {
+            <!-- F-006 US-3: a stop is a first-class cell — name, ARRIVAL time, dwell, weather. -->
+            <div class="stop-head">
+              <span class="stop-num">{{ s.waypoint_index + 1 }}</span>
+              <span class="stop-name" [title]="stopName(s.waypoint_index)">{{ short(stopName(s.waypoint_index)) }}</span>
+            </div>
+            <div class="eta">arrive {{ time(s.eta) }}</div>
+            <div class="dwell">{{ dwell(s.dwell_seconds) }}</div>
+          } @else {
+            <div class="mi">{{ mi(s.distance_from_start_meters) }} mi</div>
+            <div class="eta">{{ time(s.eta) }}</div>
+          }
           @if (s.weather; as w) {
             <div class="cond-row">
               <span class="wx" [title]="w.condition_text">{{ emoji(w.condition_symbol, w.condition_text) }}</span>
@@ -79,6 +91,43 @@ import { SEVERITY_COLOR, type Severity, formatTemp, formatWind, weatherEmoji } f
       .cell.sel {
         box-shadow: 0 0 0 2px var(--accent);
         transform: translateY(-2px);
+      }
+      /* F-006: stop cells read as first-class stops, distinct from milestone cells. */
+      .cell.stop {
+        border-color: var(--accent);
+        background: var(--surface);
+      }
+      .stop-head {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+      }
+      .stop-num {
+        flex: 0 0 auto;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--accent);
+        color: var(--accent-contrast);
+        display: grid;
+        place-items: center;
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1;
+      }
+      .stop-name {
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .dwell {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--accent);
+        margin-top: 2px;
       }
       .mi {
         font-size: 11px;
@@ -155,6 +204,16 @@ export class Timeline {
 
   dot(sev?: Severity): string {
     return SEVERITY_COLOR[sev ?? 'clear'];
+  }
+  /** The stop's display name from the plan's echoed waypoints (F-006). */
+  stopName(waypointIndex: number): string {
+    return this.plan().waypoints?.[waypointIndex]?.name ?? `Stop ${waypointIndex + 1}`;
+  }
+  short(name: string): string {
+    return name.split(',')[0];
+  }
+  dwell(dwellSeconds?: number): string {
+    return formatDwell(Math.round((dwellSeconds ?? 0) / 60));
   }
   emoji(symbol?: string, text?: string): string {
     return weatherEmoji(symbol, text);
