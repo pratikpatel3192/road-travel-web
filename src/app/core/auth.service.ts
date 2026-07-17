@@ -1,5 +1,10 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { type Session, type SupabaseClient, createClient } from '@supabase/supabase-js';
+import {
+  type EmailOtpType,
+  type Session,
+  type SupabaseClient,
+  createClient,
+} from '@supabase/supabase-js';
 
 import { ConfigService } from './config';
 
@@ -82,6 +87,11 @@ export class AuthService {
     this.configured.set(true);
     this.supabase.auth.onAuthStateChange((_event, session) => this._session.set(session));
 
+    // Universal-Link magic-link callback: the branded email links to /auth-callback?token_hash=…
+    // (our domain, so it can open the iOS app). On web / when the app isn't installed, verify it
+    // here — token_hash is a query param, which detectSessionInUrl (fragments only) won't pick up.
+    await this.verifyMagicLinkFromUrl();
+
     // ADR-0025 §6: web sessions expire after 7 days of INACTIVITY. Enforced at load: if the last
     // activity stamp is older than the limit, purge the stored session before reading it, so the
     // user lands signed out (a fresh anonymous session bootstraps below for browsing).
@@ -93,6 +103,23 @@ export class AuthService {
     const { data } = await this.supabase.auth.getSession();
     this._session.set(data.session);
     if (!data.session) await this.bootstrapAnonymous();
+  }
+
+  private async verifyMagicLinkFromUrl(): Promise<void> {
+    if (!this.supabase) return;
+    const params = new URLSearchParams(window.location.search);
+    const tokenHash = params.get('token_hash');
+    const type = params.get('type');
+    if (!tokenHash || !type) return;
+    const { error } = await this.supabase.auth.verifyOtp({
+      token_hash: tokenHash,
+      type: type as EmailOtpType,
+    });
+    if (error) {
+      this.authError.set('That sign-in link is invalid or has expired — request a new one.');
+    }
+    // Strip the single-use token from the URL so a reload/share can't replay it, and land on the app.
+    history.replaceState(null, '', '/');
   }
 
   private lastActive(): number {
