@@ -1,7 +1,7 @@
 import { Component, type OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import type { BriefingResponse, PlanTripResponse } from '@road-travel/sdk';
+import type { BriefingResponse, PlaceCardModel, PlanTripResponse } from '@road-travel/sdk';
 
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
@@ -13,6 +13,7 @@ import { SettingsService } from '../../core/settings.service';
 import { TripsService } from '../../core/trips.service';
 import { AheadBanner } from './ahead-banner';
 import { BriefingCard } from './briefing-card';
+import { ExplorePanel } from './explore-panel';
 import { PlaceField, type PlaceValue } from './place-field';
 import { BriefingMemory, tripIdentityKey } from './rebrief';
 import { RouteMap } from './route-map';
@@ -20,6 +21,7 @@ import { type Severity, formatDuration } from './severity';
 import { StopList } from './stop-list';
 import { Timeline } from './timeline';
 import {
+  type DwellMinutes,
   MAX_STOPS,
   type StopDraft,
   buildBriefingRequest,
@@ -37,7 +39,7 @@ import {
  */
 @Component({
   selector: 'app-plan',
-  imports: [FormsModule, RouterLink, PlaceField, StopList, RouteMap, Timeline, BriefingCard, AheadBanner],
+  imports: [FormsModule, RouterLink, PlaceField, StopList, RouteMap, Timeline, BriefingCard, AheadBanner, ExplorePanel],
   template: `
     <div class="shell">
       <section class="panel">
@@ -150,6 +152,27 @@ import {
           [selected]="selected()"
           (selectedChange)="selected.set($event)"
         />
+        <!-- F-005 Trip Explorer: a Pro surface on the PLANNED trip (gating is the server's 402 →
+             the existing paywall modal — never client-decided). -->
+        @if (!exploreOpen()) {
+          <button class="explore-open card" type="button" (click)="exploreOpen.set(true)">
+            <span>🧭 Explore along the way</span>
+            <span class="explore-sub">stops · food · fuel · scenic</span>
+          </button>
+        } @else if (plannedContext(); as ctx) {
+          <app-explore-panel
+            [origin]="ctx.origin"
+            [destination]="ctx.destination"
+            [departureAt]="exploreDepartureAt()"
+            [waypoints]="exploreWaypoints()"
+            [units]="settings.units()"
+            [highlighted]="exploreSelected()"
+            (close)="closeExplore()"
+            (cardsChange)="onExploreCards($event)"
+            (highlightChange)="onExploreHighlight($event)"
+            (addStop)="onExploreAddStop($event)"
+          />
+        }
       }
       @if (briefing(); as b) {
         <!-- F-001 v2 US-13: a tapped claim sentence selects its sample on the timeline + map. -->
@@ -170,6 +193,9 @@ import {
           [selected]="selected()"
           (selectedChange)="selected.set($event)"
           (stopRequest)="addStopFromMap($event)"
+          [explorePins]="exploreCards()"
+          [exploreSelected]="exploreSelected()"
+          (exploreSelectedChange)="onExploreHighlight($event)"
         />
       </aside>
     </div>
@@ -257,41 +283,6 @@ import {
       .icon:disabled {
         opacity: 0.45;
         cursor: default;
-      }
-      .menu-wrap {
-        position: relative;
-      }
-      .menu {
-        position: absolute;
-        right: 0;
-        top: calc(100% + 6px);
-        z-index: 30;
-        list-style: none;
-        margin: 0;
-        padding: 4px;
-        min-width: 220px;
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
-      }
-      .menu li {
-        padding: 9px 10px;
-        border-radius: 8px;
-        font-size: 14px;
-        cursor: pointer;
-        white-space: nowrap;
-      }
-      .menu li:hover {
-        background: var(--surface-2);
-      }
-      .link {
-        background: none;
-        border: none;
-        color: var(--accent);
-        cursor: pointer;
-        padding: 0;
-        font-size: 13px;
       }
       .card {
         background: var(--surface);
@@ -396,9 +387,33 @@ import {
       app-ahead-banner,
       app-route-map,
       app-timeline,
-      app-briefing-card {
+      app-briefing-card,
+      app-explore-panel {
         display: block;
         margin-top: 16px;
+      }
+      /* F-005: the Explore entry, sitting right above the briefing card (surface via .card). */
+      .explore-open {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        width: 100%;
+        margin-top: 16px;
+        padding: 12px 14px;
+        font: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text);
+        cursor: pointer;
+      }
+      .explore-open:hover {
+        border-color: var(--accent);
+      }
+      .explore-sub {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--muted);
       }
       .summary {
         display: flex;
@@ -492,7 +507,8 @@ export class Plan implements OnInit {
   readonly departureOffset = signal(0); // minutes past the planned departure
   readonly replanning = signal(false);
   private readonly plannedBase = signal<Date | null>(null);
-  private plannedContext: { origin: PlaceValue; destination: PlaceValue } | null = null;
+  /** The endpoints the SHOWN plan was generated with (a signal — Explore binds to it). */
+  readonly plannedContext = signal<{ origin: PlaceValue; destination: PlaceValue } | null>(null);
   private scrubTimer: ReturnType<typeof setTimeout> | undefined;
   // F-006: what the shown plan/briefing were generated with — trip identity now includes the
   // waypoints + dwell (ADR-0031 §3), so stop edits know when to re-plan + refresh the briefing.
@@ -504,6 +520,20 @@ export class Plan implements OnInit {
   private readonly briefingMemory = new BriefingMemory();
 
   readonly canSubmit = computed(() => !!this.origin() && !!this.destination());
+
+  // --- F-005 Trip Explorer state -----------------------------------------------------------------
+  readonly exploreOpen = signal(false);
+  /** The panel's current result cards → numbered map pins ([] = none). */
+  readonly exploreCards = signal<PlaceCardModel[]>([]);
+  /** Highlighted card/pin index, shared card-list ↔ map. */
+  readonly exploreSelected = signal<number | null>(null);
+  /** The departure the SHOWN plan used — the planned base plus any scrubbed offset. */
+  readonly exploreDepartureAt = computed(() => {
+    const base = this.plannedBase();
+    return base ? new Date(base.getTime() + this.departureOffset() * 60_000).toISOString() : '';
+  });
+  /** The current effective waypoints (same composition the plan/briefing requests use). */
+  readonly exploreWaypoints = computed(() => toWaypoints(this.stops()));
 
   /** Whether the currently-shown trip is in the saved list (reacts to saves + endpoint changes). */
   readonly isCurrentSaved = computed(() => {
@@ -624,7 +654,7 @@ export class Plan implements OnInit {
    */
   onStopsChange(next: StopDraft[]): void {
     this.stops.set(next);
-    if (!this.plannedContext) return; // nothing planned yet — stops apply on the next submit
+    if (!this.plannedContext()) return; // nothing planned yet — stops apply on the next submit
     if (waypointsKey(toWaypoints(next)) === this.plannedWaypointsKey) return;
     clearTimeout(this.stopsTimer);
     this.stopsTimer = setTimeout(() => void this.replan({ refreshBriefing: true }), 400);
@@ -649,9 +679,38 @@ export class Plan implements OnInit {
     ]);
   }
 
+  /**
+   * F-005: a confirmed add-as-stop from the Explore panel — routed through the EXISTING F-006
+   * stop-list flow ({@link onStopsChange}: debounced re-plan + briefing refresh), with the dwell
+   * the user chose in the preview.
+   */
+  onExploreAddStop(event: { place: PlaceValue; dwellMinutes: DwellMinutes }): void {
+    if (this.stops().length >= MAX_STOPS) return;
+    this.onStopsChange([...this.stops(), newStop(event.place, event.dwellMinutes)]);
+  }
+
+  /** Panel result cards → numbered map pins (a fresh set resets the highlight). */
+  onExploreCards(cards: PlaceCardModel[]): void {
+    this.exploreCards.set(cards);
+    this.exploreSelected.set(null);
+  }
+
+  /** Card click/hover ↔ pin click: highlight the pair AND select the card's nearest sample. */
+  onExploreHighlight(index: number | null): void {
+    this.exploreSelected.set(index);
+    const card = index != null ? this.exploreCards()[index] : null;
+    if (card) this.selected.set(card.nearest_sample_index);
+  }
+
+  closeExplore(): void {
+    this.exploreOpen.set(false);
+    this.exploreCards.set([]);
+    this.exploreSelected.set(null);
+  }
+
   private async replan(opts: { refreshBriefing?: boolean } = {}): Promise<void> {
     const base = this.plannedBase();
-    const ctx = this.plannedContext;
+    const ctx = this.plannedContext();
     if (!base || !ctx) return;
     const departureAt = new Date(base.getTime() + this.departureOffset() * 60_000).toISOString();
     const waypoints = toWaypoints(this.stops());
@@ -722,6 +781,8 @@ export class Plan implements OnInit {
     this.briefing.set(null);
     this.selected.set(null);
     this.departureOffset.set(0);
+    // A new plan is a new trip — any open Explore session (results, pins) is for the old one.
+    this.closeExplore();
 
     const base = new Date(this.departureAt);
     const departureAt = base.toISOString();
@@ -748,7 +809,7 @@ export class Plan implements OnInit {
       this.plan.set(plan);
       this.briefing.set(briefing);
       this.briefingMemory.remember(identity, briefing.facts);
-      this.plannedContext = { origin, destination };
+      this.plannedContext.set({ origin, destination });
       this.plannedBase.set(base);
       this.plannedWaypointsKey = waypointsKey(waypoints);
       // My Trips → Recent (local history): remember every trip you plan.

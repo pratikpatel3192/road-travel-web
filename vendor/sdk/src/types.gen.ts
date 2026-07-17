@@ -5,6 +5,77 @@ export type ClientOptions = {
 };
 
 /**
+ * AddStopPreviewRequest
+ *
+ * F-005 add-a-stop → F-006 delta preview: the trip as planned + the candidate stop.
+ */
+export type AddStopPreviewRequest = {
+    origin: PlaceModel;
+    destination: PlaceModel;
+    /**
+     * Departure At
+     */
+    departure_at: string;
+    /**
+     * Waypoints
+     */
+    waypoints?: Array<WaypointModel>;
+    /**
+     * Step Meters
+     */
+    step_meters?: number | null;
+    stop: WaypointModel;
+};
+
+/**
+ * AddStopPreviewResponse
+ */
+export type AddStopPreviewResponse = {
+    /**
+     * Added Seconds
+     *
+     * Driving-time delta (dwell excluded).
+     */
+    added_seconds: number;
+    /**
+     * Added Meters
+     */
+    added_meters: number;
+    /**
+     * Dwell Seconds
+     *
+     * The stop's own dwell (shifts arrival too).
+     */
+    dwell_seconds: number;
+    /**
+     * Arrival Before
+     */
+    arrival_before: string;
+    /**
+     * Arrival After
+     */
+    arrival_after: string;
+    /**
+     * Exposure Before
+     *
+     * Severity exposure score (ADR-0032 weights).
+     */
+    exposure_before: number;
+    /**
+     * Exposure After
+     */
+    exposure_after: number;
+    /**
+     * Worst Before
+     */
+    worst_before: 'clear' | 'caution' | 'severe';
+    /**
+     * Worst After
+     */
+    worst_after: 'clear' | 'caution' | 'severe';
+};
+
+/**
  * BriefingFactsModel
  */
 export type BriefingFactsModel = {
@@ -406,6 +477,123 @@ export type DepartureWindowModel = {
 };
 
 /**
+ * ExploreFeedbackRequest
+ *
+ * US: 'I wanted something else' — stored (sanitized, no coordinates), never answered.
+ */
+export type ExploreFeedbackRequest = {
+    /**
+     * Intent
+     */
+    intent: 'passenger_stops' | 'food_mealtime' | 'fuel_charge' | 'scenic' | 'add_stop_search';
+    /**
+     * Note
+     */
+    note?: string | null;
+};
+
+/**
+ * ExploreParams
+ *
+ * Typed intent parameters (all optional; intent-specific).
+ */
+export type ExploreParams = {
+    /**
+     * Query
+     *
+     * add_stop_search only: the place text to search for.
+     */
+    query?: string | null;
+    /**
+     * Fuel Type
+     *
+     * fuel_charge only: restrict to gas or EV charging.
+     */
+    fuel_type?: 'any' | 'gas' | 'ev';
+    /**
+     * Category
+     *
+     * Optional single-category filter (refinement chip).
+     */
+    category?: 'park' | 'playground' | 'rest_area' | 'restaurant' | 'fast_food' | 'gas_station' | 'charging_station' | 'tourist_attraction' | 'viewpoint' | null;
+};
+
+/**
+ * ExploreRequest
+ */
+export type ExploreRequest = {
+    origin: PlaceModel;
+    destination: PlaceModel;
+    /**
+     * Departure At
+     */
+    departure_at: string;
+    /**
+     * Waypoints
+     */
+    waypoints?: Array<WaypointModel>;
+    /**
+     * Step Meters
+     */
+    step_meters?: number | null;
+    /**
+     * Intent
+     */
+    intent: 'passenger_stops' | 'food_mealtime' | 'fuel_charge' | 'scenic' | 'add_stop_search';
+    params?: ExploreParams;
+    /**
+     * Refinements
+     */
+    refinements?: Array<'closer_to_halfway' | 'shorter_detour'>;
+};
+
+/**
+ * ExploreResponse
+ */
+export type ExploreResponse = {
+    /**
+     * Intent
+     */
+    intent: 'passenger_stops' | 'food_mealtime' | 'fuel_charge' | 'scenic' | 'add_stop_search';
+    /**
+     * Cards
+     */
+    cards: Array<PlaceCardModel>;
+    /**
+     * Summary
+     *
+     * One grounded summary line (LLM or template; may be empty).
+     */
+    summary?: string;
+    /**
+     * Summary Model
+     */
+    summary_model?: string;
+    /**
+     * Attribution
+     *
+     * Display attribution for POI data.
+     */
+    attribution?: string;
+    /**
+     * Refinements Applied
+     */
+    refinements_applied?: Array<'closer_to_halfway' | 'shorter_detour'>;
+    /**
+     * Probe Count
+     *
+     * Corridor probe points queried (budget).
+     */
+    probe_count?: number;
+    /**
+     * Cache Hit
+     *
+     * True when served from the per-trip POI budget cache.
+     */
+    cache_hit?: boolean;
+};
+
+/**
  * ExportResponse
  *
  * GDPR/CCPA export — MVP marks the request; a background job fulfils it (ADR-0019 stub).
@@ -649,6 +837,77 @@ export type PaywallResponse = {
      * Store free-trial length for the default plan.
      */
     trial_days: number;
+};
+
+/**
+ * PlaceCardModel
+ *
+ * One ranked result: place · signals · route-clock placement · weather-at-pass-time.
+ *
+ * Signals only — the service NEVER asserts a place is 'safe'/'kid-friendly' (evaluated
+ * guardrail); clients render category/hours/brand/detour and let the driver judge.
+ */
+export type PlaceCardModel = {
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Latitude
+     */
+    latitude: number;
+    /**
+     * Longitude
+     */
+    longitude: number;
+    /**
+     * Categories
+     */
+    categories?: Array<string>;
+    /**
+     * Brand
+     */
+    brand?: string | null;
+    /**
+     * Open At Pass Time
+     *
+     * None = hours unknown to the provider.
+     */
+    open_at_pass_time?: boolean | null;
+    /**
+     * Detour Meters
+     */
+    detour_meters: number;
+    /**
+     * Along Route Meters
+     */
+    along_route_meters: number;
+    /**
+     * Pass Eta
+     *
+     * Dwell-aware ETA of the nearest route sample.
+     */
+    pass_eta: string;
+    /**
+     * Nearest Sample Index
+     */
+    nearest_sample_index: number;
+    /**
+     * The trip's own forecast at the pass-time sample.
+     */
+    weather?: WeatherSnapshotModel | null;
+    /**
+     * Score
+     *
+     * Deterministic engine rank score (lower = better).
+     */
+    score: number;
+    /**
+     * Source
+     *
+     * POI data attribution (e.g. 'mapbox').
+     */
+    source: string;
 };
 
 /**
@@ -1590,6 +1849,89 @@ export type DeleteTripV1TripsTripIdDeleteResponses = {
 };
 
 export type DeleteTripV1TripsTripIdDeleteResponse = DeleteTripV1TripsTripIdDeleteResponses[keyof DeleteTripV1TripsTripIdDeleteResponses];
+
+export type ExploreV1TripsExplorePostData = {
+    body: ExploreRequest;
+    path?: never;
+    query?: never;
+    url: '/v1/trips/explore';
+};
+
+export type ExploreV1TripsExplorePostErrors = {
+    /**
+     * Trial paywall (not entitled).
+     */
+    402: PaywallResponse;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ExploreV1TripsExplorePostError = ExploreV1TripsExplorePostErrors[keyof ExploreV1TripsExplorePostErrors];
+
+export type ExploreV1TripsExplorePostResponses = {
+    /**
+     * Successful Response
+     */
+    200: ExploreResponse;
+};
+
+export type ExploreV1TripsExplorePostResponse = ExploreV1TripsExplorePostResponses[keyof ExploreV1TripsExplorePostResponses];
+
+export type AddStopPreviewV1TripsExploreAddStopPreviewPostData = {
+    body: AddStopPreviewRequest;
+    path?: never;
+    query?: never;
+    url: '/v1/trips/explore/add-stop-preview';
+};
+
+export type AddStopPreviewV1TripsExploreAddStopPreviewPostErrors = {
+    /**
+     * Trial paywall (not entitled).
+     */
+    402: PaywallResponse;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AddStopPreviewV1TripsExploreAddStopPreviewPostError = AddStopPreviewV1TripsExploreAddStopPreviewPostErrors[keyof AddStopPreviewV1TripsExploreAddStopPreviewPostErrors];
+
+export type AddStopPreviewV1TripsExploreAddStopPreviewPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: AddStopPreviewResponse;
+};
+
+export type AddStopPreviewV1TripsExploreAddStopPreviewPostResponse = AddStopPreviewV1TripsExploreAddStopPreviewPostResponses[keyof AddStopPreviewV1TripsExploreAddStopPreviewPostResponses];
+
+export type ExploreFeedbackV1TripsExploreFeedbackPostData = {
+    body: ExploreFeedbackRequest;
+    path?: never;
+    query?: never;
+    url: '/v1/trips/explore/feedback';
+};
+
+export type ExploreFeedbackV1TripsExploreFeedbackPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ExploreFeedbackV1TripsExploreFeedbackPostError = ExploreFeedbackV1TripsExploreFeedbackPostErrors[keyof ExploreFeedbackV1TripsExploreFeedbackPostErrors];
+
+export type ExploreFeedbackV1TripsExploreFeedbackPostResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type ExploreFeedbackV1TripsExploreFeedbackPostResponse = ExploreFeedbackV1TripsExploreFeedbackPostResponses[keyof ExploreFeedbackV1TripsExploreFeedbackPostResponses];
 
 export type CreateBriefingV1BriefingsPostData = {
     body: BriefingRequest;

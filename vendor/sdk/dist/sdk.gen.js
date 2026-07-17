@@ -45,6 +45,42 @@ export const deleteTripV1TripsTripIdDelete = (options) => (options.client ?? cli
     ...options
 });
 /**
+ * One-tap corridor discovery: ranked stops along the planned trip (Pro)
+ */
+export const exploreV1TripsExplorePost = (options) => (options.client ?? client).post({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/trips/explore',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
+ * F-006 delta preview for a candidate stop: added time + changed weather exposure
+ */
+export const addStopPreviewV1TripsExploreAddStopPreviewPost = (options) => (options.client ?? client).post({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/trips/explore/add-stop-preview',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
+ * 'I wanted something else' — recorded (sanitized), never answered (F-005 v1)
+ */
+export const exploreFeedbackV1TripsExploreFeedbackPost = (options) => (options.client ?? client).post({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/trips/explore/feedback',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
  * Generate a grounded natural-language briefing for a planned trip
  */
 export const createBriefingV1BriefingsPost = (options) => (options.client ?? client).post({

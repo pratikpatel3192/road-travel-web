@@ -146,6 +146,12 @@ export class RouteMap implements OnDestroy {
   readonly selectedChange = output<number | null>();
   /** F-006: a long-press (~500 ms mouse/touch hold) asks the planner to add a stop here. */
   readonly stopRequest = output<{ latitude: number; longitude: number }>();
+  /** F-005 Explore: ranked-result pins in card order — numbered, distinct from stop/weather pins;
+   *  an empty array (panel closed / results cleared) removes them. */
+  readonly explorePins = input<{ latitude: number; longitude: number }[]>([]);
+  /** Highlighted explore-card index (two-way with the panel via the plan page). */
+  readonly exploreSelected = input<number | null>(null);
+  readonly exploreSelectedChange = output<number | null>();
   private readonly mapEl = viewChild.required<ElementRef<HTMLDivElement>>('mapEl');
 
   readonly settings = inject(SettingsService);
@@ -164,6 +170,8 @@ export class RouteMap implements OnDestroy {
     { marker: L.Marker; sev: Severity; emoji: string; stop: number | null }
   >();
   private unbindLongPress: (() => void) | null = null;
+  private exploreLayer: L.LayerGroup | null = null;
+  private exploreMarkers: L.Marker[] = [];
 
   constructor() {
     effect(() => {
@@ -175,6 +183,15 @@ export class RouteMap implements OnDestroy {
     effect(() => {
       this.selected();
       this.applySelection();
+    });
+    // F-005: (re)drop the numbered explore pins whenever the result set changes ([] clears).
+    effect(() => {
+      const pins = this.explorePins();
+      setTimeout(() => this.renderExplorePins(pins), 0);
+    });
+    effect(() => {
+      this.exploreSelected();
+      this.applyExploreSelection();
     });
     // Swap base/overlay layers when the map style changes.
     effect(() => {
@@ -324,6 +341,61 @@ export class RouteMap implements OnDestroy {
       const on = idx === sel;
       marker.setIcon(stop != null ? this.stopIcon(stop + 1, sev, on) : this.pinIcon(emoji, sev, on));
       marker.setZIndexOffset(on ? 1000 : stop != null ? 500 : 0);
+    });
+  }
+
+  /**
+   * F-005 explore pins: one numbered pin per result card (1-based, card order), above weather
+   * pins but below a selected marker. Cleared whenever the input empties (panel closed).
+   */
+  private renderExplorePins(pins: readonly { latitude: number; longitude: number }[]): void {
+    const map = this.map;
+    if (!map) return;
+    this.exploreLayer?.remove();
+    this.exploreLayer = null;
+    this.exploreMarkers = [];
+    if (!pins.length) return;
+    const layer = L.layerGroup().addTo(map);
+    this.exploreLayer = layer;
+    const sel = this.exploreSelected();
+    pins.forEach((p, i) => {
+      const marker = L.marker([p.latitude, p.longitude], {
+        icon: this.exploreIcon(i + 1, i === sel),
+        keyboard: false,
+        zIndexOffset: i === sel ? 1100 : 700,
+      });
+      marker.on('click', () => this.exploreSelectedChange.emit(i));
+      marker.addTo(layer);
+      this.exploreMarkers.push(marker);
+    });
+  }
+
+  private applyExploreSelection(): void {
+    const sel = this.exploreSelected();
+    this.exploreMarkers.forEach((m, i) => {
+      m.setIcon(this.exploreIcon(i + 1, i === sel));
+      m.setZIndexOffset(i === sel ? 1100 : 700);
+    });
+  }
+
+  /**
+   * F-005 explore pin: the 1-based result number on a blue teardrop-cornered badge — visually
+   * distinct from the accent/severity stop pins and the white emoji weather dots.
+   */
+  private exploreIcon(n: number, selected: boolean): L.DivIcon {
+    const size = selected ? 32 : 25;
+    const border = selected ? 3 : 2;
+    const font = selected ? 15 : 12;
+    const html =
+      `<div style="width:${size}px;height:${size}px;border-radius:50% 50% 50% 4px;` +
+      `display:flex;align-items:center;justify-content:center;` +
+      `background:#2a78d6;color:#fff;border:${border}px solid #fff;` +
+      `box-shadow:0 1px 4px rgba(0,0,0,0.35);font-size:${font}px;font-weight:700;line-height:1;">${n}</div>`;
+    return L.divIcon({
+      html,
+      className: 'wx-explore-pin',
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
     });
   }
 

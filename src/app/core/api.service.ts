@@ -1,9 +1,14 @@
 import { Injectable, inject } from '@angular/core';
 import {
+  type AddStopPreviewRequest,
+  type AddStopPreviewResponse,
   type BriefingRequest,
   type BriefingResponse,
   type CheckoutSessionResponse,
   type ConsentInput,
+  type ExploreFeedbackRequest,
+  type ExploreRequest,
+  type ExploreResponse,
   type MeResponse,
   type OnboardingRequest,
   type PaywallResponse,
@@ -17,9 +22,12 @@ import {
   type SavedTripsResponse,
   type SurveyQuestionsResponse,
   type TrialClaimResponse,
+  addStopPreviewV1TripsExploreAddStopPreviewPost,
   claimTrialV1MeTrialClaimPost,
   createBriefingV1BriefingsPost,
   deleteTripV1TripsTripIdDelete,
+  exploreFeedbackV1TripsExploreFeedbackPost,
+  exploreV1TripsExplorePost,
   listTripsV1TripsGet,
   createCheckoutSessionV1BillingCheckoutSessionPost,
   createPortalSessionV1BillingPortalSessionPost,
@@ -115,6 +123,35 @@ export class ApiService {
     const { data, error, response } = await planTripV1TripsPlanPost({ ...this.options(), body });
     if (error || !data) this.raise(response, error);
     return data as PlanTripResponse;
+  }
+
+  /**
+   * F-005 Trip Explorer: ranked stop cards along the planned corridor for one intent (Pro —
+   * a 402 becomes a {@link PaywallError} exactly like plan/briefings; ADR-0033).
+   */
+  async explore(body: ExploreRequest): Promise<ExploreResponse> {
+    const { data, error, response } = await exploreV1TripsExplorePost({ ...this.options(), body });
+    if (error || !data) this.raise(response, error);
+    return data as ExploreResponse;
+  }
+
+  /** F-005 → F-006 add-a-stop delta preview: added time + arrival + weather-exposure change. */
+  async addStopPreview(body: AddStopPreviewRequest): Promise<AddStopPreviewResponse> {
+    const { data, error, response } = await addStopPreviewV1TripsExploreAddStopPreviewPost({
+      ...this.options(),
+      body,
+    });
+    if (error || !data) this.raise(response, error);
+    return data as AddStopPreviewResponse;
+  }
+
+  /** F-005 "I wanted something else" drop-box — recorded server-side, never answered (204). */
+  async exploreFeedback(body: ExploreFeedbackRequest): Promise<void> {
+    const { error, response } = await exploreFeedbackV1TripsExploreFeedbackPost({
+      ...this.options(),
+      body,
+    });
+    if (response && !response.ok) this.raise(response, error);
   }
 
   /** Grounded natural-language briefing + structured facts (F-001). */
