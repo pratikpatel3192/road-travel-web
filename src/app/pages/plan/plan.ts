@@ -703,9 +703,12 @@ export class Plan implements OnInit {
     this.onStopsChange([...this.stops(), newStop(event.place, event.dwellMinutes)]);
   }
 
-  /** Panel result cards → numbered map pins (a fresh set resets the highlight). */
+  /** Panel result cards → numbered map pins (a fresh set resets the highlight). Ordered start→end
+   *  along the route (by `along_route_meters`), not by relevance score, so the numbered pins + list
+   *  read in travel sequence — 1 nearest the origin, the last nearest the destination. */
   onExploreCards(cards: PlaceCardModel[]): void {
-    this.exploreCards.set(cards);
+    const ordered = [...cards].sort((a, b) => a.along_route_meters - b.along_route_meters);
+    this.exploreCards.set(ordered);
     this.exploreSelected.set(null);
   }
 
