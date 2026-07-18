@@ -147,6 +147,8 @@ export class PlaceField {
   readonly index = input<number | null>(null);
   readonly placeholder = input('Search a place');
   readonly place = model<PlaceValue | null>(null);
+  /** Proximity bias for autocomplete — rank suggestions near this point first (e.g. the route). */
+  readonly near = input<{ latitude: number; longitude: number } | null>(null);
 
   private readonly geocode = inject(GeocodeService);
   readonly query = signal('');
@@ -180,7 +182,7 @@ export class PlaceField {
     this.loading.set(true);
     const mine = ++this.seq;
     this.timer = setTimeout(async () => {
-      const results = await this.geocode.search(value);
+      const results = await this.geocode.search(value, this.near());
       if (mine !== this.seq) return; // a newer query superseded this one
       this.suggestions.set(results);
       this.loading.set(false);

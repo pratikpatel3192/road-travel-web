@@ -70,17 +70,19 @@ import {
           kind="origin"
           placeholder="Origin"
           [place]="origin()"
+          [near]="destination()"
           (placeChange)="origin.set($event)"
         />
         <div class="divider">
           <button class="swap" type="button" (click)="swap()" aria-label="Swap origin and destination">⇅</button>
         </div>
         <!-- F-006: up to 3 ordered stops between origin and destination; every edit re-plans. -->
-        <app-stop-list [stops]="stops()" (stopsChange)="onStopsChange($event)" />
+        <app-stop-list [stops]="stops()" [near]="stopBias()" (stopsChange)="onStopsChange($event)" />
         <app-place-field
           kind="destination"
           placeholder="Destination"
           [place]="destination()"
+          [near]="origin()"
           (placeChange)="destination.set($event)"
         />
       </div>
@@ -520,6 +522,18 @@ export class Plan implements OnInit {
   private readonly briefingMemory = new BriefingMemory();
 
   readonly canSubmit = computed(() => !!this.origin() && !!this.destination());
+
+  /** Proximity bias for stop autocomplete: the midpoint of origin↔destination (the route corridor),
+   *  so a typed stop name resolves near the trip — "Santa Fe" on an Austin→LA route is New Mexico,
+   *  not somewhere on another continent. Falls back to whichever endpoint is set. */
+  readonly stopBias = computed(() => {
+    const o = this.origin();
+    const d = this.destination();
+    if (o && d) {
+      return { latitude: (o.latitude + d.latitude) / 2, longitude: (o.longitude + d.longitude) / 2 };
+    }
+    return o ?? d ?? null;
+  });
 
   // --- F-005 Trip Explorer state -----------------------------------------------------------------
   readonly exploreOpen = signal(false);

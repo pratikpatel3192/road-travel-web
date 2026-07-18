@@ -148,7 +148,7 @@ export class RouteMap implements OnDestroy {
   readonly stopRequest = output<{ latitude: number; longitude: number }>();
   /** F-005 Explore: ranked-result pins in card order — numbered, distinct from stop/weather pins;
    *  an empty array (panel closed / results cleared) removes them. */
-  readonly explorePins = input<{ latitude: number; longitude: number }[]>([]);
+  readonly explorePins = input<{ latitude: number; longitude: number; name?: string }[]>([]);
   /** Highlighted explore-card index (two-way with the panel via the plan page). */
   readonly exploreSelected = input<number | null>(null);
   readonly exploreSelectedChange = output<number | null>();
@@ -264,7 +264,21 @@ export class RouteMap implements OnDestroy {
         keyboard: false,
         zIndexOffset: stop != null ? 500 : 0,
       });
-      marker.on('click', () => this.selectedChange.emit(s.index));
+      // F-006: label stop pins with their name ("Stop 1 — Santa Fe"); weather milestones stay
+      // emoji-only to avoid clutter (there are ~14 of them).
+      if (stop != null) {
+        const wpName = plan.waypoints?.[stop]?.name?.split(',')[0]?.trim(); // short label (drop ", CA, USA")
+        marker.bindTooltip(`Stop ${stop + 1}${wpName ? ' — ' + wpName : ''}`, {
+          permanent: true,
+          direction: 'right',
+          offset: [10, 0],
+          className: 'wx-map-label',
+        });
+      }
+      marker.on('click', () => {
+        this.selectedChange.emit(s.index);
+        this.zoomTo(s.latitude, s.longitude); // click-to-zoom (a little), centered on the milestone
+      });
       marker.addTo(layer);
       this.markers.set(s.index, { marker, sev, emoji, stop });
     }
@@ -297,6 +311,15 @@ export class RouteMap implements OnDestroy {
   recenter(): void {
     const loc = this.userLocation();
     if (loc && this.map) this.map.setView([loc.latitude, loc.longitude], 12);
+  }
+
+  /** Click-to-zoom: center on a milestone/pin and zoom in a little. Never zooms back out (so
+   *  clicking an already-close pin just recenters), and caps so it doesn't slam to street level. */
+  private zoomTo(latitude: number, longitude: number): void {
+    const map = this.map;
+    if (!map) return;
+    const target = Math.min(Math.max(map.getZoom() + 1, 10), 13);
+    map.setView([latitude, longitude], target, { animate: true });
   }
 
   /** (Re)build the base map and hybrid overlays from the current map-style setting. */
@@ -348,7 +371,9 @@ export class RouteMap implements OnDestroy {
    * F-005 explore pins: one numbered pin per result card (1-based, card order), above weather
    * pins but below a selected marker. Cleared whenever the input empties (panel closed).
    */
-  private renderExplorePins(pins: readonly { latitude: number; longitude: number }[]): void {
+  private renderExplorePins(
+    pins: readonly { latitude: number; longitude: number; name?: string }[],
+  ): void {
     const map = this.map;
     if (!map) return;
     this.exploreLayer?.remove();
@@ -364,7 +389,19 @@ export class RouteMap implements OnDestroy {
         keyboard: false,
         zIndexOffset: i === sel ? 1100 : 700,
       });
-      marker.on('click', () => this.exploreSelectedChange.emit(i));
+      // F-005: label each result pin with its number + place name ("1. Grand Canyon Overlook").
+      if (p.name) {
+        marker.bindTooltip(`${i + 1}. ${p.name.split(',')[0].trim()}`, {
+          permanent: true,
+          direction: 'right',
+          offset: [10, 0],
+          className: 'wx-map-label',
+        });
+      }
+      marker.on('click', () => {
+        this.exploreSelectedChange.emit(i);
+        this.zoomTo(p.latitude, p.longitude);
+      });
       marker.addTo(layer);
       this.exploreMarkers.push(marker);
     });

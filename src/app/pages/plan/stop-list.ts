@@ -1,4 +1,4 @@
-import { Component, model } from '@angular/core';
+import { Component, input, model } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { PlaceField, type PlaceValue } from './place-field';
@@ -22,6 +22,7 @@ import { DWELL_PRESETS, type DwellMinutes, MAX_STOPS, type StopDraft, newStop } 
             [index]="i + 1"
             [placeholder]="'Stop ' + (i + 1)"
             [place]="s.place"
+            [near]="near()"
             (placeChange)="setPlace(i, $event)"
           />
           <button class="tool remove" type="button" (click)="remove(i)" [attr.aria-label]="'Remove stop ' + (i + 1)">
@@ -162,6 +163,8 @@ import { DWELL_PRESETS, type DwellMinutes, MAX_STOPS, type StopDraft, newStop } 
 export class StopList {
   /** The ordered stop rows — two-way bound; every edit emits a fresh array (`stopsChange`). */
   readonly stops = model<StopDraft[]>([]);
+  /** Proximity bias for stop autocomplete — the route midpoint, so suggestions stay near the trip. */
+  readonly near = input<{ latitude: number; longitude: number } | null>(null);
 
   readonly presets = DWELL_PRESETS;
   readonly max = MAX_STOPS;

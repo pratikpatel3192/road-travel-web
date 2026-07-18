@@ -13,14 +13,22 @@ export interface GeoResult {
  */
 @Injectable({ providedIn: 'root' })
 export class GeocodeService {
-  async search(query: string): Promise<GeoResult[]> {
+  /**
+   * @param near optional proximity bias (lon/lat) — Photon ranks results near this point first, so a
+   *   stop on an Austin→LA route surfaces the New Mexico "Santa Fe", not one on another continent.
+   */
+  async search(
+    query: string,
+    near?: { latitude: number; longitude: number } | null,
+  ): Promise<GeoResult[]> {
     const q = query.trim();
     if (q.length < 3) return [];
     try {
-      const res = await fetch(
-        `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=6`,
-        { headers: { Accept: 'application/json' } },
-      );
+      let url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=6`;
+      if (near && Number.isFinite(near.latitude) && Number.isFinite(near.longitude)) {
+        url += `&lat=${near.latitude}&lon=${near.longitude}`; // proximity bias (rank nearby first)
+      }
+      const res = await fetch(url, { headers: { Accept: 'application/json' } });
       if (!res.ok) return [];
       const json = await res.json();
       const features: unknown[] = json?.features ?? [];
