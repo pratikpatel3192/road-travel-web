@@ -3,6 +3,7 @@ import { Routes } from '@angular/router';
 import { authGuard, realAccountGuard } from './core/auth.guard';
 import { Privacy } from './pages/privacy/privacy';
 import { Support } from './pages/support/support';
+import { Terms } from './pages/terms/terms';
 
 export const routes: Routes = [
   // The root IS the product: the trip planner renders directly at / (T-021). The old marketing home
@@ -29,6 +30,7 @@ export const routes: Routes = [
     canActivate: [realAccountGuard],
   },
   { path: 'privacy', component: Privacy },
+  { path: 'terms', component: Terms },
   { path: 'support', component: Support },
   { path: '**', redirectTo: '' },
 ];
