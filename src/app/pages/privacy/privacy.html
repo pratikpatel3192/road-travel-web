@@ -6,56 +6,90 @@
     Legal
   </div>
   <h1>Road Travel — Privacy Policy</h1>
-  <p class="meta"><strong>Effective date:</strong> July 1, 2026</p>
+  <p class="meta"><strong>Effective date:</strong> July 18, 2026</p>
 
-  <p class="intro">Road Travel is a navigation and weather app that plans driving routes and shows the weather you'll meet along the way, time-shifted to your estimated arrival at each point. This policy explains what the app does with your information. <strong>We designed Road Travel to run on your device and to collect as little as possible.</strong></p>
+  <p class="intro">Road Travel plans driving routes and shows the weather you'll meet along the way, timed to your estimated arrival at each point. This policy explains what information the app collects, how it is used, who processes it, and the choices you have. <strong>We collect only what the app needs to work, we don't show ads or track you across other apps, and we never sell your data.</strong></p>
 
   <div class="section">
     <h2>Summary</h2>
     <ul>
-      <li>Road Travel does <strong>not</strong> require an account and does <strong>not</strong> ask for your name or email.</li>
-      <li>Your trips, searches, and settings are stored <strong>on your device</strong>. We do not upload them to a server we control.</li>
-      <li>We do <strong>not</strong> track you across apps or websites, and we do <strong>not</strong> sell your data.</li>
-      <li>Location, maps, weather, and subscriptions are handled by Apple frameworks and one subscription provider (RevenueCat), described below.</li>
+      <li>You can browse and plan with an anonymous session; some features require an <strong>account</strong> (Apple, Google, or email sign-in), which involves your <strong>email address</strong>.</li>
+      <li>Your <strong>saved trips, stops, and profile</strong> (such as vehicle type and preferences) are stored on <strong>our backend</strong> so they sync across your devices.</li>
+      <li>With your permission, your <strong>location</strong> is used to plan routes, navigate, and check the weather ahead. It is not sold and we do not keep a location history for advertising.</li>
+      <li>We do <strong>not</strong> track you across apps or websites, we do <strong>not</strong> use advertising SDKs, and we do <strong>not</strong> sell your data.</li>
+      <li>You can <strong>export or delete</strong> your data at any time (see "Your rights and choices").</li>
     </ul>
   </div>
 
   <div class="section">
-    <h2>Information the app uses</h2>
+    <h2>Information we collect and use</h2>
+
+    <h3>Account and sign-in</h3>
+    <p>You can use Road Travel with an anonymous session. To save and sync trips, keep Pro across devices, or use account features, you create an account by signing in with <strong>Sign in with Apple</strong>, <strong>Google</strong>, or an <strong>email magic link</strong>. This involves your <strong>email address</strong> and an account identifier. Authentication is handled by our provider <strong>Supabase</strong>. We use this to operate your account and secure your data — not for advertising.</p>
 
     <h3>Location</h3>
-    <p>With your permission, Road Travel uses your device location to set your current location as the starting point of a trip, provide turn-by-turn navigation, and check the weather ahead along your route (including while the screen is off, during active navigation). Location is processed on your device to compute routes and match forecasts. Road Travel does not store a history of your location on any server we operate. You can revoke location access at any time in <strong>Settings → Privacy &amp; Security → Location Services</strong>.</p>
+    <p>With your permission, Road Travel uses your device location to set your starting point, provide turn-by-turn navigation, and check the weather ahead along your route (including while the screen is off during active navigation). To plan a route and match forecasts, the relevant coordinates are sent to our backend and to our mapping, routing, and weather providers (below). We do not keep a location history for advertising or sell your location. You can revoke location access at any time in <strong>Settings → Privacy &amp; Security → Location Services</strong>.</p>
 
-    <h3>Routes, places, and saved trips</h3>
-    <p>Origins, destinations, autocomplete searches, recent trips, and saved trips are stored <strong>locally on your device</strong>. They stay on your device unless you delete them or delete the app. Address search and routing are performed through Apple MapKit.</p>
+    <h3>Trips, stops, and profile</h3>
+    <p>When you save a trip, add stops, or set preferences, we store that content — origins, destinations, waypoints, saved trips, vehicle type, onboarding answers, and settings — on <strong>our backend</strong>, linked to your account, so it syncs across your devices. Address autocomplete is provided through Apple MapKit (on iPhone) or an open geocoding service (on the web) to turn what you type into places.</p>
 
     <h3>Weather</h3>
-    <p>Weather forecasts are provided by <strong>Apple Weather (WeatherKit)</strong>. When the app requests a forecast for points along your route, the relevant coordinates are sent to Apple to return the forecast. Apple's handling of that data is governed by Apple's privacy policy and the Apple Weather / WeatherKit terms. See Apple's data-source attribution at <a href="https://weatherkit.apple.com/legal-attribution.html" target="_blank" rel="noopener">weatherkit.apple.com/legal-attribution.html</a>.</p>
+    <p>Weather forecasts are provided by <strong>Apple Weather (WeatherKit)</strong>. When the app requests a forecast for points along your route, the relevant coordinates are sent to Apple to return the forecast, governed by Apple's privacy policy and the Apple Weather / WeatherKit terms. See Apple's attribution at <a href="https://weatherkit.apple.com/legal-attribution.html" target="_blank" rel="noopener">weatherkit.apple.com/legal-attribution.html</a>.</p>
+
+    <h3>Maps, search, and routing</h3>
+    <p>Maps, place search, and routing are provided by <strong>Apple MapKit</strong> (on iPhone) and by <strong>Mapbox</strong> and open map data (on the web and for multi-stop and point-of-interest routing). The relevant coordinates and search terms are sent to these providers to draw the map, find places, and compute routes.</p>
+
+    <h3>AI trip briefings</h3>
+    <p>Optional plain-language trip briefings are generated by <strong>Anthropic (Claude)</strong>. The briefing is written from the weather facts already computed for your route (conditions, timing, severity) — not from your identity. We operate this under a zero-retention arrangement: <strong>your inputs are not used to train the model</strong> and are not retained beyond generating the response.</p>
 
     <h3>Subscriptions (Road Travel Pro)</h3>
-    <p>Optional subscriptions are sold through <strong>Apple's App Store (StoreKit)</strong> and managed with the help of <strong>RevenueCat</strong>, a subscription-infrastructure provider. To validate your purchase and keep your Pro status in sync across your devices, a random, app-generated identifier and your purchase/receipt information are processed by Apple and RevenueCat. This does <strong>not</strong> include your name, email, or Apple ID. Apple handles all payment information; <strong>Road Travel never sees or stores your payment details.</strong></p>
+    <p>Optional subscriptions are sold through <strong>Apple's App Store (StoreKit)</strong> and managed with <strong>RevenueCat</strong>, a subscription-infrastructure provider. To validate purchases and keep your Pro status in sync, your account identifier and purchase/receipt information are processed by Apple and RevenueCat. Apple handles all payment information; <strong>Road Travel never sees or stores your payment details.</strong></p>
     <ul>
       <li>RevenueCat privacy policy: <a href="https://www.revenuecat.com/privacy" target="_blank" rel="noopener">revenuecat.com/privacy</a></li>
       <li>Apple's subscription and payment handling is governed by Apple's privacy policy.</li>
     </ul>
 
     <h3>Diagnostics</h3>
-    <p>Any in-app event logging is used only to help the app function and is not used to build a profile of you or to track you across other apps or websites.</p>
+    <p>In-app event logging is used only to help the app function. It stays on your device and is not used to build an advertising profile or to track you across other apps or websites.</p>
+  </div>
+
+  <div class="section">
+    <h2>Service providers (subprocessors)</h2>
+    <p>We share the minimum data needed with providers who process it on our behalf, under contract, to run the app:</p>
+    <ul>
+      <li><strong>Supabase</strong> — authentication and database for your account and trips (<a href="https://supabase.com/privacy" target="_blank" rel="noopener">supabase.com/privacy</a>).</li>
+      <li><strong>Google Cloud</strong> — hosting for our backend.</li>
+      <li><strong>Apple</strong> — weather, maps/search, and App Store subscriptions.</li>
+      <li><strong>Mapbox</strong> — web maps, routing, and points of interest (<a href="https://www.mapbox.com/legal/privacy" target="_blank" rel="noopener">mapbox.com/legal/privacy</a>).</li>
+      <li><strong>RevenueCat</strong> — subscription management.</li>
+      <li><strong>Anthropic</strong> — AI trip briefings, under a no-training / zero-retention arrangement.</li>
+    </ul>
   </div>
 
   <div class="section">
     <h2>What we do NOT do</h2>
     <ul>
-      <li>We do not require or collect accounts, names, or email addresses.</li>
       <li>We do not use third-party advertising or ad tracking.</li>
-      <li>We do not sell or rent personal information.</li>
-      <li>We do not maintain a server-side history of your trips or locations.</li>
+      <li>We do not sell or rent your personal information.</li>
+      <li>We do not track you across other apps or websites.</li>
+      <li>We do not use your trips or content to train AI models.</li>
     </ul>
   </div>
 
   <div class="section">
-    <h2>Data retention and deletion</h2>
-    <p>Because your trips and settings live on your device, you control them: delete individual saved trips in the app, or delete the app to remove its local data. Subscription records held by Apple and RevenueCat are retained per their respective policies.</p>
+    <h2>Your rights and choices</h2>
+    <p>You control your data:</p>
+    <ul>
+      <li><strong>Export</strong> a copy of your data from the app (Settings).</li>
+      <li><strong>Delete</strong> your account and its data from the app (Settings); this removes your trips, profile, and account from our backend. Subscription records held by Apple and RevenueCat are retained per their own policies.</li>
+      <li><strong>Revoke location</strong> access at any time in your device Settings.</li>
+      <li>Depending on where you live, you may have additional rights (access, correction, deletion, portability). Contact us to exercise them.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>Data retention and security</h2>
+    <p>We keep account and trip data while your account is active, and delete it when you delete your account (backups age out on a rolling basis). Data is encrypted in transit (HTTPS/TLS) and at rest by our hosting and database providers.</p>
   </div>
 
   <div class="section">
