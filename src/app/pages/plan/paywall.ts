@@ -29,6 +29,16 @@ import { PaywallService } from '../../core/paywall.service';
           <h2>Go Pro</h2>
           <p class="msg">{{ p.message }}</p>
 
+          <ul class="benefits">
+            <li>Weather timed to your exact arrival</li>
+            <li>Weather-ahead alerts as you drive</li>
+            <li>Multi-stop trips, planned stop by stop</li>
+            <li>Scenic spots, food &amp; fuel along the way</li>
+            <li>Plain-language AI trip briefings</li>
+            <li>Plan future departures &amp; compare times</li>
+            <li>Save &amp; sync your trips across devices</li>
+          </ul>
+
           <div class="plans">
             @for (plan of p.plans; track plan.product_id) {
               <button
@@ -125,6 +135,28 @@ import { PaywallService } from '../../core/paywall.service';
         margin: 0 0 16px;
         color: var(--muted);
         font-size: 14px;
+      }
+      .benefits {
+        list-style: none;
+        margin: 0 0 18px;
+        padding: 0;
+        display: grid;
+        gap: 9px;
+      }
+      .benefits li {
+        position: relative;
+        padding-left: 26px;
+        font-size: 14px;
+        color: var(--text);
+        line-height: 1.35;
+      }
+      .benefits li::before {
+        content: '✓';
+        position: absolute;
+        left: 0;
+        top: 0;
+        color: var(--accent);
+        font-weight: 800;
       }
       .plans {
         display: grid;
