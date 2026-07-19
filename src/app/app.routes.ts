@@ -29,6 +29,12 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/saved/saved').then((m) => m.Saved),
     canActivate: [realAccountGuard],
   },
+  // F-007 P1: view-only drives/garage/stats (recording is iOS-only for 3.0.0).
+  {
+    path: 'driving',
+    loadComponent: () => import('./pages/driving/driving').then((m) => m.Driving),
+    canActivate: [realAccountGuard],
+  },
   { path: 'privacy', component: Privacy },
   { path: 'terms', component: Terms },
   { path: 'support', component: Support },

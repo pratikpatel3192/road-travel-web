@@ -302,7 +302,7 @@ export type ConsentInput = {
     /**
      * Consent Type
      */
-    consent_type: 'tos' | 'privacy' | 'marketing';
+    consent_type: 'tos' | 'privacy' | 'marketing' | 'drive_recording' | 'live_location_sharing';
     /**
      * Granted
      */
@@ -317,7 +317,7 @@ export type ConsentModel = {
     /**
      * Consent Type
      */
-    consent_type: 'tos' | 'privacy' | 'marketing';
+    consent_type: 'tos' | 'privacy' | 'marketing' | 'drive_recording' | 'live_location_sharing';
     /**
      * Document Version
      */
@@ -457,6 +457,113 @@ export type DepartureWindowModel = {
     options?: Array<DepartureOptionModel>;
 };
 /**
+ * DriveModel
+ *
+ * A recorded drive with its server-computed stats and simplified polyline.
+ */
+export type DriveModel = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Started At
+     */
+    started_at: string;
+    /**
+     * Ended At
+     */
+    ended_at: string;
+    /**
+     * Distance Meters
+     */
+    distance_meters: number;
+    /**
+     * Duration Seconds
+     */
+    duration_seconds: number;
+    /**
+     * Moving Seconds
+     */
+    moving_seconds: number;
+    /**
+     * Avg Speed Mps
+     */
+    avg_speed_mps: number;
+    /**
+     * Max Speed Mps
+     */
+    max_speed_mps: number;
+    /**
+     * Polyline
+     *
+     * Simplified track as [latitude, longitude] pairs.
+     */
+    polyline: Array<Array<number>>;
+    /**
+     * Regions
+     *
+     * Coarse region codes crossed.
+     */
+    regions?: Array<string>;
+    /**
+     * Start Place
+     */
+    start_place?: string | null;
+    /**
+     * End Place
+     */
+    end_place?: string | null;
+    /**
+     * Visibility
+     */
+    visibility?: 'private' | 'friends';
+    /**
+     * Title
+     */
+    title?: string | null;
+    /**
+     * Vehicle Id
+     */
+    vehicle_id?: string | null;
+    /**
+     * Trip Id
+     */
+    trip_id?: string | null;
+    /**
+     * Created At
+     */
+    created_at: string;
+};
+/**
+ * DrivePointModel
+ *
+ * One raw GPS fix as recorded on device.
+ */
+export type DrivePointModel = {
+    /**
+     * Latitude
+     */
+    latitude: number;
+    /**
+     * Longitude
+     */
+    longitude: number;
+    /**
+     * Timestamp
+     */
+    timestamp: string;
+};
+/**
+ * DrivesResponse
+ */
+export type DrivesResponse = {
+    /**
+     * Drives
+     */
+    drives: Array<DriveModel>;
+};
+/**
  * ExploreFeedbackRequest
  *
  * US: 'I wanted something else' — stored (sanitized, no coordinates), never answered.
@@ -572,27 +679,26 @@ export type ExploreResponse = {
 /**
  * ExportResponse
  *
- * GDPR/CCPA export — MVP marks the request; a background job fulfils it (ADR-0019 stub).
+ * GDPR/CCPA data export (F-004) — a complete, machine-readable snapshot of the account's PII,
+ * produced synchronously and returned to the authenticated account holder (Art. 15/20).
  */
 export type ExportResponse = {
-    /**
-     * Status
-     */
-    status: string;
     /**
      * User Id
      */
     user_id: string;
     /**
-     * Requested At
+     * Generated At
      */
-    requested_at: string;
+    generated_at: string;
     /**
-     * Detail
+     * Data
      *
-     * What will happen and roughly when.
+     * All personal data the service holds for this user (profile, saved trips incl. coordinates, recorded drives incl. polylines, garage vehicles, driving stats, survey answers, consents, usage, billing linkage).
      */
-    detail: string;
+    data: {
+        [key: string]: unknown;
+    };
 };
 /**
  * FactsDiffEntryModel
@@ -733,6 +839,31 @@ export type MeResponse = {
      * Active subscription's manage-routing info (ADR-0028); null when none active.
      */
     subscription?: SubscriptionModel | null;
+};
+/**
+ * MeStatsResponse
+ *
+ * Per-user driving aggregates (rollup — never recomputed from polylines on read).
+ */
+export type MeStatsResponse = {
+    /**
+     * Total Distance Meters
+     */
+    total_distance_meters: number;
+    /**
+     * Drive Count
+     */
+    drive_count: number;
+    /**
+     * Total Duration Seconds
+     */
+    total_duration_seconds: number;
+    /**
+     * Regions
+     *
+     * Distinct coarse region codes ever driven, sorted.
+     */
+    regions?: Array<string>;
 };
 /**
  * OnboardingRequest
@@ -1241,6 +1372,39 @@ export type RouteSampleModel = {
     dwell_seconds?: number;
 };
 /**
+ * SaveDriveRequest
+ *
+ * A finished recording. Raw fixes only — the server computes everything else.
+ */
+export type SaveDriveRequest = {
+    /**
+     * Points
+     */
+    points: Array<DrivePointModel>;
+    /**
+     * Vehicle Id
+     */
+    vehicle_id?: string | null;
+    /**
+     * Trip Id
+     *
+     * Links the drive to its planned trip (weather-along-route story).
+     */
+    trip_id?: string | null;
+    /**
+     * Title
+     */
+    title?: string | null;
+    /**
+     * Start Place
+     */
+    start_place?: string | null;
+    /**
+     * End Place
+     */
+    end_place?: string | null;
+};
+/**
  * SaveTripRequest
  *
  * Minimal payload to persist a planned trip for cross-device sync (login-only; ADR-0025 has
@@ -1497,6 +1661,21 @@ export type TrialModel = {
     ends_at?: string | null;
 };
 /**
+ * UpdateDriveRequest
+ *
+ * Editable drive metadata. Stats/polyline are immutable; visibility unlocks in P2.
+ */
+export type UpdateDriveRequest = {
+    /**
+     * Title
+     */
+    title?: string | null;
+    /**
+     * Vehicle Id
+     */
+    vehicle_id?: string | null;
+};
+/**
  * ValidationError
  */
 export type ValidationError = {
@@ -1524,6 +1703,84 @@ export type ValidationError = {
     };
 };
 /**
+ * VehicleCreateRequest
+ */
+export type VehicleCreateRequest = {
+    /**
+     * Make
+     */
+    make: string;
+    /**
+     * Model
+     */
+    model: string;
+    /**
+     * Year
+     */
+    year?: number | null;
+    /**
+     * Trim
+     */
+    trim?: string | null;
+    /**
+     * Color
+     */
+    color?: string | null;
+    /**
+     * Photo Path
+     *
+     * Supabase Storage object path (no URL).
+     */
+    photo_path?: string | null;
+    /**
+     * Vehicle Type
+     *
+     * A seeded vehicle_types code (car/suv/…/ev).
+     */
+    vehicle_type: string;
+};
+/**
+ * VehicleModel
+ */
+export type VehicleModel = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Make
+     */
+    make: string;
+    /**
+     * Model
+     */
+    model: string;
+    /**
+     * Year
+     */
+    year?: number | null;
+    /**
+     * Trim
+     */
+    trim?: string | null;
+    /**
+     * Color
+     */
+    color?: string | null;
+    /**
+     * Photo Path
+     */
+    photo_path?: string | null;
+    /**
+     * Vehicle Type
+     */
+    vehicle_type: string;
+    /**
+     * Created At
+     */
+    created_at: string;
+};
+/**
  * VehicleTypeModel
  */
 export type VehicleTypeModel = {
@@ -1539,6 +1796,48 @@ export type VehicleTypeModel = {
      * Sort
      */
     sort: number;
+};
+/**
+ * VehicleUpdateRequest
+ */
+export type VehicleUpdateRequest = {
+    /**
+     * Make
+     */
+    make?: string | null;
+    /**
+     * Model
+     */
+    model?: string | null;
+    /**
+     * Year
+     */
+    year?: number | null;
+    /**
+     * Trim
+     */
+    trim?: string | null;
+    /**
+     * Color
+     */
+    color?: string | null;
+    /**
+     * Photo Path
+     */
+    photo_path?: string | null;
+    /**
+     * Vehicle Type
+     */
+    vehicle_type?: string | null;
+};
+/**
+ * VehiclesResponse
+ */
+export type VehiclesResponse = {
+    /**
+     * Vehicles
+     */
+    vehicles: Array<VehicleModel>;
 };
 /**
  * WaypointModel
@@ -2113,4 +2412,211 @@ export type CreatePortalSessionV1BillingPortalSessionPostResponses = {
     200: PortalSessionResponse;
 };
 export type CreatePortalSessionV1BillingPortalSessionPostResponse = CreatePortalSessionV1BillingPortalSessionPostResponses[keyof CreatePortalSessionV1BillingPortalSessionPostResponses];
+export type ListDrivesV1DrivesGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/drives';
+};
+export type ListDrivesV1DrivesGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: DrivesResponse;
+};
+export type ListDrivesV1DrivesGetResponse = ListDrivesV1DrivesGetResponses[keyof ListDrivesV1DrivesGetResponses];
+export type SaveDriveV1DrivesPostData = {
+    body: SaveDriveRequest;
+    path?: never;
+    query?: never;
+    url: '/v1/drives';
+};
+export type SaveDriveV1DrivesPostErrors = {
+    /**
+     * consent_required: drive_recording not granted at current version.
+     */
+    400: unknown;
+    /**
+     * drive_too_short: fewer than two usable fixes after filtering.
+     */
+    422: unknown;
+};
+export type SaveDriveV1DrivesPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: DriveModel;
+};
+export type SaveDriveV1DrivesPostResponse = SaveDriveV1DrivesPostResponses[keyof SaveDriveV1DrivesPostResponses];
+export type DeleteDriveV1DrivesDriveIdDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * Drive Id
+         */
+        drive_id: string;
+    };
+    query?: never;
+    url: '/v1/drives/{drive_id}';
+};
+export type DeleteDriveV1DrivesDriveIdDeleteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+export type DeleteDriveV1DrivesDriveIdDeleteError = DeleteDriveV1DrivesDriveIdDeleteErrors[keyof DeleteDriveV1DrivesDriveIdDeleteErrors];
+export type DeleteDriveV1DrivesDriveIdDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+export type DeleteDriveV1DrivesDriveIdDeleteResponse = DeleteDriveV1DrivesDriveIdDeleteResponses[keyof DeleteDriveV1DrivesDriveIdDeleteResponses];
+export type GetDriveV1DrivesDriveIdGetData = {
+    body?: never;
+    path: {
+        /**
+         * Drive Id
+         */
+        drive_id: string;
+    };
+    query?: never;
+    url: '/v1/drives/{drive_id}';
+};
+export type GetDriveV1DrivesDriveIdGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+export type GetDriveV1DrivesDriveIdGetError = GetDriveV1DrivesDriveIdGetErrors[keyof GetDriveV1DrivesDriveIdGetErrors];
+export type GetDriveV1DrivesDriveIdGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: DriveModel;
+};
+export type GetDriveV1DrivesDriveIdGetResponse = GetDriveV1DrivesDriveIdGetResponses[keyof GetDriveV1DrivesDriveIdGetResponses];
+export type UpdateDriveV1DrivesDriveIdPatchData = {
+    body: UpdateDriveRequest;
+    path: {
+        /**
+         * Drive Id
+         */
+        drive_id: string;
+    };
+    query?: never;
+    url: '/v1/drives/{drive_id}';
+};
+export type UpdateDriveV1DrivesDriveIdPatchErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+export type UpdateDriveV1DrivesDriveIdPatchError = UpdateDriveV1DrivesDriveIdPatchErrors[keyof UpdateDriveV1DrivesDriveIdPatchErrors];
+export type UpdateDriveV1DrivesDriveIdPatchResponses = {
+    /**
+     * Successful Response
+     */
+    200: DriveModel;
+};
+export type UpdateDriveV1DrivesDriveIdPatchResponse = UpdateDriveV1DrivesDriveIdPatchResponses[keyof UpdateDriveV1DrivesDriveIdPatchResponses];
+export type GetMyStatsV1MeStatsGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/me/stats';
+};
+export type GetMyStatsV1MeStatsGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: MeStatsResponse;
+};
+export type GetMyStatsV1MeStatsGetResponse = GetMyStatsV1MeStatsGetResponses[keyof GetMyStatsV1MeStatsGetResponses];
+export type ListVehiclesV1VehiclesGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/vehicles';
+};
+export type ListVehiclesV1VehiclesGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: VehiclesResponse;
+};
+export type ListVehiclesV1VehiclesGetResponse = ListVehiclesV1VehiclesGetResponses[keyof ListVehiclesV1VehiclesGetResponses];
+export type CreateVehicleV1VehiclesPostData = {
+    body: VehicleCreateRequest;
+    path?: never;
+    query?: never;
+    url: '/v1/vehicles';
+};
+export type CreateVehicleV1VehiclesPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+export type CreateVehicleV1VehiclesPostError = CreateVehicleV1VehiclesPostErrors[keyof CreateVehicleV1VehiclesPostErrors];
+export type CreateVehicleV1VehiclesPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: VehicleModel;
+};
+export type CreateVehicleV1VehiclesPostResponse = CreateVehicleV1VehiclesPostResponses[keyof CreateVehicleV1VehiclesPostResponses];
+export type DeleteVehicleV1VehiclesVehicleIdDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * Vehicle Id
+         */
+        vehicle_id: string;
+    };
+    query?: never;
+    url: '/v1/vehicles/{vehicle_id}';
+};
+export type DeleteVehicleV1VehiclesVehicleIdDeleteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+export type DeleteVehicleV1VehiclesVehicleIdDeleteError = DeleteVehicleV1VehiclesVehicleIdDeleteErrors[keyof DeleteVehicleV1VehiclesVehicleIdDeleteErrors];
+export type DeleteVehicleV1VehiclesVehicleIdDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+export type DeleteVehicleV1VehiclesVehicleIdDeleteResponse = DeleteVehicleV1VehiclesVehicleIdDeleteResponses[keyof DeleteVehicleV1VehiclesVehicleIdDeleteResponses];
+export type UpdateVehicleV1VehiclesVehicleIdPatchData = {
+    body: VehicleUpdateRequest;
+    path: {
+        /**
+         * Vehicle Id
+         */
+        vehicle_id: string;
+    };
+    query?: never;
+    url: '/v1/vehicles/{vehicle_id}';
+};
+export type UpdateVehicleV1VehiclesVehicleIdPatchErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+export type UpdateVehicleV1VehiclesVehicleIdPatchError = UpdateVehicleV1VehiclesVehicleIdPatchErrors[keyof UpdateVehicleV1VehiclesVehicleIdPatchErrors];
+export type UpdateVehicleV1VehiclesVehicleIdPatchResponses = {
+    /**
+     * Successful Response
+     */
+    200: VehicleModel;
+};
+export type UpdateVehicleV1VehiclesVehicleIdPatchResponse = UpdateVehicleV1VehiclesVehicleIdPatchResponses[keyof UpdateVehicleV1VehiclesVehicleIdPatchResponses];
 //# sourceMappingURL=types.gen.d.ts.map

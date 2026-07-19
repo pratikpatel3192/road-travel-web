@@ -113,7 +113,7 @@ export const claimTrialV1MeTrialClaimPost = (options) => (options.client ?? clie
     }
 });
 /**
- * Request a GDPR/CCPA export of the account's data (MVP: queued)
+ * GDPR/CCPA export of the account's data (Art. 15/20) — complete + synchronous
  */
 export const exportAccountV1AccountExportPost = (options) => (options?.client ?? client).post({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -218,5 +218,101 @@ export const createPortalSessionV1BillingPortalSessionPost = (options) => (optio
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/v1/billing/portal-session',
     ...options
+});
+/**
+ * The caller's recorded drives, newest first (owner-only this phase)
+ */
+export const listDrivesV1DrivesGet = (options) => (options?.client ?? client).get({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/drives',
+    ...options
+});
+/**
+ * Upload a finished recording; the server recomputes all stats via the engine
+ */
+export const saveDriveV1DrivesPost = (options) => (options.client ?? client).post({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/drives',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
+ * Delete one of the caller's drives (owner-scoped; the stats rollup decrements)
+ */
+export const deleteDriveV1DrivesDriveIdDelete = (options) => (options.client ?? client).delete({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/drives/{drive_id}',
+    ...options
+});
+/**
+ * One of the caller's drives (owner-scoped; 404 otherwise)
+ */
+export const getDriveV1DrivesDriveIdGet = (options) => (options.client ?? client).get({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/drives/{drive_id}',
+    ...options
+});
+/**
+ * Edit a drive's metadata (title / garage vehicle); stats are immutable
+ */
+export const updateDriveV1DrivesDriveIdPatch = (options) => (options.client ?? client).patch({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/drives/{drive_id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
+ * The caller's driving totals (rollup read — never a polyline scan)
+ */
+export const getMyStatsV1MeStatsGet = (options) => (options?.client ?? client).get({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/me/stats',
+    ...options
+});
+/**
+ * The caller's garage, newest first
+ */
+export const listVehiclesV1VehiclesGet = (options) => (options?.client ?? client).get({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/vehicles',
+    ...options
+});
+/**
+ * Add a vehicle to the caller's garage
+ */
+export const createVehicleV1VehiclesPost = (options) => (options.client ?? client).post({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/vehicles',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
+ * Remove a vehicle; drives that referenced it survive with the link cleared
+ */
+export const deleteVehicleV1VehiclesVehicleIdDelete = (options) => (options.client ?? client).delete({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/vehicles/{vehicle_id}',
+    ...options
+});
+/**
+ * Edit one of the caller's vehicles (owner-scoped; 404 otherwise)
+ */
+export const updateVehicleV1VehiclesVehicleIdPatch = (options) => (options.client ?? client).patch({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/vehicles/{vehicle_id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 //# sourceMappingURL=sdk.gen.js.map
