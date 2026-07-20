@@ -35,6 +35,12 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/driving/driving').then((m) => m.Driving),
     canActivate: [realAccountGuard],
   },
+  // F-007 P2.1: friend-request invite emails land here (explicit confirm; never a GET action).
+  {
+    path: 'friends/respond',
+    loadComponent: () => import('./pages/respond/respond').then((m) => m.Respond),
+    canActivate: [realAccountGuard],
+  },
   { path: 'privacy', component: Privacy },
   { path: 'terms', component: Terms },
   { path: 'support', component: Support },
