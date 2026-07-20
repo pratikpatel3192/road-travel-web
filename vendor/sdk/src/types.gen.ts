@@ -76,6 +76,18 @@ export type AddStopPreviewResponse = {
 };
 
 /**
+ * BlockRequest
+ *
+ * POST /v1/social/blocks — block the other party of an existing relationship.
+ */
+export type BlockRequest = {
+    /**
+     * Friendship Id
+     */
+    friendship_id: string;
+};
+
+/**
  * BriefingFactsModel
  */
 export type BriefingFactsModel = {
@@ -779,6 +791,72 @@ export type FactsDiffModel = {
 };
 
 /**
+ * FriendRequestCreate
+ *
+ * POST /v1/social/friends — request a friend by the one identifier people actually know.
+ */
+export type FriendRequestCreate = {
+    /**
+     * Email
+     */
+    email: string;
+};
+
+/**
+ * FriendsResponse
+ *
+ * The caller's whole graph, pre-partitioned; blocks OTHERS placed on the caller are absent
+ * (invisible), blocks the CALLER placed appear under ``blocked`` so they can be lifted.
+ */
+export type FriendsResponse = {
+    /**
+     * Friends
+     */
+    friends?: Array<FriendshipModel>;
+    /**
+     * Incoming
+     */
+    incoming?: Array<FriendshipModel>;
+    /**
+     * Outgoing
+     */
+    outgoing?: Array<FriendshipModel>;
+    /**
+     * Blocked
+     */
+    blocked?: Array<FriendshipModel>;
+};
+
+/**
+ * FriendshipModel
+ */
+export type FriendshipModel = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Status
+     */
+    status: 'pending' | 'accepted' | 'blocked';
+    /**
+     * Direction
+     *
+     * Relative to the caller: did they send or receive the request?
+     */
+    direction: 'incoming' | 'outgoing';
+    friend: PartyModel;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Responded At
+     */
+    responded_at?: string | null;
+};
+
+/**
  * HTTPValidationError
  */
 export type HttpValidationError = {
@@ -940,6 +1018,22 @@ export type OnboardingRequest = {
      * Must include granted tos + privacy; may include marketing.
      */
     consents: Array<ConsentInput>;
+};
+
+/**
+ * PartyModel
+ *
+ * The displayable identity of the OTHER party — never more than this.
+ */
+export type PartyModel = {
+    /**
+     * Email
+     */
+    email?: string | null;
+    /**
+     * Display Name
+     */
+    display_name?: string | null;
 };
 
 /**
@@ -1350,6 +1444,18 @@ export type ProfileUpdate = {
 };
 
 /**
+ * RespondRequest
+ *
+ * POST /v1/social/friends/{id}/respond — the addressee accepts or declines.
+ */
+export type RespondRequest = {
+    /**
+     * Accept
+     */
+    accept: boolean;
+};
+
+/**
  * RevenueCatWebhookBody
  *
  * RevenueCat webhook envelope. ``event`` is kept loose (a raw object) so RevenueCat can add
@@ -1451,6 +1557,10 @@ export type SaveDriveRequest = {
      * End Place
      */
     end_place?: string | null;
+    /**
+     * Visibility
+     */
+    visibility?: 'private' | 'friends';
 };
 
 /**
@@ -1569,6 +1679,89 @@ export type SegmentModel = {
      * Severity
      */
     severity: 'clear' | 'caution' | 'severe';
+};
+
+/**
+ * SharedDriveModel
+ *
+ * A friend's drive with ``visibility='friends'`` — stats, track, badge, weather chip.
+ */
+export type SharedDriveModel = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Started At
+     */
+    started_at: string;
+    /**
+     * Ended At
+     */
+    ended_at: string;
+    /**
+     * Distance Meters
+     */
+    distance_meters: number;
+    /**
+     * Duration Seconds
+     */
+    duration_seconds: number;
+    /**
+     * Moving Seconds
+     */
+    moving_seconds: number;
+    /**
+     * Avg Speed Mps
+     */
+    avg_speed_mps: number;
+    /**
+     * Max Speed Mps
+     */
+    max_speed_mps: number;
+    /**
+     * Polyline
+     *
+     * Simplified track as [latitude, longitude] pairs.
+     */
+    polyline: Array<Array<number>>;
+    /**
+     * Regions
+     */
+    regions?: Array<string>;
+    /**
+     * Start Place
+     */
+    start_place?: string | null;
+    /**
+     * End Place
+     */
+    end_place?: string | null;
+    /**
+     * Title
+     */
+    title?: string | null;
+    vehicle?: VehicleBadgeModel | null;
+    /**
+     * Trip Worst Severity
+     *
+     * The linked planned trip's worst severity (the weather story chip).
+     */
+    trip_worst_severity?: string | null;
+    /**
+     * Created At
+     */
+    created_at: string;
+};
+
+/**
+ * SharedDrivesResponse
+ */
+export type SharedDrivesResponse = {
+    /**
+     * Drives
+     */
+    drives: Array<SharedDriveModel>;
 };
 
 /**
@@ -1723,7 +1916,7 @@ export type TrialModel = {
 /**
  * UpdateDriveRequest
  *
- * Editable drive metadata. Stats/polyline are immutable; visibility unlocks in P2.
+ * Editable drive metadata. Stats/polyline are immutable.
  */
 export type UpdateDriveRequest = {
     /**
@@ -1734,6 +1927,10 @@ export type UpdateDriveRequest = {
      * Vehicle Id
      */
     vehicle_id?: string | null;
+    /**
+     * Visibility
+     */
+    visibility?: 'private' | 'friends' | null;
 };
 
 /**
@@ -1762,6 +1959,34 @@ export type ValidationError = {
     ctx?: {
         [key: string]: unknown;
     };
+};
+
+/**
+ * VehicleBadgeModel
+ *
+ * The garage vehicle as shown on a shared drive (display fields only).
+ */
+export type VehicleBadgeModel = {
+    /**
+     * Make
+     */
+    make: string;
+    /**
+     * Model
+     */
+    model: string;
+    /**
+     * Year
+     */
+    year?: number | null;
+    /**
+     * Color
+     */
+    color?: string | null;
+    /**
+     * Vehicle Type
+     */
+    vehicle_type: string;
 };
 
 /**
@@ -2828,3 +3053,175 @@ export type UpdateVehicleV1VehiclesVehicleIdPatchResponses = {
 };
 
 export type UpdateVehicleV1VehiclesVehicleIdPatchResponse = UpdateVehicleV1VehiclesVehicleIdPatchResponses[keyof UpdateVehicleV1VehiclesVehicleIdPatchResponses];
+
+export type ListFriendsV1SocialFriendsGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/social/friends';
+};
+
+export type ListFriendsV1SocialFriendsGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: FriendsResponse;
+};
+
+export type ListFriendsV1SocialFriendsGetResponse = ListFriendsV1SocialFriendsGetResponses[keyof ListFriendsV1SocialFriendsGetResponses];
+
+export type RequestFriendV1SocialFriendsPostData = {
+    body: FriendRequestCreate;
+    path?: never;
+    query?: never;
+    url: '/v1/social/friends';
+};
+
+export type RequestFriendV1SocialFriendsPostErrors = {
+    /**
+     * user_not_found — also the answer when that user blocked you.
+     */
+    404: unknown;
+    /**
+     * already_friends / request_pending / blocked_by_you.
+     */
+    409: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+    /**
+     * rate_limited — daily request cap reached.
+     */
+    429: unknown;
+};
+
+export type RequestFriendV1SocialFriendsPostError = RequestFriendV1SocialFriendsPostErrors[keyof RequestFriendV1SocialFriendsPostErrors];
+
+export type RequestFriendV1SocialFriendsPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: FriendshipModel;
+};
+
+export type RequestFriendV1SocialFriendsPostResponse = RequestFriendV1SocialFriendsPostResponses[keyof RequestFriendV1SocialFriendsPostResponses];
+
+export type RespondV1SocialFriendsFriendshipIdRespondPostData = {
+    body: RespondRequest;
+    path: {
+        /**
+         * Friendship Id
+         */
+        friendship_id: string;
+    };
+    query?: never;
+    url: '/v1/social/friends/{friendship_id}/respond';
+};
+
+export type RespondV1SocialFriendsFriendshipIdRespondPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RespondV1SocialFriendsFriendshipIdRespondPostError = RespondV1SocialFriendsFriendshipIdRespondPostErrors[keyof RespondV1SocialFriendsFriendshipIdRespondPostErrors];
+
+export type RespondV1SocialFriendsFriendshipIdRespondPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: FriendshipModel;
+    /**
+     * Declined — the request is gone.
+     */
+    204: void;
+};
+
+export type RespondV1SocialFriendsFriendshipIdRespondPostResponse = RespondV1SocialFriendsFriendshipIdRespondPostResponses[keyof RespondV1SocialFriendsFriendshipIdRespondPostResponses];
+
+export type RemoveFriendV1SocialFriendsFriendshipIdDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * Friendship Id
+         */
+        friendship_id: string;
+    };
+    query?: never;
+    url: '/v1/social/friends/{friendship_id}';
+};
+
+export type RemoveFriendV1SocialFriendsFriendshipIdDeleteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RemoveFriendV1SocialFriendsFriendshipIdDeleteError = RemoveFriendV1SocialFriendsFriendshipIdDeleteErrors[keyof RemoveFriendV1SocialFriendsFriendshipIdDeleteErrors];
+
+export type RemoveFriendV1SocialFriendsFriendshipIdDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type RemoveFriendV1SocialFriendsFriendshipIdDeleteResponse = RemoveFriendV1SocialFriendsFriendshipIdDeleteResponses[keyof RemoveFriendV1SocialFriendsFriendshipIdDeleteResponses];
+
+export type BlockUserV1SocialBlocksPostData = {
+    body: BlockRequest;
+    path?: never;
+    query?: never;
+    url: '/v1/social/blocks';
+};
+
+export type BlockUserV1SocialBlocksPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type BlockUserV1SocialBlocksPostError = BlockUserV1SocialBlocksPostErrors[keyof BlockUserV1SocialBlocksPostErrors];
+
+export type BlockUserV1SocialBlocksPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: FriendshipModel;
+};
+
+export type BlockUserV1SocialBlocksPostResponse = BlockUserV1SocialBlocksPostResponses[keyof BlockUserV1SocialBlocksPostResponses];
+
+export type FriendDrivesV1SocialFriendsFriendshipIdDrivesGetData = {
+    body?: never;
+    path: {
+        /**
+         * Friendship Id
+         */
+        friendship_id: string;
+    };
+    query?: never;
+    url: '/v1/social/friends/{friendship_id}/drives';
+};
+
+export type FriendDrivesV1SocialFriendsFriendshipIdDrivesGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type FriendDrivesV1SocialFriendsFriendshipIdDrivesGetError = FriendDrivesV1SocialFriendsFriendshipIdDrivesGetErrors[keyof FriendDrivesV1SocialFriendsFriendshipIdDrivesGetErrors];
+
+export type FriendDrivesV1SocialFriendsFriendshipIdDrivesGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: SharedDrivesResponse;
+};
+
+export type FriendDrivesV1SocialFriendsFriendshipIdDrivesGetResponse = FriendDrivesV1SocialFriendsFriendshipIdDrivesGetResponses[keyof FriendDrivesV1SocialFriendsFriendshipIdDrivesGetResponses];

@@ -315,4 +315,64 @@ export const updateVehicleV1VehiclesVehicleIdPatch = (options) => (options.clien
         ...options.headers
     }
 });
+/**
+ * The caller's friends graph (accepted / incoming / outgoing / their own blocks)
+ */
+export const listFriendsV1SocialFriendsGet = (options) => (options?.client ?? client).get({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/social/friends',
+    ...options
+});
+/**
+ * Send a friend request by email (rate-limited)
+ */
+export const requestFriendV1SocialFriendsPost = (options) => (options.client ?? client).post({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/social/friends',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
+ * Accept or decline an incoming request (addressee only; decline deletes)
+ */
+export const respondV1SocialFriendsFriendshipIdRespondPost = (options) => (options.client ?? client).post({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/social/friends/{friendship_id}/respond',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
+ * Unfriend / cancel a pending request (either party) or lift your block
+ */
+export const removeFriendV1SocialFriendsFriendshipIdDelete = (options) => (options.client ?? client).delete({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/social/friends/{friendship_id}',
+    ...options
+});
+/**
+ * Block the other party of a relationship (invisible to them; idempotent)
+ */
+export const blockUserV1SocialBlocksPost = (options) => (options.client ?? client).post({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/social/blocks',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
+ * A friend's shared drives (accepted friendships only; vehicle badge + weather chip)
+ */
+export const friendDrivesV1SocialFriendsFriendshipIdDrivesGet = (options) => (options.client ?? client).get({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/social/friends/{friendship_id}/drives',
+    ...options
+});
 //# sourceMappingURL=sdk.gen.js.map

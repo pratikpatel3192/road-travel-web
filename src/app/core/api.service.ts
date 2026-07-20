@@ -7,6 +7,7 @@ import {
   type CheckoutSessionResponse,
   type ConsentInput,
   type DrivesResponse,
+  type FriendsResponse,
   type ExploreFeedbackRequest,
   type ExploreRequest,
   type ExploreResponse,
@@ -22,6 +23,7 @@ import {
   type SaveTripRequest,
   type SavedTripModel,
   type SavedTripsResponse,
+  type SharedDrivesResponse,
   type SurveyQuestionsResponse,
   type TrialClaimResponse,
   type VehiclesResponse,
@@ -31,8 +33,10 @@ import {
   deleteTripV1TripsTripIdDelete,
   exploreFeedbackV1TripsExploreFeedbackPost,
   exploreV1TripsExplorePost,
+  friendDrivesV1SocialFriendsFriendshipIdDrivesGet,
   getMyStatsV1MeStatsGet,
   listDrivesV1DrivesGet,
+  listFriendsV1SocialFriendsGet,
   listTripsV1TripsGet,
   listVehiclesV1VehiclesGet,
   createCheckoutSessionV1BillingCheckoutSessionPost,
@@ -212,6 +216,23 @@ export class ApiService {
     const { data, error, response } = await listVehiclesV1VehiclesGet(this.options());
     if (error || !data) this.raise(response, error);
     return data as VehiclesResponse;
+  }
+
+  /** The caller's friends graph (accepted/incoming/outgoing/their own blocks). */
+  async listFriends(): Promise<FriendsResponse> {
+    const { data, error, response } = await listFriendsV1SocialFriendsGet(this.options());
+    if (error || !data) this.raise(response, error);
+    return data as FriendsResponse;
+  }
+
+  /** A friend's shared drives (accepted friendships only). */
+  async friendDrives(friendshipId: string): Promise<SharedDrivesResponse> {
+    const { data, error, response } = await friendDrivesV1SocialFriendsFriendshipIdDrivesGet({
+      ...this.options(),
+      path: { friendship_id: friendshipId },
+    });
+    if (error || !data) this.raise(response, error);
+    return data as SharedDrivesResponse;
   }
 
   /** Delete one of the caller's saved trips. Missing/foreign ids 404 (surfaced as ApiError). */

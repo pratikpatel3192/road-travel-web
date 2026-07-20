@@ -1,6 +1,12 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import type { DriveModel, MeStatsResponse, VehicleModel } from '@road-travel/sdk';
+import type {
+  DriveModel,
+  FriendshipModel,
+  MeStatsResponse,
+  SharedDriveModel,
+  VehicleModel,
+} from '@road-travel/sdk';
 
 import { ApiService } from '../../core/api.service';
 import { SettingsService } from '../../core/settings.service';
@@ -72,6 +78,44 @@ import { formatDistance } from '../plan/severity';
         }
       } @else if (!loading()) {
         <p class="empty">No vehicles yet. Add your car in the iOS app's Garage.</p>
+      }
+
+      <h2>Friends</h2>
+      @if (friends().length) {
+        @for (f of friends(); track f.id) {
+          <div class="friend">
+            <button class="open" (click)="toggleFriend(f)">
+              <span class="names">{{ friendName(f) }}</span>
+              <span class="sub">{{ expanded() === f.id ? 'hide' : 'shared drives' }}</span>
+            </button>
+            @if (expanded() === f.id) {
+              @for (d of sharedDrives(); track d.id) {
+                <div class="row shared">
+                  <span class="names">
+                    {{ sharedTitle(d) }}
+                    @if (d.trip_worst_severity && d.trip_worst_severity !== 'clear') {
+                      <span class="sev" [class.severe]="d.trip_worst_severity === 'severe'">
+                        {{ d.trip_worst_severity }}
+                      </span>
+                    }
+                  </span>
+                  <span class="sub">{{ when(d.started_at) }} · {{ dist(d.distance_meters) }}</span>
+                  @if (d.vehicle; as v) {
+                    <span class="sub">🚗 {{ [v.year, v.color, v.make, v.model].join(' ').trim() }}</span>
+                  }
+                </div>
+              } @empty {
+                <p class="empty">
+                  {{ sharedLoading() ? 'Loading…' : 'No shared drives yet.' }}
+                </p>
+              }
+            }
+          </div>
+        }
+      } @else if (!loading()) {
+        <p class="empty">
+          No friends yet. Add friends in the iOS app — drives they share show up here.
+        </p>
       }
     </div>
   `,
@@ -165,6 +209,43 @@ import { formatDistance } from '../plan/severity';
         font-size: 14px;
         padding: 4px 2px 8px;
       }
+      .friend {
+        margin-bottom: 8px;
+      }
+      .open {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 14px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface);
+        color: var(--text);
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+      .open:hover {
+        border-color: var(--accent);
+      }
+      .shared {
+        margin: 6px 0 0 18px;
+      }
+      .sev {
+        display: inline-block;
+        margin-left: 6px;
+        padding: 1px 8px;
+        border-radius: 999px;
+        background: var(--sev-caution);
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .sev.severe {
+        background: var(--sev-severe);
+      }
     `,
   ],
 })
@@ -175,6 +256,10 @@ export class Driving {
   readonly stats = signal<MeStatsResponse | null>(null);
   readonly drives = signal<DriveModel[]>([]);
   readonly vehicles = signal<VehicleModel[]>([]);
+  readonly friends = signal<FriendshipModel[]>([]);
+  readonly expanded = signal<string | null>(null);
+  readonly sharedDrives = signal<SharedDriveModel[]>([]);
+  readonly sharedLoading = signal(false);
   readonly loading = signal(true);
 
   constructor() {
@@ -183,17 +268,45 @@ export class Driving {
 
   private async refresh(): Promise<void> {
     try {
-      const [stats, drives, vehicles] = await Promise.all([
+      const [stats, drives, vehicles, graph] = await Promise.all([
         this.api.myStats(),
         this.api.listDrives(),
         this.api.listVehicles(),
+        this.api.listFriends(),
       ]);
       this.stats.set(stats);
       this.drives.set(drives.drives);
       this.vehicles.set(vehicles.vehicles);
+      this.friends.set(graph.friends ?? []);
     } finally {
       this.loading.set(false);
     }
+  }
+
+  friendName(f: FriendshipModel): string {
+    return f.friend.display_name || f.friend.email || 'Friend';
+  }
+
+  toggleFriend(f: FriendshipModel): void {
+    if (this.expanded() === f.id) {
+      this.expanded.set(null);
+      return;
+    }
+    this.expanded.set(f.id);
+    this.sharedDrives.set([]);
+    this.sharedLoading.set(true);
+    void this.api
+      .friendDrives(f.id)
+      .then((r) => {
+        if (this.expanded() === f.id) this.sharedDrives.set(r.drives);
+      })
+      .finally(() => this.sharedLoading.set(false));
+  }
+
+  sharedTitle(d: SharedDriveModel): string {
+    if (d.title) return d.title;
+    const from = d.start_place ?? 'Drive';
+    return d.end_place ? `${from} → ${d.end_place}` : from;
   }
 
   title(d: DriveModel): string {

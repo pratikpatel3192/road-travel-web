@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AddStopPreviewV1TripsExploreAddStopPreviewPostData, AddStopPreviewV1TripsExploreAddStopPreviewPostErrors, AddStopPreviewV1TripsExploreAddStopPreviewPostResponses, ClaimTrialV1MeTrialClaimPostData, ClaimTrialV1MeTrialClaimPostErrors, ClaimTrialV1MeTrialClaimPostResponses, CreateBriefingV1BriefingsPostData, CreateBriefingV1BriefingsPostErrors, CreateBriefingV1BriefingsPostResponses, CreateCheckoutSessionV1BillingCheckoutSessionPostData, CreateCheckoutSessionV1BillingCheckoutSessionPostErrors, CreateCheckoutSessionV1BillingCheckoutSessionPostResponses, CreatePortalSessionV1BillingPortalSessionPostData, CreatePortalSessionV1BillingPortalSessionPostResponses, CreateVehicleV1VehiclesPostData, CreateVehicleV1VehiclesPostErrors, CreateVehicleV1VehiclesPostResponses, DeleteAccountV1AccountDeleteData, DeleteAccountV1AccountDeleteResponses, DeleteDriveV1DrivesDriveIdDeleteData, DeleteDriveV1DrivesDriveIdDeleteErrors, DeleteDriveV1DrivesDriveIdDeleteResponses, DeleteTripV1TripsTripIdDeleteData, DeleteTripV1TripsTripIdDeleteErrors, DeleteTripV1TripsTripIdDeleteResponses, DeleteVehicleV1VehiclesVehicleIdDeleteData, DeleteVehicleV1VehiclesVehicleIdDeleteErrors, DeleteVehicleV1VehiclesVehicleIdDeleteResponses, ExploreFeedbackV1TripsExploreFeedbackPostData, ExploreFeedbackV1TripsExploreFeedbackPostErrors, ExploreFeedbackV1TripsExploreFeedbackPostResponses, ExploreV1TripsExplorePostData, ExploreV1TripsExplorePostErrors, ExploreV1TripsExplorePostResponses, ExportAccountV1AccountExportPostData, ExportAccountV1AccountExportPostResponses, GetDriveV1DrivesDriveIdGetData, GetDriveV1DrivesDriveIdGetErrors, GetDriveV1DrivesDriveIdGetResponses, GetMeV1MeGetData, GetMeV1MeGetErrors, GetMeV1MeGetResponses, GetMyStatsV1MeStatsGetData, GetMyStatsV1MeStatsGetResponses, GetProfileV1MeProfileGetData, GetProfileV1MeProfileGetResponses, GetSurveyQuestionsV1SurveyQuestionsGetData, GetSurveyQuestionsV1SurveyQuestionsGetResponses, HealthHealthGetData, HealthHealthGetResponses, ListDrivesV1DrivesGetData, ListDrivesV1DrivesGetResponses, ListTripsV1TripsGetData, ListTripsV1TripsGetResponses, ListVehiclesV1VehiclesGetData, ListVehiclesV1VehiclesGetResponses, PlanTripV1TripsPlanPostData, PlanTripV1TripsPlanPostErrors, PlanTripV1TripsPlanPostResponses, RecordConsentsV1MeConsentsPostData, RecordConsentsV1MeConsentsPostErrors, RecordConsentsV1MeConsentsPostResponses, RevenuecatWebhookV1WebhooksRevenuecatPostData, RevenuecatWebhookV1WebhooksRevenuecatPostErrors, RevenuecatWebhookV1WebhooksRevenuecatPostResponses, SaveDriveV1DrivesPostData, SaveDriveV1DrivesPostErrors, SaveDriveV1DrivesPostResponses, SaveTripV1TripsPostData, SaveTripV1TripsPostErrors, SaveTripV1TripsPostResponses, StripeWebhookV1WebhooksStripePostData, StripeWebhookV1WebhooksStripePostErrors, StripeWebhookV1WebhooksStripePostResponses, SubmitOnboardingV1MeOnboardingPostData, SubmitOnboardingV1MeOnboardingPostErrors, SubmitOnboardingV1MeOnboardingPostResponses, UpdateDriveV1DrivesDriveIdPatchData, UpdateDriveV1DrivesDriveIdPatchErrors, UpdateDriveV1DrivesDriveIdPatchResponses, UpdateProfileV1MeProfilePutData, UpdateProfileV1MeProfilePutErrors, UpdateProfileV1MeProfilePutResponses, UpdateVehicleV1VehiclesVehicleIdPatchData, UpdateVehicleV1VehiclesVehicleIdPatchErrors, UpdateVehicleV1VehiclesVehicleIdPatchResponses } from './types.gen';
+import type { AddStopPreviewV1TripsExploreAddStopPreviewPostData, AddStopPreviewV1TripsExploreAddStopPreviewPostErrors, AddStopPreviewV1TripsExploreAddStopPreviewPostResponses, BlockUserV1SocialBlocksPostData, BlockUserV1SocialBlocksPostErrors, BlockUserV1SocialBlocksPostResponses, ClaimTrialV1MeTrialClaimPostData, ClaimTrialV1MeTrialClaimPostErrors, ClaimTrialV1MeTrialClaimPostResponses, CreateBriefingV1BriefingsPostData, CreateBriefingV1BriefingsPostErrors, CreateBriefingV1BriefingsPostResponses, CreateCheckoutSessionV1BillingCheckoutSessionPostData, CreateCheckoutSessionV1BillingCheckoutSessionPostErrors, CreateCheckoutSessionV1BillingCheckoutSessionPostResponses, CreatePortalSessionV1BillingPortalSessionPostData, CreatePortalSessionV1BillingPortalSessionPostResponses, CreateVehicleV1VehiclesPostData, CreateVehicleV1VehiclesPostErrors, CreateVehicleV1VehiclesPostResponses, DeleteAccountV1AccountDeleteData, DeleteAccountV1AccountDeleteResponses, DeleteDriveV1DrivesDriveIdDeleteData, DeleteDriveV1DrivesDriveIdDeleteErrors, DeleteDriveV1DrivesDriveIdDeleteResponses, DeleteTripV1TripsTripIdDeleteData, DeleteTripV1TripsTripIdDeleteErrors, DeleteTripV1TripsTripIdDeleteResponses, DeleteVehicleV1VehiclesVehicleIdDeleteData, DeleteVehicleV1VehiclesVehicleIdDeleteErrors, DeleteVehicleV1VehiclesVehicleIdDeleteResponses, ExploreFeedbackV1TripsExploreFeedbackPostData, ExploreFeedbackV1TripsExploreFeedbackPostErrors, ExploreFeedbackV1TripsExploreFeedbackPostResponses, ExploreV1TripsExplorePostData, ExploreV1TripsExplorePostErrors, ExploreV1TripsExplorePostResponses, ExportAccountV1AccountExportPostData, ExportAccountV1AccountExportPostResponses, FriendDrivesV1SocialFriendsFriendshipIdDrivesGetData, FriendDrivesV1SocialFriendsFriendshipIdDrivesGetErrors, FriendDrivesV1SocialFriendsFriendshipIdDrivesGetResponses, GetDriveV1DrivesDriveIdGetData, GetDriveV1DrivesDriveIdGetErrors, GetDriveV1DrivesDriveIdGetResponses, GetMeV1MeGetData, GetMeV1MeGetErrors, GetMeV1MeGetResponses, GetMyStatsV1MeStatsGetData, GetMyStatsV1MeStatsGetResponses, GetProfileV1MeProfileGetData, GetProfileV1MeProfileGetResponses, GetSurveyQuestionsV1SurveyQuestionsGetData, GetSurveyQuestionsV1SurveyQuestionsGetResponses, HealthHealthGetData, HealthHealthGetResponses, ListDrivesV1DrivesGetData, ListDrivesV1DrivesGetResponses, ListFriendsV1SocialFriendsGetData, ListFriendsV1SocialFriendsGetResponses, ListTripsV1TripsGetData, ListTripsV1TripsGetResponses, ListVehiclesV1VehiclesGetData, ListVehiclesV1VehiclesGetResponses, PlanTripV1TripsPlanPostData, PlanTripV1TripsPlanPostErrors, PlanTripV1TripsPlanPostResponses, RecordConsentsV1MeConsentsPostData, RecordConsentsV1MeConsentsPostErrors, RecordConsentsV1MeConsentsPostResponses, RemoveFriendV1SocialFriendsFriendshipIdDeleteData, RemoveFriendV1SocialFriendsFriendshipIdDeleteErrors, RemoveFriendV1SocialFriendsFriendshipIdDeleteResponses, RequestFriendV1SocialFriendsPostData, RequestFriendV1SocialFriendsPostErrors, RequestFriendV1SocialFriendsPostResponses, RespondV1SocialFriendsFriendshipIdRespondPostData, RespondV1SocialFriendsFriendshipIdRespondPostErrors, RespondV1SocialFriendsFriendshipIdRespondPostResponses, RevenuecatWebhookV1WebhooksRevenuecatPostData, RevenuecatWebhookV1WebhooksRevenuecatPostErrors, RevenuecatWebhookV1WebhooksRevenuecatPostResponses, SaveDriveV1DrivesPostData, SaveDriveV1DrivesPostErrors, SaveDriveV1DrivesPostResponses, SaveTripV1TripsPostData, SaveTripV1TripsPostErrors, SaveTripV1TripsPostResponses, StripeWebhookV1WebhooksStripePostData, StripeWebhookV1WebhooksStripePostErrors, StripeWebhookV1WebhooksStripePostResponses, SubmitOnboardingV1MeOnboardingPostData, SubmitOnboardingV1MeOnboardingPostErrors, SubmitOnboardingV1MeOnboardingPostResponses, UpdateDriveV1DrivesDriveIdPatchData, UpdateDriveV1DrivesDriveIdPatchErrors, UpdateDriveV1DrivesDriveIdPatchResponses, UpdateProfileV1MeProfilePutData, UpdateProfileV1MeProfilePutErrors, UpdateProfileV1MeProfilePutResponses, UpdateVehicleV1VehiclesVehicleIdPatchData, UpdateVehicleV1VehiclesVehicleIdPatchErrors, UpdateVehicleV1VehiclesVehicleIdPatchResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -363,4 +363,70 @@ export const updateVehicleV1VehiclesVehicleIdPatch = <ThrowOnError extends boole
         'Content-Type': 'application/json',
         ...options.headers
     }
+});
+
+/**
+ * The caller's friends graph (accepted / incoming / outgoing / their own blocks)
+ */
+export const listFriendsV1SocialFriendsGet = <ThrowOnError extends boolean = false>(options?: Options<ListFriendsV1SocialFriendsGetData, ThrowOnError>): RequestResult<ListFriendsV1SocialFriendsGetResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListFriendsV1SocialFriendsGetResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/social/friends',
+    ...options
+});
+
+/**
+ * Send a friend request by email (rate-limited)
+ */
+export const requestFriendV1SocialFriendsPost = <ThrowOnError extends boolean = false>(options: Options<RequestFriendV1SocialFriendsPostData, ThrowOnError>): RequestResult<RequestFriendV1SocialFriendsPostResponses, RequestFriendV1SocialFriendsPostErrors, ThrowOnError> => (options.client ?? client).post<RequestFriendV1SocialFriendsPostResponses, RequestFriendV1SocialFriendsPostErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/social/friends',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Accept or decline an incoming request (addressee only; decline deletes)
+ */
+export const respondV1SocialFriendsFriendshipIdRespondPost = <ThrowOnError extends boolean = false>(options: Options<RespondV1SocialFriendsFriendshipIdRespondPostData, ThrowOnError>): RequestResult<RespondV1SocialFriendsFriendshipIdRespondPostResponses, RespondV1SocialFriendsFriendshipIdRespondPostErrors, ThrowOnError> => (options.client ?? client).post<RespondV1SocialFriendsFriendshipIdRespondPostResponses, RespondV1SocialFriendsFriendshipIdRespondPostErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/social/friends/{friendship_id}/respond',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Unfriend / cancel a pending request (either party) or lift your block
+ */
+export const removeFriendV1SocialFriendsFriendshipIdDelete = <ThrowOnError extends boolean = false>(options: Options<RemoveFriendV1SocialFriendsFriendshipIdDeleteData, ThrowOnError>): RequestResult<RemoveFriendV1SocialFriendsFriendshipIdDeleteResponses, RemoveFriendV1SocialFriendsFriendshipIdDeleteErrors, ThrowOnError> => (options.client ?? client).delete<RemoveFriendV1SocialFriendsFriendshipIdDeleteResponses, RemoveFriendV1SocialFriendsFriendshipIdDeleteErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/social/friends/{friendship_id}',
+    ...options
+});
+
+/**
+ * Block the other party of a relationship (invisible to them; idempotent)
+ */
+export const blockUserV1SocialBlocksPost = <ThrowOnError extends boolean = false>(options: Options<BlockUserV1SocialBlocksPostData, ThrowOnError>): RequestResult<BlockUserV1SocialBlocksPostResponses, BlockUserV1SocialBlocksPostErrors, ThrowOnError> => (options.client ?? client).post<BlockUserV1SocialBlocksPostResponses, BlockUserV1SocialBlocksPostErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/social/blocks',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * A friend's shared drives (accepted friendships only; vehicle badge + weather chip)
+ */
+export const friendDrivesV1SocialFriendsFriendshipIdDrivesGet = <ThrowOnError extends boolean = false>(options: Options<FriendDrivesV1SocialFriendsFriendshipIdDrivesGetData, ThrowOnError>): RequestResult<FriendDrivesV1SocialFriendsFriendshipIdDrivesGetResponses, FriendDrivesV1SocialFriendsFriendshipIdDrivesGetErrors, ThrowOnError> => (options.client ?? client).get<FriendDrivesV1SocialFriendsFriendshipIdDrivesGetResponses, FriendDrivesV1SocialFriendsFriendshipIdDrivesGetErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/social/friends/{friendship_id}/drives',
+    ...options
 });
