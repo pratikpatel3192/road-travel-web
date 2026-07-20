@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AddStopPreviewV1TripsExploreAddStopPreviewPostData, AddStopPreviewV1TripsExploreAddStopPreviewPostErrors, AddStopPreviewV1TripsExploreAddStopPreviewPostResponses, ClaimTrialV1MeTrialClaimPostData, ClaimTrialV1MeTrialClaimPostErrors, ClaimTrialV1MeTrialClaimPostResponses, CreateBriefingV1BriefingsPostData, CreateBriefingV1BriefingsPostErrors, CreateBriefingV1BriefingsPostResponses, CreateCheckoutSessionV1BillingCheckoutSessionPostData, CreateCheckoutSessionV1BillingCheckoutSessionPostErrors, CreateCheckoutSessionV1BillingCheckoutSessionPostResponses, CreatePortalSessionV1BillingPortalSessionPostData, CreatePortalSessionV1BillingPortalSessionPostResponses, DeleteAccountV1AccountDeleteData, DeleteAccountV1AccountDeleteResponses, DeleteTripV1TripsTripIdDeleteData, DeleteTripV1TripsTripIdDeleteErrors, DeleteTripV1TripsTripIdDeleteResponses, ExploreFeedbackV1TripsExploreFeedbackPostData, ExploreFeedbackV1TripsExploreFeedbackPostErrors, ExploreFeedbackV1TripsExploreFeedbackPostResponses, ExploreV1TripsExplorePostData, ExploreV1TripsExplorePostErrors, ExploreV1TripsExplorePostResponses, ExportAccountV1AccountExportPostData, ExportAccountV1AccountExportPostResponses, GetMeV1MeGetData, GetMeV1MeGetErrors, GetMeV1MeGetResponses, GetProfileV1MeProfileGetData, GetProfileV1MeProfileGetResponses, GetSurveyQuestionsV1SurveyQuestionsGetData, GetSurveyQuestionsV1SurveyQuestionsGetResponses, HealthHealthGetData, HealthHealthGetResponses, ListTripsV1TripsGetData, ListTripsV1TripsGetResponses, PlanTripV1TripsPlanPostData, PlanTripV1TripsPlanPostErrors, PlanTripV1TripsPlanPostResponses, RecordConsentsV1MeConsentsPostData, RecordConsentsV1MeConsentsPostErrors, RecordConsentsV1MeConsentsPostResponses, RevenuecatWebhookV1WebhooksRevenuecatPostData, RevenuecatWebhookV1WebhooksRevenuecatPostErrors, RevenuecatWebhookV1WebhooksRevenuecatPostResponses, SaveTripV1TripsPostData, SaveTripV1TripsPostErrors, SaveTripV1TripsPostResponses, StripeWebhookV1WebhooksStripePostData, StripeWebhookV1WebhooksStripePostErrors, StripeWebhookV1WebhooksStripePostResponses, SubmitOnboardingV1MeOnboardingPostData, SubmitOnboardingV1MeOnboardingPostErrors, SubmitOnboardingV1MeOnboardingPostResponses, UpdateProfileV1MeProfilePutData, UpdateProfileV1MeProfilePutErrors, UpdateProfileV1MeProfilePutResponses } from './types.gen';
+import type { AddStopPreviewV1TripsExploreAddStopPreviewPostData, AddStopPreviewV1TripsExploreAddStopPreviewPostErrors, AddStopPreviewV1TripsExploreAddStopPreviewPostResponses, ClaimTrialV1MeTrialClaimPostData, ClaimTrialV1MeTrialClaimPostErrors, ClaimTrialV1MeTrialClaimPostResponses, CreateBriefingV1BriefingsPostData, CreateBriefingV1BriefingsPostErrors, CreateBriefingV1BriefingsPostResponses, CreateCheckoutSessionV1BillingCheckoutSessionPostData, CreateCheckoutSessionV1BillingCheckoutSessionPostErrors, CreateCheckoutSessionV1BillingCheckoutSessionPostResponses, CreatePortalSessionV1BillingPortalSessionPostData, CreatePortalSessionV1BillingPortalSessionPostResponses, CreateVehicleV1VehiclesPostData, CreateVehicleV1VehiclesPostErrors, CreateVehicleV1VehiclesPostResponses, DeleteAccountV1AccountDeleteData, DeleteAccountV1AccountDeleteResponses, DeleteDriveV1DrivesDriveIdDeleteData, DeleteDriveV1DrivesDriveIdDeleteErrors, DeleteDriveV1DrivesDriveIdDeleteResponses, DeleteTripV1TripsTripIdDeleteData, DeleteTripV1TripsTripIdDeleteErrors, DeleteTripV1TripsTripIdDeleteResponses, DeleteVehicleV1VehiclesVehicleIdDeleteData, DeleteVehicleV1VehiclesVehicleIdDeleteErrors, DeleteVehicleV1VehiclesVehicleIdDeleteResponses, ExploreFeedbackV1TripsExploreFeedbackPostData, ExploreFeedbackV1TripsExploreFeedbackPostErrors, ExploreFeedbackV1TripsExploreFeedbackPostResponses, ExploreV1TripsExplorePostData, ExploreV1TripsExplorePostErrors, ExploreV1TripsExplorePostResponses, ExportAccountV1AccountExportPostData, ExportAccountV1AccountExportPostResponses, GetDriveV1DrivesDriveIdGetData, GetDriveV1DrivesDriveIdGetErrors, GetDriveV1DrivesDriveIdGetResponses, GetMeV1MeGetData, GetMeV1MeGetErrors, GetMeV1MeGetResponses, GetMyStatsV1MeStatsGetData, GetMyStatsV1MeStatsGetResponses, GetProfileV1MeProfileGetData, GetProfileV1MeProfileGetResponses, GetSurveyQuestionsV1SurveyQuestionsGetData, GetSurveyQuestionsV1SurveyQuestionsGetResponses, HealthHealthGetData, HealthHealthGetResponses, ListDrivesV1DrivesGetData, ListDrivesV1DrivesGetResponses, ListTripsV1TripsGetData, ListTripsV1TripsGetResponses, ListVehiclesV1VehiclesGetData, ListVehiclesV1VehiclesGetResponses, PlanTripV1TripsPlanPostData, PlanTripV1TripsPlanPostErrors, PlanTripV1TripsPlanPostResponses, RecordConsentsV1MeConsentsPostData, RecordConsentsV1MeConsentsPostErrors, RecordConsentsV1MeConsentsPostResponses, RevenuecatWebhookV1WebhooksRevenuecatPostData, RevenuecatWebhookV1WebhooksRevenuecatPostErrors, RevenuecatWebhookV1WebhooksRevenuecatPostResponses, SaveDriveV1DrivesPostData, SaveDriveV1DrivesPostErrors, SaveDriveV1DrivesPostResponses, SaveTripV1TripsPostData, SaveTripV1TripsPostErrors, SaveTripV1TripsPostResponses, StripeWebhookV1WebhooksStripePostData, StripeWebhookV1WebhooksStripePostErrors, StripeWebhookV1WebhooksStripePostResponses, SubmitOnboardingV1MeOnboardingPostData, SubmitOnboardingV1MeOnboardingPostErrors, SubmitOnboardingV1MeOnboardingPostResponses, UpdateDriveV1DrivesDriveIdPatchData, UpdateDriveV1DrivesDriveIdPatchErrors, UpdateDriveV1DrivesDriveIdPatchResponses, UpdateProfileV1MeProfilePutData, UpdateProfileV1MeProfilePutErrors, UpdateProfileV1MeProfilePutResponses, UpdateVehicleV1VehiclesVehicleIdPatchData, UpdateVehicleV1VehiclesVehicleIdPatchErrors, UpdateVehicleV1VehiclesVehicleIdPatchResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -142,7 +142,7 @@ export const claimTrialV1MeTrialClaimPost = <ThrowOnError extends boolean = fals
 });
 
 /**
- * Request a GDPR/CCPA export of the account's data (MVP: queued)
+ * GDPR/CCPA export of the account's data (Art. 15/20) — complete + synchronous
  */
 export const exportAccountV1AccountExportPost = <ThrowOnError extends boolean = false>(options?: Options<ExportAccountV1AccountExportPostData, ThrowOnError>): RequestResult<ExportAccountV1AccountExportPostResponses, unknown, ThrowOnError> => (options?.client ?? client).post<ExportAccountV1AccountExportPostResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -257,4 +257,110 @@ export const createPortalSessionV1BillingPortalSessionPost = <ThrowOnError exten
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/v1/billing/portal-session',
     ...options
+});
+
+/**
+ * The caller's recorded drives, newest first (owner-only this phase)
+ */
+export const listDrivesV1DrivesGet = <ThrowOnError extends boolean = false>(options?: Options<ListDrivesV1DrivesGetData, ThrowOnError>): RequestResult<ListDrivesV1DrivesGetResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListDrivesV1DrivesGetResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/drives',
+    ...options
+});
+
+/**
+ * Upload a finished recording; the server recomputes all stats via the engine
+ */
+export const saveDriveV1DrivesPost = <ThrowOnError extends boolean = false>(options: Options<SaveDriveV1DrivesPostData, ThrowOnError>): RequestResult<SaveDriveV1DrivesPostResponses, SaveDriveV1DrivesPostErrors, ThrowOnError> => (options.client ?? client).post<SaveDriveV1DrivesPostResponses, SaveDriveV1DrivesPostErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/drives',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete one of the caller's drives (owner-scoped; the stats rollup decrements)
+ */
+export const deleteDriveV1DrivesDriveIdDelete = <ThrowOnError extends boolean = false>(options: Options<DeleteDriveV1DrivesDriveIdDeleteData, ThrowOnError>): RequestResult<DeleteDriveV1DrivesDriveIdDeleteResponses, DeleteDriveV1DrivesDriveIdDeleteErrors, ThrowOnError> => (options.client ?? client).delete<DeleteDriveV1DrivesDriveIdDeleteResponses, DeleteDriveV1DrivesDriveIdDeleteErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/drives/{drive_id}',
+    ...options
+});
+
+/**
+ * One of the caller's drives (owner-scoped; 404 otherwise)
+ */
+export const getDriveV1DrivesDriveIdGet = <ThrowOnError extends boolean = false>(options: Options<GetDriveV1DrivesDriveIdGetData, ThrowOnError>): RequestResult<GetDriveV1DrivesDriveIdGetResponses, GetDriveV1DrivesDriveIdGetErrors, ThrowOnError> => (options.client ?? client).get<GetDriveV1DrivesDriveIdGetResponses, GetDriveV1DrivesDriveIdGetErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/drives/{drive_id}',
+    ...options
+});
+
+/**
+ * Edit a drive's metadata (title / garage vehicle); stats are immutable
+ */
+export const updateDriveV1DrivesDriveIdPatch = <ThrowOnError extends boolean = false>(options: Options<UpdateDriveV1DrivesDriveIdPatchData, ThrowOnError>): RequestResult<UpdateDriveV1DrivesDriveIdPatchResponses, UpdateDriveV1DrivesDriveIdPatchErrors, ThrowOnError> => (options.client ?? client).patch<UpdateDriveV1DrivesDriveIdPatchResponses, UpdateDriveV1DrivesDriveIdPatchErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/drives/{drive_id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * The caller's driving totals (rollup read — never a polyline scan)
+ */
+export const getMyStatsV1MeStatsGet = <ThrowOnError extends boolean = false>(options?: Options<GetMyStatsV1MeStatsGetData, ThrowOnError>): RequestResult<GetMyStatsV1MeStatsGetResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetMyStatsV1MeStatsGetResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/me/stats',
+    ...options
+});
+
+/**
+ * The caller's garage, newest first
+ */
+export const listVehiclesV1VehiclesGet = <ThrowOnError extends boolean = false>(options?: Options<ListVehiclesV1VehiclesGetData, ThrowOnError>): RequestResult<ListVehiclesV1VehiclesGetResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListVehiclesV1VehiclesGetResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/vehicles',
+    ...options
+});
+
+/**
+ * Add a vehicle to the caller's garage
+ */
+export const createVehicleV1VehiclesPost = <ThrowOnError extends boolean = false>(options: Options<CreateVehicleV1VehiclesPostData, ThrowOnError>): RequestResult<CreateVehicleV1VehiclesPostResponses, CreateVehicleV1VehiclesPostErrors, ThrowOnError> => (options.client ?? client).post<CreateVehicleV1VehiclesPostResponses, CreateVehicleV1VehiclesPostErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/vehicles',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Remove a vehicle; drives that referenced it survive with the link cleared
+ */
+export const deleteVehicleV1VehiclesVehicleIdDelete = <ThrowOnError extends boolean = false>(options: Options<DeleteVehicleV1VehiclesVehicleIdDeleteData, ThrowOnError>): RequestResult<DeleteVehicleV1VehiclesVehicleIdDeleteResponses, DeleteVehicleV1VehiclesVehicleIdDeleteErrors, ThrowOnError> => (options.client ?? client).delete<DeleteVehicleV1VehiclesVehicleIdDeleteResponses, DeleteVehicleV1VehiclesVehicleIdDeleteErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/vehicles/{vehicle_id}',
+    ...options
+});
+
+/**
+ * Edit one of the caller's vehicles (owner-scoped; 404 otherwise)
+ */
+export const updateVehicleV1VehiclesVehicleIdPatch = <ThrowOnError extends boolean = false>(options: Options<UpdateVehicleV1VehiclesVehicleIdPatchData, ThrowOnError>): RequestResult<UpdateVehicleV1VehiclesVehicleIdPatchResponses, UpdateVehicleV1VehiclesVehicleIdPatchErrors, ThrowOnError> => (options.client ?? client).patch<UpdateVehicleV1VehiclesVehicleIdPatchResponses, UpdateVehicleV1VehiclesVehicleIdPatchErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/vehicles/{vehicle_id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });

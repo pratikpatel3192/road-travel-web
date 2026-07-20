@@ -28,6 +28,7 @@
            Shows the profile name when one is set (F-003), otherwise the account email. -->
       <a routerLink="/settings" class="nav-id" [title]="auth.email()">{{ profile.headerName() }}</a>
       <a routerLink="/saved" class="nav-link">My trips</a>
+      <a routerLink="/driving" class="nav-link">Driving</a>
       <a routerLink="/settings" class="nav-link">Settings</a>
       <button type="button" class="nav-link" (click)="auth.signOut()">Sign out</button>
     } @else {

@@ -6,10 +6,12 @@ import {
   type BriefingResponse,
   type CheckoutSessionResponse,
   type ConsentInput,
+  type DrivesResponse,
   type ExploreFeedbackRequest,
   type ExploreRequest,
   type ExploreResponse,
   type MeResponse,
+  type MeStatsResponse,
   type OnboardingRequest,
   type PaywallResponse,
   type PlanTripRequest,
@@ -22,13 +24,17 @@ import {
   type SavedTripsResponse,
   type SurveyQuestionsResponse,
   type TrialClaimResponse,
+  type VehiclesResponse,
   addStopPreviewV1TripsExploreAddStopPreviewPost,
   claimTrialV1MeTrialClaimPost,
   createBriefingV1BriefingsPost,
   deleteTripV1TripsTripIdDelete,
   exploreFeedbackV1TripsExploreFeedbackPost,
   exploreV1TripsExplorePost,
+  getMyStatsV1MeStatsGet,
+  listDrivesV1DrivesGet,
   listTripsV1TripsGet,
+  listVehiclesV1VehiclesGet,
   createCheckoutSessionV1BillingCheckoutSessionPost,
   createPortalSessionV1BillingPortalSessionPost,
   getMeV1MeGet,
@@ -183,6 +189,29 @@ export class ApiService {
     const { data, error, response } = await listTripsV1TripsGet(this.options());
     if (error || !data) this.raise(response, error);
     return data as SavedTripsResponse;
+  }
+
+  // --- F-007 P1: recorded drives + garage + stats (view-only on web; recording is iOS-only) ---
+
+  /** The caller's recorded drives, newest first (server-computed stats + simplified polylines). */
+  async listDrives(): Promise<DrivesResponse> {
+    const { data, error, response } = await listDrivesV1DrivesGet(this.options());
+    if (error || !data) this.raise(response, error);
+    return data as DrivesResponse;
+  }
+
+  /** The caller's driving totals (the server's trigger-maintained rollup). */
+  async myStats(): Promise<MeStatsResponse> {
+    const { data, error, response } = await getMyStatsV1MeStatsGet(this.options());
+    if (error || !data) this.raise(response, error);
+    return data as MeStatsResponse;
+  }
+
+  /** The caller's garage, newest first. */
+  async listVehicles(): Promise<VehiclesResponse> {
+    const { data, error, response } = await listVehiclesV1VehiclesGet(this.options());
+    if (error || !data) this.raise(response, error);
+    return data as VehiclesResponse;
   }
 
   /** Delete one of the caller's saved trips. Missing/foreign ids 404 (surfaced as ApiError). */

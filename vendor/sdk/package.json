@@ -1,7 +1,7 @@
 {
   "name": "@road-travel/sdk",
   "version": "0.1.0",
-  "description": "Generated TypeScript SDK for road-travel-core. DO NOT hand-edit src/ \u2014 regenerate from the OpenAPI spec (see scripts.generate).",
+  "description": "Generated TypeScript SDK for road-travel-core. DO NOT hand-edit src/ — regenerate from the OpenAPI spec (see scripts.generate).",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -15,6 +15,15 @@
     "dist",
     "src"
   ],
-  "scripts": {},
-  "dependencies": {}
+  "scripts": {
+    "generate": "openapi-ts -i ../../openapi/road-travel-core.openapi.json -o ./src -c @hey-api/client-fetch",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json",
+    "prepare": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@hey-api/openapi-ts": "^0.99.0",
+    "typescript": "^5.6.0"
+  }
 }
