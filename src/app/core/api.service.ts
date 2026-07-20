@@ -7,6 +7,7 @@ import {
   type CheckoutSessionResponse,
   type ConsentInput,
   type DrivesResponse,
+  type FriendshipModel,
   type FriendsResponse,
   type ExploreFeedbackRequest,
   type ExploreRequest,
@@ -33,12 +34,16 @@ import {
   deleteTripV1TripsTripIdDelete,
   exploreFeedbackV1TripsExploreFeedbackPost,
   exploreV1TripsExplorePost,
+  blockUserV1SocialBlocksPost,
   friendDrivesV1SocialFriendsFriendshipIdDrivesGet,
   getMyStatsV1MeStatsGet,
   listDrivesV1DrivesGet,
   listFriendsV1SocialFriendsGet,
   listTripsV1TripsGet,
   listVehiclesV1VehiclesGet,
+  removeFriendV1SocialFriendsFriendshipIdDelete,
+  requestFriendV1SocialFriendsPost,
+  respondV1SocialFriendsFriendshipIdRespondPost,
   createCheckoutSessionV1BillingCheckoutSessionPost,
   createPortalSessionV1BillingPortalSessionPost,
   getMeV1MeGet,
@@ -233,6 +238,45 @@ export class ApiService {
     });
     if (error || !data) this.raise(response, error);
     return data as SharedDrivesResponse;
+  }
+
+  /** Send a friend request by email. 404 = no account (or that account blocked us —
+   * indistinguishable by design); 409 = existing relationship; 429 = daily cap. */
+  async requestFriend(email: string): Promise<FriendshipModel> {
+    const { data, error, response } = await requestFriendV1SocialFriendsPost({
+      ...this.options(),
+      body: { email },
+    });
+    if (error || !data) this.raise(response, error);
+    return data as FriendshipModel;
+  }
+
+  /** Accept (200) or decline (204 — the request is deleted) an incoming request. */
+  async respondFriend(friendshipId: string, accept: boolean): Promise<void> {
+    const { error, response } = await respondV1SocialFriendsFriendshipIdRespondPost({
+      ...this.options(),
+      path: { friendship_id: friendshipId },
+      body: { accept },
+    });
+    if (response && !response.ok) this.raise(response, error);
+  }
+
+  /** Unfriend / cancel a pending request / lift one of the caller's blocks. */
+  async removeFriend(friendshipId: string): Promise<void> {
+    const { error, response } = await removeFriendV1SocialFriendsFriendshipIdDelete({
+      ...this.options(),
+      path: { friendship_id: friendshipId },
+    });
+    if (response && !response.ok) this.raise(response, error);
+  }
+
+  /** Block the other party of a relationship (invisible to them; idempotent). */
+  async blockFriend(friendshipId: string): Promise<void> {
+    const { error, response } = await blockUserV1SocialBlocksPost({
+      ...this.options(),
+      body: { friendship_id: friendshipId },
+    });
+    if (response && !response.ok) this.raise(response, error);
   }
 
   /** Delete one of the caller's saved trips. Missing/foreign ids 404 (surfaced as ApiError). */

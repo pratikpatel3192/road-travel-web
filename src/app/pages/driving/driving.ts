@@ -81,13 +81,51 @@ import { formatDistance } from '../plan/severity';
       }
 
       <h2>Friends</h2>
+      <form class="add" (submit)="sendRequest($event)">
+        <input
+          type="email"
+          placeholder="Friend's email"
+          [value]="email()"
+          (input)="email.set($any($event.target).value)"
+          autocomplete="off"
+        />
+        <button type="submit" [disabled]="busy() || !email().includes('@')">
+          {{ busy() ? 'Sending…' : 'Add friend' }}
+        </button>
+      </form>
+      @if (notice(); as n) {
+        <p class="notice">{{ n }}</p>
+      }
+      @if (friendError(); as e) {
+        <p class="error">{{ e }}</p>
+      }
+
+      @if (incoming().length) {
+        <h3>Requests</h3>
+        @for (f of incoming(); track f.id) {
+          <div class="row actions-row">
+            <span class="names">{{ friendName(f) }}</span>
+            <span class="actions">
+              <button class="act accept" (click)="respond(f, true)">Accept</button>
+              <button class="act" (click)="respond(f, false)">Decline</button>
+            </span>
+          </div>
+        }
+      }
+
       @if (friends().length) {
         @for (f of friends(); track f.id) {
           <div class="friend">
-            <button class="open" (click)="toggleFriend(f)">
-              <span class="names">{{ friendName(f) }}</span>
-              <span class="sub">{{ expanded() === f.id ? 'hide' : 'shared drives' }}</span>
-            </button>
+            <div class="row actions-row">
+              <button class="open bare" (click)="toggleFriend(f)">
+                <span class="names">{{ friendName(f) }}</span>
+                <span class="sub">{{ expanded() === f.id ? 'hide' : 'shared drives' }}</span>
+              </button>
+              <span class="actions">
+                <button class="act" (click)="remove(f)">Unfriend</button>
+                <button class="act warn" (click)="block(f)">Block</button>
+              </span>
+            </div>
             @if (expanded() === f.id) {
               @for (d of sharedDrives(); track d.id) {
                 <div class="row shared">
@@ -113,9 +151,31 @@ import { formatDistance } from '../plan/severity';
           </div>
         }
       } @else if (!loading()) {
-        <p class="empty">
-          No friends yet. Add friends in the iOS app — drives they share show up here.
-        </p>
+        <p class="empty">No friends yet — add someone by email above.</p>
+      }
+
+      @if (outgoing().length) {
+        <h3>Sent</h3>
+        @for (f of outgoing(); track f.id) {
+          <div class="row actions-row">
+            <span class="names">{{ friendName(f) }} <span class="sub">pending</span></span>
+            <span class="actions">
+              <button class="act" (click)="remove(f)">Cancel</button>
+            </span>
+          </div>
+        }
+      }
+
+      @if (blocked().length) {
+        <h3>Blocked by you</h3>
+        @for (f of blocked(); track f.id) {
+          <div class="row actions-row">
+            <span class="names">{{ friendName(f) }}</span>
+            <span class="actions">
+              <button class="act" (click)="remove(f)">Unblock</button>
+            </span>
+          </div>
+        }
       }
     </div>
   `,
@@ -246,6 +306,93 @@ import { formatDistance } from '../plan/severity';
       .sev.severe {
         background: var(--sev-severe);
       }
+      h3 {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--muted);
+        margin: 14px 0 6px;
+      }
+      .add {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      .add input {
+        flex: 1;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface);
+        color: var(--text);
+        font: inherit;
+      }
+      .add button {
+        padding: 10px 14px;
+        border: none;
+        border-radius: var(--radius);
+        background: var(--accent);
+        color: var(--accent-contrast);
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .add button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      .notice {
+        color: var(--muted);
+        font-size: 13px;
+        margin: 0 2px 6px;
+      }
+      .error {
+        color: var(--sev-severe);
+        font-size: 13px;
+        margin: 0 2px 6px;
+      }
+      .actions-row {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .actions {
+        display: flex;
+        gap: 6px;
+        flex: 0 0 auto;
+      }
+      .act {
+        padding: 6px 10px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface);
+        color: var(--text);
+        font: inherit;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .act:hover {
+        border-color: var(--accent);
+      }
+      .act.accept {
+        border-color: var(--accent);
+        color: var(--accent);
+        font-weight: 600;
+      }
+      .act.warn:hover {
+        border-color: var(--sev-severe);
+        color: var(--sev-severe);
+      }
+      .open.bare {
+        border: none;
+        background: none;
+        padding: 0;
+        flex: 1;
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+      }
     `,
   ],
 })
@@ -257,10 +404,17 @@ export class Driving {
   readonly drives = signal<DriveModel[]>([]);
   readonly vehicles = signal<VehicleModel[]>([]);
   readonly friends = signal<FriendshipModel[]>([]);
+  readonly incoming = signal<FriendshipModel[]>([]);
+  readonly outgoing = signal<FriendshipModel[]>([]);
+  readonly blocked = signal<FriendshipModel[]>([]);
   readonly expanded = signal<string | null>(null);
   readonly sharedDrives = signal<SharedDriveModel[]>([]);
   readonly sharedLoading = signal(false);
   readonly loading = signal(true);
+  readonly email = signal('');
+  readonly busy = signal(false);
+  readonly notice = signal<string | null>(null);
+  readonly friendError = signal<string | null>(null);
 
   constructor() {
     void this.refresh();
@@ -278,6 +432,9 @@ export class Driving {
       this.drives.set(drives.drives);
       this.vehicles.set(vehicles.vehicles);
       this.friends.set(graph.friends ?? []);
+      this.incoming.set(graph.incoming ?? []);
+      this.outgoing.set(graph.outgoing ?? []);
+      this.blocked.set(graph.blocked ?? []);
     } finally {
       this.loading.set(false);
     }
@@ -285,6 +442,54 @@ export class Driving {
 
   friendName(f: FriendshipModel): string {
     return f.friend.display_name || f.friend.email || 'Friend';
+  }
+
+  // --- friend management (parity with iOS — user decision 2026-07-19) ---
+
+  sendRequest(event: Event): void {
+    event.preventDefault();
+    const address = this.email().trim();
+    if (!address || this.busy()) return;
+    this.busy.set(true);
+    this.notice.set(null);
+    this.friendError.set(null);
+    void this.api
+      .requestFriend(address)
+      .then(() => {
+        this.notice.set(`Request sent to ${address}.`);
+        this.email.set('');
+        return this.refresh();
+      })
+      .catch((e: unknown) => {
+        // 404 (no account / blocked — indistinguishable by design), 409, or 429.
+        this.friendError.set(
+          e instanceof Error && e.message ? e.message : 'Couldn’t send that request.',
+        );
+      })
+      .finally(() => this.busy.set(false));
+  }
+
+  respond(f: FriendshipModel, accept: boolean): void {
+    void this.api
+      .respondFriend(f.id, accept)
+      .then(() => this.refresh())
+      .catch(() => this.friendError.set('Couldn’t update that request.'));
+  }
+
+  remove(f: FriendshipModel): void {
+    if (this.expanded() === f.id) this.expanded.set(null);
+    void this.api
+      .removeFriend(f.id)
+      .then(() => this.refresh())
+      .catch(() => this.friendError.set('Couldn’t update that friendship.'));
+  }
+
+  block(f: FriendshipModel): void {
+    if (this.expanded() === f.id) this.expanded.set(null);
+    void this.api
+      .blockFriend(f.id)
+      .then(() => this.refresh())
+      .catch(() => this.friendError.set('Couldn’t block that user.'));
   }
 
   toggleFriend(f: FriendshipModel): void {
