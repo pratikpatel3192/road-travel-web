@@ -6,7 +6,7 @@
     Legal
   </div>
   <h1>Road Travel — Privacy Policy</h1>
-  <p class="meta"><strong>Effective date:</strong> July 18, 2026</p>
+  <p class="meta"><strong>Effective date:</strong> July 19, 2026 &nbsp;·&nbsp; <strong>Version:</strong> privacy-2026-07-19</p>
 
   <p class="intro">Road Travel plans driving routes and shows the weather you'll meet along the way, timed to your estimated arrival at each point. This policy explains what information the app collects, how it is used, who processes it, and the choices you have. <strong>We collect only what the app needs to work, we don't show ads or track you across other apps, and we never sell your data.</strong></p>
 
@@ -17,6 +17,7 @@
       <li>Your <strong>saved trips, stops, and profile</strong> (such as vehicle type and preferences) are stored on <strong>our backend</strong> so they sync across your devices.</li>
       <li>With your permission, your <strong>location</strong> is used to plan routes, navigate, and check the weather ahead. It is not sold and we do not keep a location history for advertising.</li>
       <li>We do <strong>not</strong> track you across apps or websites, we do <strong>not</strong> use advertising SDKs, and we do <strong>not</strong> sell your data.</li>
+      <li><strong>Recording a drive, sharing with friends, and live location sharing are strictly opt-in</strong> — each needs your separate, explicit consent, everything is private by default, and you can withdraw at any time.</li>
       <li>You can <strong>export or delete</strong> your data at any time (see "Your rights and choices").</li>
     </ul>
   </div>
@@ -32,6 +33,15 @@
 
     <h3>Trips, stops, and profile</h3>
     <p>When you save a trip, add stops, or set preferences, we store that content — origins, destinations, waypoints, saved trips, vehicle type, onboarding answers, and settings — on <strong>our backend</strong>, linked to your account, so it syncs across your devices. Address autocomplete is provided through Apple MapKit (on iPhone) or an open geocoding service (on the web) to turn what you type into places.</p>
+
+    <h3>Recorded drives &amp; driving stats (opt-in)</h3>
+    <p>If you choose to record a drive and give your separate, explicit consent, we store that drive on our backend: the <strong>route trace</strong> (a simplified series of coordinates), start/end places and times, distance, duration, and speed summaries, plus the garage vehicle you attach. Drives are <strong>private by default</strong> — we never record a drive without you starting the recording, and you can delete any drive at any time. From your recorded drives we derive aggregate <strong>driving stats</strong> (total distance, number of drives, driving time, regions visited); deleting a drive removes it from your stats. If you use the <strong>garage</strong>, we also store the vehicle details you add (make, model, year, color).</p>
+
+    <h3>Friends &amp; sharing</h3>
+    <p>To send a friend request you enter that person's <strong>email address</strong>, which we use to find their account and to send them an invitation email with accept/decline links; requests <strong>expire automatically</strong> (currently 7 days). Your friends list (who you're connected to, pending requests, and blocks you place) is stored on our backend. A drive is visible to your accepted friends <strong>only if you mark that specific drive "shared with friends"</strong> — you can make it private again at any time. Blocking someone hides your relationship from them entirely.</p>
+
+    <h3>Live location sharing (opt-in)</h3>
+    <p>If you choose to share your live location and give your separate, explicit consent, your position is transmitted in real time to the people you select, only during a sharing session that <strong>you start, can stop at any time, and that expires automatically</strong>. Shared live positions are relayed through our infrastructure but are <strong>not stored</strong> on our servers.</p>
 
     <h3>Weather</h3>
     <p>Weather forecasts are provided by <strong>Apple Weather (WeatherKit)</strong>. When the app requests a forecast for points along your route, the relevant coordinates are sent to Apple to return the forecast, governed by Apple's privacy policy and the Apple Weather / WeatherKit terms. See Apple's attribution at <a href="https://weatherkit.apple.com/legal-attribution.html" target="_blank" rel="noopener">weatherkit.apple.com/legal-attribution.html</a>.</p>
@@ -63,6 +73,7 @@
       <li><strong>Mapbox</strong> — web maps, routing, and points of interest (<a href="https://www.mapbox.com/legal/privacy" target="_blank" rel="noopener">mapbox.com/legal/privacy</a>).</li>
       <li><strong>RevenueCat</strong> — subscription management.</li>
       <li><strong>Anthropic</strong> — AI trip briefings, under a no-training / zero-retention arrangement.</li>
+      <li><strong>Resend</strong> — transactional email delivery (friend-request invitations) (<a href="https://resend.com/legal/privacy-policy" target="_blank" rel="noopener">resend.com/legal/privacy-policy</a>).</li>
     </ul>
   </div>
 
@@ -83,13 +94,14 @@
       <li><strong>Export</strong> a copy of your data from the app (Settings).</li>
       <li><strong>Delete</strong> your account and its data from the app (Settings); this removes your trips, profile, and account from our backend. Subscription records held by Apple and RevenueCat are retained per their own policies.</li>
       <li><strong>Revoke location</strong> access at any time in your device Settings.</li>
+      <li><strong>Drives &amp; sharing:</strong> delete any recorded drive, unshare a drive, unfriend or block anyone, and withdraw drive-recording or live-sharing consent in <em>Settings → Privacy</em>. Withdrawing stops future recording/sharing and does not affect the lawfulness of prior processing.</li>
       <li>Depending on where you live, you may have additional rights (access, correction, deletion, portability). Contact us to exercise them.</li>
     </ul>
   </div>
 
   <div class="section">
     <h2>Data retention and security</h2>
-    <p>We keep account and trip data while your account is active, and delete it when you delete your account (backups age out on a rolling basis). Data is encrypted in transit (HTTPS/TLS) and at rest by our hosting and database providers.</p>
+    <p>We keep account and trip data while your account is active, and delete it when you delete your account (backups age out on a rolling basis). Recorded drives are kept until you delete them or delete your account; live location shared during a session is transmitted only and is not retained after the session ends; pending friend requests expire automatically. Data is encrypted in transit (HTTPS/TLS) and at rest by our hosting and database providers.</p>
   </div>
 
   <div class="section">
