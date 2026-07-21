@@ -33,30 +33,15 @@ const APPLE_SUBSCRIPTIONS_URL = 'https://account.apple.com/account/manage';
               </div>
               <button type="button" class="acct-btn" (click)="auth.signOut()">Sign out</button>
             </div>
-            <!-- ADR-0028: route by WHERE the subscription is billed (server field), never by
-                 platform. Hidden for promo/dev (management 'none') and non-subscribers. -->
-            @if (manageable(); as sub) {
-              <div class="manage-row">
-                <div class="acct-who">
-                  <p class="manage-title">Subscription</p>
-                  <p class="acct-note">
-                    {{ sub.management === 'apple' ? 'Billed through Apple.' : 'Billed through our website.' }}
-                    @if (sub.will_renew === false) { Won't renew. }
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  class="acct-btn"
-                  [disabled]="portalLoading()"
-                  (click)="manageSubscription()"
-                >
-                  {{ portalLoading() ? 'Opening…' : 'Manage subscription' }}
-                </button>
-              </div>
-              @if (manageError()) {
-                <p class="manage-error" role="alert">{{ manageError() }}</p>
-              }
-            }
+            <!-- iOS parity: the account's driving surfaces, right where the phone puts them. -->
+            <div class="rows">
+              <a routerLink="/driving" class="row-link">
+                <span>Garage &amp; driving stats</span><span class="chev">›</span>
+              </a>
+              <a routerLink="/driving" class="row-link">
+                <span>Friends</span><span class="chev">›</span>
+              </a>
+            </div>
           } @else {
             <!-- Guests run on a silent anonymous session — say so, and say what signing in adds. -->
             <p class="acct-note">
@@ -69,6 +54,32 @@ const APPLE_SUBSCRIPTIONS_URL = 'https://account.apple.com/account/manage';
       }
 
       <app-profile-settings />
+
+      @if (auth.hasRealAccount()) {
+        <section class="card">
+          <h2>Privacy</h2>
+          <div class="acct">
+            <div class="acct-who">
+              <p class="manage-title">Drive recording</p>
+              <p class="acct-note">
+                Lets you record drives you choose to save (route + stats, private to you).
+                Turning this off withdraws your consent and stops all recording.
+              </p>
+            </div>
+            <button
+              type="button"
+              class="toggle"
+              role="switch"
+              [attr.aria-checked]="driveConsent() === true"
+              [class.on]="driveConsent() === true"
+              [disabled]="driveConsent() === null"
+              (click)="toggleDriveConsent()"
+            >
+              <span class="knob"></span>
+            </button>
+          </div>
+        </section>
+      }
 
       <section class="card">
         <h2>Appearance</h2>
@@ -98,7 +109,7 @@ const APPLE_SUBSCRIPTIONS_URL = 'https://account.apple.com/account/manage';
       </section>
 
       <section class="card">
-        <h2>Favorites</h2>
+        <h2>Personalization</h2>
         <label class="fav-label">Home</label>
         <div class="fav-field">
           <app-place-field
@@ -119,8 +130,36 @@ const APPLE_SUBSCRIPTIONS_URL = 'https://account.apple.com/account/manage';
         </div>
       </section>
 
+      @if (manageable(); as sub) {
+        <section class="card">
+          <h2>Subscription</h2>
+          <div class="acct">
+            <div class="acct-who">
+              <p class="manage-title">Road Travel Pro</p>
+              <p class="acct-note">
+                {{ sub.management === 'apple' ? 'Billed through Apple.' : 'Billed through our website.' }}
+                @if (sub.will_renew === false) { Won't renew. }
+              </p>
+            </div>
+            <button
+              type="button"
+              class="acct-btn"
+              [disabled]="portalLoading()"
+              (click)="manageSubscription()"
+            >
+              {{ portalLoading() ? 'Opening…' : 'Manage' }}
+            </button>
+          </div>
+          @if (manageError()) {
+            <p class="manage-error" role="alert">{{ manageError() }}</p>
+          }
+        </section>
+      }
+
       <section class="card links">
+        <h2>About</h2>
         <a routerLink="/privacy">Privacy Policy</a>
+        <a routerLink="/terms">Terms of Use</a>
         <a routerLink="/support">Support</a>
       </section>
 
@@ -333,6 +372,66 @@ const APPLE_SUBSCRIPTIONS_URL = 'https://account.apple.com/account/manage';
       .modal-close {
         margin-top: 6px;
       }
+      .rows {
+        margin-top: 12px;
+        padding-top: 4px;
+        border-top: 1px solid var(--border);
+      }
+      .row-link {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 2px;
+        color: var(--text);
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        border-bottom: 1px solid var(--border);
+      }
+      .row-link:last-child {
+        border-bottom: none;
+      }
+      .row-link:hover span:first-child {
+        color: var(--accent);
+      }
+      .chev {
+        color: var(--muted);
+        font-size: 16px;
+      }
+      .toggle {
+        flex-shrink: 0;
+        width: 46px;
+        height: 28px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: var(--surface-2);
+        position: relative;
+        cursor: pointer;
+        padding: 0;
+        transition: background 0.15s ease;
+      }
+      .toggle .knob {
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        transition: transform 0.15s ease;
+      }
+      .toggle.on {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+      .toggle.on .knob {
+        transform: translateX(18px);
+      }
+      .toggle:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
     `,
   ],
 })
@@ -358,9 +457,34 @@ export class Settings {
     { value: 'dark', label: 'Dark' },
   ];
 
+  /** F-007 (ADR-0035): the drive_recording consent — null until loaded (toggle disabled). */
+  readonly driveConsent = signal<boolean | null>(null);
+
   constructor() {
     // The subscription routing lives on /v1/me — make sure it's fresh when Settings opens.
     void this.entitlement.refresh();
+    if (this.auth.hasRealAccount()) {
+      void this.api
+        .getProfile()
+        .then((profile) => {
+          const consent = (profile.consents ?? []).find(
+            (c) => c.consent_type === 'drive_recording',
+          );
+          this.driveConsent.set(consent?.granted ?? false);
+        })
+        .catch(() => this.driveConsent.set(false));
+    }
+  }
+
+  /** Every change is an append-only consent event; the server enforces it on upload anyway. */
+  toggleDriveConsent(): void {
+    const previous = this.driveConsent();
+    if (previous === null) return;
+    const granted = !previous;
+    this.driveConsent.set(granted);
+    void this.api
+      .recordConsents([{ consent_type: 'drive_recording', granted }])
+      .catch(() => this.driveConsent.set(previous)); // network failed — reflect reality
   }
 
   async manageSubscription(): Promise<void> {
