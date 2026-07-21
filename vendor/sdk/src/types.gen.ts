@@ -854,6 +854,12 @@ export type FriendshipModel = {
      * Responded At
      */
     responded_at?: string | null;
+    /**
+     * Expires At
+     *
+     * Pending requests only: past this instant the request is gone.
+     */
+    expires_at?: string | null;
 };
 
 /**
