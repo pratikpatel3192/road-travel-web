@@ -255,6 +255,37 @@ export type BriefingResponse = {
     stale?: boolean;
 };
 /**
+ * ChatDriveModel
+ *
+ * The compact drive card attached to a message (sender's drive; absent if since deleted).
+ */
+export type ChatDriveModel = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Title
+     */
+    title?: string | null;
+    /**
+     * Start Place
+     */
+    start_place?: string | null;
+    /**
+     * End Place
+     */
+    end_place?: string | null;
+    /**
+     * Distance Meters
+     */
+    distance_meters: number;
+    /**
+     * Started At
+     */
+    started_at: string;
+};
+/**
  * CheckoutSessionRequest
  *
  * Start web (Stripe) checkout for a plan. The SERVER decides the trial, never the client.
@@ -352,6 +383,72 @@ export type ConsentsRequest = {
      * Consents
      */
     consents: Array<ConsentInput>;
+};
+/**
+ * ConversationCreateRequest
+ *
+ * DM: exactly `friendship_id`. Group: `friendship_ids` (2..7 accepted friends) + title.
+ */
+export type ConversationCreateRequest = {
+    /**
+     * Kind
+     */
+    kind?: 'dm' | 'group';
+    /**
+     * Friendship Id
+     */
+    friendship_id?: string | null;
+    /**
+     * Friendship Ids
+     */
+    friendship_ids?: Array<string> | null;
+    /**
+     * Title
+     */
+    title?: string | null;
+};
+/**
+ * ConversationModel
+ */
+export type ConversationModel = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Kind
+     */
+    kind: 'dm' | 'group';
+    /**
+     * Title
+     */
+    title?: string | null;
+    /**
+     * Topic
+     *
+     * The Realtime delivery topic: chat:{conversation_id}.
+     */
+    topic: string;
+    /**
+     * Members
+     *
+     * The OTHER members.
+     */
+    members?: Array<PartyModel>;
+    last_message?: MessageModel | null;
+    /**
+     * Created At
+     */
+    created_at: string;
+};
+/**
+ * ConversationsResponse
+ */
+export type ConversationsResponse = {
+    /**
+     * Conversations
+     */
+    conversations: Array<ConversationModel>;
 };
 /**
  * CoordinateModel
@@ -771,6 +868,43 @@ export type FriendRequestCreate = {
     email: string;
 };
 /**
+ * FriendSessionModel
+ *
+ * A friend's live share as the map consumes it — identity + topic, never a position.
+ */
+export type FriendSessionModel = {
+    /**
+     * Session Id
+     */
+    session_id: string;
+    /**
+     * Topic
+     */
+    topic: string;
+    /**
+     * Friendship Id
+     */
+    friendship_id: string;
+    friend: PartyModel;
+    /**
+     * Started At
+     */
+    started_at: string;
+    /**
+     * Expires At
+     */
+    expires_at: string;
+};
+/**
+ * FriendSessionsResponse
+ */
+export type FriendSessionsResponse = {
+    /**
+     * Sessions
+     */
+    sessions: Array<FriendSessionModel>;
+};
+/**
  * FriendsResponse
  *
  * The caller's whole graph, pre-partitioned; blocks OTHERS placed on the caller are absent
@@ -881,6 +1015,33 @@ export type HazardModel = {
     peak_detail: string;
 };
 /**
+ * LocationSessionModel
+ */
+export type LocationSessionModel = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Topic
+     *
+     * The Realtime broadcast topic: location:{session_id}.
+     */
+    topic: string;
+    /**
+     * Started At
+     */
+    started_at: string;
+    /**
+     * Expires At
+     */
+    expires_at: string;
+    /**
+     * Drive Id
+     */
+    drive_id?: string | null;
+};
+/**
  * MeResponse
  *
  * Entitlement + funnel snapshot the clients poll to drive gating (GET /v1/me, ADR-0025).
@@ -944,6 +1105,53 @@ export type MeStatsResponse = {
      * Distinct coarse region codes ever driven, sorted.
      */
     regions?: Array<string>;
+};
+/**
+ * MessageModel
+ */
+export type MessageModel = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Conversation Id
+     */
+    conversation_id: string;
+    /**
+     * Body
+     */
+    body: string;
+    /**
+     * Absent when the sender's account was deleted (anonymized).
+     */
+    sender?: PartyModel | null;
+    /**
+     * Mine
+     */
+    mine?: boolean;
+    drive?: ChatDriveModel | null;
+    /**
+     * Created At
+     */
+    created_at: string;
+};
+/**
+ * MessagesResponse
+ */
+export type MessagesResponse = {
+    /**
+     * Messages
+     */
+    messages: Array<MessageModel>;
+};
+/**
+ * MySessionResponse
+ *
+ * The caller's live session, if any — lets the client restore the sharing indicator.
+ */
+export type MySessionResponse = {
+    session?: LocationSessionModel | null;
 };
 /**
  * OnboardingRequest
@@ -1627,6 +1835,38 @@ export type SegmentModel = {
      * Severity
      */
     severity: 'clear' | 'caution' | 'severe';
+};
+/**
+ * SendMessageRequest
+ */
+export type SendMessageRequest = {
+    /**
+     * Body
+     */
+    body: string;
+    /**
+     * Drive Id
+     *
+     * Share one of YOUR drives into the chat (rendered as a card).
+     */
+    drive_id?: string | null;
+};
+/**
+ * SessionCreateRequest
+ */
+export type SessionCreateRequest = {
+    /**
+     * Ttl Minutes
+     *
+     * Session length; server default when omitted.
+     */
+    ttl_minutes?: number | null;
+    /**
+     * Drive Id
+     *
+     * Optionally ties the share to a recorded drive in progress.
+     */
+    drive_id?: string | null;
 };
 /**
  * SharedDriveModel
@@ -2960,6 +3200,19 @@ export type BlockUserV1SocialBlocksPostResponses = {
     200: FriendshipModel;
 };
 export type BlockUserV1SocialBlocksPostResponse = BlockUserV1SocialBlocksPostResponses[keyof BlockUserV1SocialBlocksPostResponses];
+export type FriendSessionsV1SocialFriendsSessionsGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/social/friends/sessions';
+};
+export type FriendSessionsV1SocialFriendsSessionsGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: FriendSessionsResponse;
+};
+export type FriendSessionsV1SocialFriendsSessionsGetResponse = FriendSessionsV1SocialFriendsSessionsGetResponses[keyof FriendSessionsV1SocialFriendsSessionsGetResponses];
 export type FriendDrivesV1SocialFriendsFriendshipIdDrivesGetData = {
     body?: never;
     path: {
@@ -2985,4 +3238,178 @@ export type FriendDrivesV1SocialFriendsFriendshipIdDrivesGetResponses = {
     200: SharedDrivesResponse;
 };
 export type FriendDrivesV1SocialFriendsFriendshipIdDrivesGetResponse = FriendDrivesV1SocialFriendsFriendshipIdDrivesGetResponses[keyof FriendDrivesV1SocialFriendsFriendshipIdDrivesGetResponses];
+export type MintSessionV1LocationsSessionsPostData = {
+    body: SessionCreateRequest;
+    path?: never;
+    query?: never;
+    url: '/v1/locations/sessions';
+};
+export type MintSessionV1LocationsSessionsPostErrors = {
+    /**
+     * consent_required: live_location_sharing not at current version.
+     */
+    400: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+export type MintSessionV1LocationsSessionsPostError = MintSessionV1LocationsSessionsPostErrors[keyof MintSessionV1LocationsSessionsPostErrors];
+export type MintSessionV1LocationsSessionsPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: LocationSessionModel;
+};
+export type MintSessionV1LocationsSessionsPostResponse = MintSessionV1LocationsSessionsPostResponses[keyof MintSessionV1LocationsSessionsPostResponses];
+export type RevokeSessionV1LocationsSessionsSessionIdDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * Session Id
+         */
+        session_id: string;
+    };
+    query?: never;
+    url: '/v1/locations/sessions/{session_id}';
+};
+export type RevokeSessionV1LocationsSessionsSessionIdDeleteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+export type RevokeSessionV1LocationsSessionsSessionIdDeleteError = RevokeSessionV1LocationsSessionsSessionIdDeleteErrors[keyof RevokeSessionV1LocationsSessionsSessionIdDeleteErrors];
+export type RevokeSessionV1LocationsSessionsSessionIdDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+export type RevokeSessionV1LocationsSessionsSessionIdDeleteResponse = RevokeSessionV1LocationsSessionsSessionIdDeleteResponses[keyof RevokeSessionV1LocationsSessionsSessionIdDeleteResponses];
+export type MySessionV1LocationsSessionsMineGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/locations/sessions/mine';
+};
+export type MySessionV1LocationsSessionsMineGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: MySessionResponse;
+};
+export type MySessionV1LocationsSessionsMineGetResponse = MySessionV1LocationsSessionsMineGetResponses[keyof MySessionV1LocationsSessionsMineGetResponses];
+export type ListConversationsV1ConversationsGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/conversations';
+};
+export type ListConversationsV1ConversationsGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: ConversationsResponse;
+};
+export type ListConversationsV1ConversationsGetResponse = ListConversationsV1ConversationsGetResponses[keyof ListConversationsV1ConversationsGetResponses];
+export type CreateConversationV1ConversationsPostData = {
+    body: ConversationCreateRequest;
+    path?: never;
+    query?: never;
+    url: '/v1/conversations';
+};
+export type CreateConversationV1ConversationsPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+export type CreateConversationV1ConversationsPostError = CreateConversationV1ConversationsPostErrors[keyof CreateConversationV1ConversationsPostErrors];
+export type CreateConversationV1ConversationsPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: ConversationModel;
+};
+export type CreateConversationV1ConversationsPostResponse = CreateConversationV1ConversationsPostResponses[keyof CreateConversationV1ConversationsPostResponses];
+export type GetMessagesV1ConversationsConversationIdMessagesGetData = {
+    body?: never;
+    path: {
+        /**
+         * Conversation Id
+         */
+        conversation_id: string;
+    };
+    query?: never;
+    url: '/v1/conversations/{conversation_id}/messages';
+};
+export type GetMessagesV1ConversationsConversationIdMessagesGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+export type GetMessagesV1ConversationsConversationIdMessagesGetError = GetMessagesV1ConversationsConversationIdMessagesGetErrors[keyof GetMessagesV1ConversationsConversationIdMessagesGetErrors];
+export type GetMessagesV1ConversationsConversationIdMessagesGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: MessagesResponse;
+};
+export type GetMessagesV1ConversationsConversationIdMessagesGetResponse = GetMessagesV1ConversationsConversationIdMessagesGetResponses[keyof GetMessagesV1ConversationsConversationIdMessagesGetResponses];
+export type SendMessageV1ConversationsConversationIdMessagesPostData = {
+    body: SendMessageRequest;
+    path: {
+        /**
+         * Conversation Id
+         */
+        conversation_id: string;
+    };
+    query?: never;
+    url: '/v1/conversations/{conversation_id}/messages';
+};
+export type SendMessageV1ConversationsConversationIdMessagesPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+export type SendMessageV1ConversationsConversationIdMessagesPostError = SendMessageV1ConversationsConversationIdMessagesPostErrors[keyof SendMessageV1ConversationsConversationIdMessagesPostErrors];
+export type SendMessageV1ConversationsConversationIdMessagesPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: MessageModel;
+};
+export type SendMessageV1ConversationsConversationIdMessagesPostResponse = SendMessageV1ConversationsConversationIdMessagesPostResponses[keyof SendMessageV1ConversationsConversationIdMessagesPostResponses];
+export type ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostData = {
+    body?: never;
+    path: {
+        /**
+         * Conversation Id
+         */
+        conversation_id: string;
+        /**
+         * Message Id
+         */
+        message_id: string;
+    };
+    query?: never;
+    url: '/v1/conversations/{conversation_id}/messages/{message_id}/report';
+};
+export type ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+export type ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostError = ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostErrors[keyof ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostErrors];
+export type ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+export type ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostResponse = ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostResponses[keyof ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostResponses];
 //# sourceMappingURL=types.gen.d.ts.map

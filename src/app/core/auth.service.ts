@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import {
   type EmailOtpType,
+  type RealtimeChannel,
   type Session,
   type SupabaseClient,
   createClient,
@@ -232,6 +233,21 @@ export class AuthService {
     // Reading the token = an authenticated call is about to happen — that's "activity".
     this.stampActivity();
     return this._session()?.access_token ?? null;
+  }
+
+  /**
+   * F-007 P3 (ADR-0034): a PRIVATE Realtime broadcast channel on `topic`, or null when Supabase
+   * isn't configured. Authorization is server-side — joining succeeds only if the DB channel
+   * policies allow this JWT (e.g. a chat conversation member). Callers own the lifecycle:
+   * `.subscribe()` after wiring handlers, `.unsubscribe()` when leaving.
+   */
+  channel(topic: string): RealtimeChannel | null {
+    if (!this.supabase) return null;
+    // Private channels authorize against the CURRENT access token, not the anon key.
+    void this.supabase.realtime.setAuth(this.token);
+    return this.supabase.channel(topic, {
+      config: { private: true, broadcast: { self: false } },
+    });
   }
 
   get userId(): string | null {

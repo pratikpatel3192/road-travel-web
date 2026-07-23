@@ -35,6 +35,12 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/driving/driving').then((m) => m.Driving),
     canActivate: [realAccountGuard],
   },
+  // F-007 P3 M8: chat (history via REST, delivery via Realtime — ADR-0034).
+  {
+    path: 'chats',
+    loadComponent: () => import('./pages/driving/chats').then((m) => m.Chats),
+    canActivate: [realAccountGuard],
+  },
   // F-007 P2.1: friend-request invite emails land here (explicit confirm; never a GET action).
   {
     path: 'friends/respond',
