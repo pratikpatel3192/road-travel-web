@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import type {
   DriveModel,
   FriendshipModel,
@@ -25,6 +25,7 @@ import { formatDistance } from '../plan/severity';
       <header class="top">
         <a routerLink="/app" class="back" aria-label="Back">←</a>
         <h1>Driving</h1>
+        <a routerLink="/chats" class="chats-link">Chats →</a>
       </header>
 
       @if (stats(); as s) {
@@ -122,6 +123,7 @@ import { formatDistance } from '../plan/severity';
                 <span class="sub">{{ expanded() === f.id ? 'hide' : 'shared drives' }}</span>
               </button>
               <span class="actions">
+                <button class="act accept" (click)="message(f)">Message</button>
                 <button class="act" (click)="remove(f)">Unfriend</button>
                 <button class="act warn" (click)="block(f)">Block</button>
               </span>
@@ -191,6 +193,11 @@ import { formatDistance } from '../plan/severity';
         align-items: center;
         gap: 12px;
         margin-bottom: 12px;
+      }
+      .chats-link {
+        margin-left: auto;
+        font-size: 14px;
+        font-weight: 600;
       }
       .back {
         width: 34px;
@@ -399,6 +406,7 @@ import { formatDistance } from '../plan/severity';
 export class Driving {
   private readonly api = inject(ApiService);
   private readonly settings = inject(SettingsService);
+  private readonly router = inject(Router);
 
   readonly stats = signal<MeStatsResponse | null>(null);
   readonly drives = signal<DriveModel[]>([]);
@@ -490,6 +498,14 @@ export class Driving {
       .blockFriend(f.id)
       .then(() => this.refresh())
       .catch(() => this.friendError.set('Couldn’t block that user.'));
+  }
+
+  /** F-007 P3 M8: open (or dedupe into) this friend's DM, then land on the thread. */
+  message(f: FriendshipModel): void {
+    void this.api
+      .openDm(f.id)
+      .then((convo) => this.router.navigate(['/chats'], { queryParams: { open: convo.id } }))
+      .catch(() => this.friendError.set('Couldn’t open that chat.'));
   }
 
   toggleFriend(f: FriendshipModel): void {

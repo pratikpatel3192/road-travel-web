@@ -368,11 +368,95 @@ export const blockUserV1SocialBlocksPost = (options) => (options.client ?? clien
     }
 });
 /**
+ * Live-sharing sessions of accepted friends (the friends-map discovery call)
+ */
+export const friendSessionsV1SocialFriendsSessionsGet = (options) => (options?.client ?? client).get({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/social/friends/sessions',
+    ...options
+});
+/**
  * A friend's shared drives (accepted friendships only; vehicle badge + weather chip)
  */
 export const friendDrivesV1SocialFriendsFriendshipIdDrivesGet = (options) => (options.client ?? client).get({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/v1/social/friends/{friendship_id}/drives',
+    ...options
+});
+/**
+ * Start a live-sharing session (consent-gated; supersedes any prior session)
+ */
+export const mintSessionV1LocationsSessionsPost = (options) => (options.client ?? client).post({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/locations/sessions',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
+ * Stop sharing (owner-only; new channel joins are denied immediately)
+ */
+export const revokeSessionV1LocationsSessionsSessionIdDelete = (options) => (options.client ?? client).delete({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/locations/sessions/{session_id}',
+    ...options
+});
+/**
+ * The caller's live session, if any (restores the sharing indicator)
+ */
+export const mySessionV1LocationsSessionsMineGet = (options) => (options?.client ?? client).get({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/locations/sessions/mine',
+    ...options
+});
+/**
+ * The caller's conversations, newest first (dead DMs are absent)
+ */
+export const listConversationsV1ConversationsGet = (options) => (options?.client ?? client).get({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/conversations',
+    ...options
+});
+/**
+ * Start a DM (dedup-safe) or a group with accepted friends
+ */
+export const createConversationV1ConversationsPost = (options) => (options.client ?? client).post({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/conversations',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
+ * History, newest first (members only; 404 otherwise)
+ */
+export const getMessagesV1ConversationsConversationIdMessagesGet = (options) => (options.client ?? client).get({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/conversations/{conversation_id}/messages',
+    ...options
+});
+/**
+ * Send a message (sanitized, rate-limited; delivery fans out via Realtime)
+ */
+export const sendMessageV1ConversationsConversationIdMessagesPost = (options) => (options.client ?? client).post({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/conversations/{conversation_id}/messages',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
+ * Report a message (members only; goes to the moderation log)
+ */
+export const reportMessageV1ConversationsConversationIdMessagesMessageIdReportPost = (options) => (options.client ?? client).post({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/conversations/{conversation_id}/messages/{message_id}/report',
     ...options
 });
 //# sourceMappingURL=sdk.gen.js.map

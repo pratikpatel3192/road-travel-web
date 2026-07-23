@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AddStopPreviewV1TripsExploreAddStopPreviewPostData, AddStopPreviewV1TripsExploreAddStopPreviewPostErrors, AddStopPreviewV1TripsExploreAddStopPreviewPostResponses, BlockUserV1SocialBlocksPostData, BlockUserV1SocialBlocksPostErrors, BlockUserV1SocialBlocksPostResponses, ClaimTrialV1MeTrialClaimPostData, ClaimTrialV1MeTrialClaimPostErrors, ClaimTrialV1MeTrialClaimPostResponses, CreateBriefingV1BriefingsPostData, CreateBriefingV1BriefingsPostErrors, CreateBriefingV1BriefingsPostResponses, CreateCheckoutSessionV1BillingCheckoutSessionPostData, CreateCheckoutSessionV1BillingCheckoutSessionPostErrors, CreateCheckoutSessionV1BillingCheckoutSessionPostResponses, CreatePortalSessionV1BillingPortalSessionPostData, CreatePortalSessionV1BillingPortalSessionPostResponses, CreateVehicleV1VehiclesPostData, CreateVehicleV1VehiclesPostErrors, CreateVehicleV1VehiclesPostResponses, DeleteAccountV1AccountDeleteData, DeleteAccountV1AccountDeleteResponses, DeleteDriveV1DrivesDriveIdDeleteData, DeleteDriveV1DrivesDriveIdDeleteErrors, DeleteDriveV1DrivesDriveIdDeleteResponses, DeleteTripV1TripsTripIdDeleteData, DeleteTripV1TripsTripIdDeleteErrors, DeleteTripV1TripsTripIdDeleteResponses, DeleteVehicleV1VehiclesVehicleIdDeleteData, DeleteVehicleV1VehiclesVehicleIdDeleteErrors, DeleteVehicleV1VehiclesVehicleIdDeleteResponses, ExploreFeedbackV1TripsExploreFeedbackPostData, ExploreFeedbackV1TripsExploreFeedbackPostErrors, ExploreFeedbackV1TripsExploreFeedbackPostResponses, ExploreV1TripsExplorePostData, ExploreV1TripsExplorePostErrors, ExploreV1TripsExplorePostResponses, ExportAccountV1AccountExportPostData, ExportAccountV1AccountExportPostResponses, FriendDrivesV1SocialFriendsFriendshipIdDrivesGetData, FriendDrivesV1SocialFriendsFriendshipIdDrivesGetErrors, FriendDrivesV1SocialFriendsFriendshipIdDrivesGetResponses, GetDriveV1DrivesDriveIdGetData, GetDriveV1DrivesDriveIdGetErrors, GetDriveV1DrivesDriveIdGetResponses, GetMeV1MeGetData, GetMeV1MeGetErrors, GetMeV1MeGetResponses, GetMyStatsV1MeStatsGetData, GetMyStatsV1MeStatsGetResponses, GetProfileV1MeProfileGetData, GetProfileV1MeProfileGetResponses, GetSurveyQuestionsV1SurveyQuestionsGetData, GetSurveyQuestionsV1SurveyQuestionsGetResponses, HealthHealthGetData, HealthHealthGetResponses, ListDrivesV1DrivesGetData, ListDrivesV1DrivesGetResponses, ListFriendsV1SocialFriendsGetData, ListFriendsV1SocialFriendsGetResponses, ListTripsV1TripsGetData, ListTripsV1TripsGetResponses, ListVehiclesV1VehiclesGetData, ListVehiclesV1VehiclesGetResponses, PlanTripV1TripsPlanPostData, PlanTripV1TripsPlanPostErrors, PlanTripV1TripsPlanPostResponses, RecordConsentsV1MeConsentsPostData, RecordConsentsV1MeConsentsPostErrors, RecordConsentsV1MeConsentsPostResponses, RemoveFriendV1SocialFriendsFriendshipIdDeleteData, RemoveFriendV1SocialFriendsFriendshipIdDeleteErrors, RemoveFriendV1SocialFriendsFriendshipIdDeleteResponses, RequestFriendV1SocialFriendsPostData, RequestFriendV1SocialFriendsPostErrors, RequestFriendV1SocialFriendsPostResponses, RespondV1SocialFriendsFriendshipIdRespondPostData, RespondV1SocialFriendsFriendshipIdRespondPostErrors, RespondV1SocialFriendsFriendshipIdRespondPostResponses, RevenuecatWebhookV1WebhooksRevenuecatPostData, RevenuecatWebhookV1WebhooksRevenuecatPostErrors, RevenuecatWebhookV1WebhooksRevenuecatPostResponses, SaveDriveV1DrivesPostData, SaveDriveV1DrivesPostErrors, SaveDriveV1DrivesPostResponses, SaveTripV1TripsPostData, SaveTripV1TripsPostErrors, SaveTripV1TripsPostResponses, StripeWebhookV1WebhooksStripePostData, StripeWebhookV1WebhooksStripePostErrors, StripeWebhookV1WebhooksStripePostResponses, SubmitOnboardingV1MeOnboardingPostData, SubmitOnboardingV1MeOnboardingPostErrors, SubmitOnboardingV1MeOnboardingPostResponses, UpdateDriveV1DrivesDriveIdPatchData, UpdateDriveV1DrivesDriveIdPatchErrors, UpdateDriveV1DrivesDriveIdPatchResponses, UpdateProfileV1MeProfilePutData, UpdateProfileV1MeProfilePutErrors, UpdateProfileV1MeProfilePutResponses, UpdateVehicleV1VehiclesVehicleIdPatchData, UpdateVehicleV1VehiclesVehicleIdPatchErrors, UpdateVehicleV1VehiclesVehicleIdPatchResponses } from './types.gen';
+import type { AddStopPreviewV1TripsExploreAddStopPreviewPostData, AddStopPreviewV1TripsExploreAddStopPreviewPostErrors, AddStopPreviewV1TripsExploreAddStopPreviewPostResponses, BlockUserV1SocialBlocksPostData, BlockUserV1SocialBlocksPostErrors, BlockUserV1SocialBlocksPostResponses, ClaimTrialV1MeTrialClaimPostData, ClaimTrialV1MeTrialClaimPostErrors, ClaimTrialV1MeTrialClaimPostResponses, CreateBriefingV1BriefingsPostData, CreateBriefingV1BriefingsPostErrors, CreateBriefingV1BriefingsPostResponses, CreateCheckoutSessionV1BillingCheckoutSessionPostData, CreateCheckoutSessionV1BillingCheckoutSessionPostErrors, CreateCheckoutSessionV1BillingCheckoutSessionPostResponses, CreateConversationV1ConversationsPostData, CreateConversationV1ConversationsPostErrors, CreateConversationV1ConversationsPostResponses, CreatePortalSessionV1BillingPortalSessionPostData, CreatePortalSessionV1BillingPortalSessionPostResponses, CreateVehicleV1VehiclesPostData, CreateVehicleV1VehiclesPostErrors, CreateVehicleV1VehiclesPostResponses, DeleteAccountV1AccountDeleteData, DeleteAccountV1AccountDeleteResponses, DeleteDriveV1DrivesDriveIdDeleteData, DeleteDriveV1DrivesDriveIdDeleteErrors, DeleteDriveV1DrivesDriveIdDeleteResponses, DeleteTripV1TripsTripIdDeleteData, DeleteTripV1TripsTripIdDeleteErrors, DeleteTripV1TripsTripIdDeleteResponses, DeleteVehicleV1VehiclesVehicleIdDeleteData, DeleteVehicleV1VehiclesVehicleIdDeleteErrors, DeleteVehicleV1VehiclesVehicleIdDeleteResponses, ExploreFeedbackV1TripsExploreFeedbackPostData, ExploreFeedbackV1TripsExploreFeedbackPostErrors, ExploreFeedbackV1TripsExploreFeedbackPostResponses, ExploreV1TripsExplorePostData, ExploreV1TripsExplorePostErrors, ExploreV1TripsExplorePostResponses, ExportAccountV1AccountExportPostData, ExportAccountV1AccountExportPostResponses, FriendDrivesV1SocialFriendsFriendshipIdDrivesGetData, FriendDrivesV1SocialFriendsFriendshipIdDrivesGetErrors, FriendDrivesV1SocialFriendsFriendshipIdDrivesGetResponses, FriendSessionsV1SocialFriendsSessionsGetData, FriendSessionsV1SocialFriendsSessionsGetResponses, GetDriveV1DrivesDriveIdGetData, GetDriveV1DrivesDriveIdGetErrors, GetDriveV1DrivesDriveIdGetResponses, GetMessagesV1ConversationsConversationIdMessagesGetData, GetMessagesV1ConversationsConversationIdMessagesGetErrors, GetMessagesV1ConversationsConversationIdMessagesGetResponses, GetMeV1MeGetData, GetMeV1MeGetErrors, GetMeV1MeGetResponses, GetMyStatsV1MeStatsGetData, GetMyStatsV1MeStatsGetResponses, GetProfileV1MeProfileGetData, GetProfileV1MeProfileGetResponses, GetSurveyQuestionsV1SurveyQuestionsGetData, GetSurveyQuestionsV1SurveyQuestionsGetResponses, HealthHealthGetData, HealthHealthGetResponses, ListConversationsV1ConversationsGetData, ListConversationsV1ConversationsGetResponses, ListDrivesV1DrivesGetData, ListDrivesV1DrivesGetResponses, ListFriendsV1SocialFriendsGetData, ListFriendsV1SocialFriendsGetResponses, ListTripsV1TripsGetData, ListTripsV1TripsGetResponses, ListVehiclesV1VehiclesGetData, ListVehiclesV1VehiclesGetResponses, MintSessionV1LocationsSessionsPostData, MintSessionV1LocationsSessionsPostErrors, MintSessionV1LocationsSessionsPostResponses, MySessionV1LocationsSessionsMineGetData, MySessionV1LocationsSessionsMineGetResponses, PlanTripV1TripsPlanPostData, PlanTripV1TripsPlanPostErrors, PlanTripV1TripsPlanPostResponses, RecordConsentsV1MeConsentsPostData, RecordConsentsV1MeConsentsPostErrors, RecordConsentsV1MeConsentsPostResponses, RemoveFriendV1SocialFriendsFriendshipIdDeleteData, RemoveFriendV1SocialFriendsFriendshipIdDeleteErrors, RemoveFriendV1SocialFriendsFriendshipIdDeleteResponses, ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostData, ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostErrors, ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostResponses, RequestFriendV1SocialFriendsPostData, RequestFriendV1SocialFriendsPostErrors, RequestFriendV1SocialFriendsPostResponses, RespondV1SocialFriendsFriendshipIdRespondPostData, RespondV1SocialFriendsFriendshipIdRespondPostErrors, RespondV1SocialFriendsFriendshipIdRespondPostResponses, RevenuecatWebhookV1WebhooksRevenuecatPostData, RevenuecatWebhookV1WebhooksRevenuecatPostErrors, RevenuecatWebhookV1WebhooksRevenuecatPostResponses, RevokeSessionV1LocationsSessionsSessionIdDeleteData, RevokeSessionV1LocationsSessionsSessionIdDeleteErrors, RevokeSessionV1LocationsSessionsSessionIdDeleteResponses, SaveDriveV1DrivesPostData, SaveDriveV1DrivesPostErrors, SaveDriveV1DrivesPostResponses, SaveTripV1TripsPostData, SaveTripV1TripsPostErrors, SaveTripV1TripsPostResponses, SendMessageV1ConversationsConversationIdMessagesPostData, SendMessageV1ConversationsConversationIdMessagesPostErrors, SendMessageV1ConversationsConversationIdMessagesPostResponses, StripeWebhookV1WebhooksStripePostData, StripeWebhookV1WebhooksStripePostErrors, StripeWebhookV1WebhooksStripePostResponses, SubmitOnboardingV1MeOnboardingPostData, SubmitOnboardingV1MeOnboardingPostErrors, SubmitOnboardingV1MeOnboardingPostResponses, UpdateDriveV1DrivesDriveIdPatchData, UpdateDriveV1DrivesDriveIdPatchErrors, UpdateDriveV1DrivesDriveIdPatchResponses, UpdateProfileV1MeProfilePutData, UpdateProfileV1MeProfilePutErrors, UpdateProfileV1MeProfilePutResponses, UpdateVehicleV1VehiclesVehicleIdPatchData, UpdateVehicleV1VehiclesVehicleIdPatchErrors, UpdateVehicleV1VehiclesVehicleIdPatchResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -423,10 +423,103 @@ export const blockUserV1SocialBlocksPost = <ThrowOnError extends boolean = false
 });
 
 /**
+ * Live-sharing sessions of accepted friends (the friends-map discovery call)
+ */
+export const friendSessionsV1SocialFriendsSessionsGet = <ThrowOnError extends boolean = false>(options?: Options<FriendSessionsV1SocialFriendsSessionsGetData, ThrowOnError>): RequestResult<FriendSessionsV1SocialFriendsSessionsGetResponses, unknown, ThrowOnError> => (options?.client ?? client).get<FriendSessionsV1SocialFriendsSessionsGetResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/social/friends/sessions',
+    ...options
+});
+
+/**
  * A friend's shared drives (accepted friendships only; vehicle badge + weather chip)
  */
 export const friendDrivesV1SocialFriendsFriendshipIdDrivesGet = <ThrowOnError extends boolean = false>(options: Options<FriendDrivesV1SocialFriendsFriendshipIdDrivesGetData, ThrowOnError>): RequestResult<FriendDrivesV1SocialFriendsFriendshipIdDrivesGetResponses, FriendDrivesV1SocialFriendsFriendshipIdDrivesGetErrors, ThrowOnError> => (options.client ?? client).get<FriendDrivesV1SocialFriendsFriendshipIdDrivesGetResponses, FriendDrivesV1SocialFriendsFriendshipIdDrivesGetErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/v1/social/friends/{friendship_id}/drives',
+    ...options
+});
+
+/**
+ * Start a live-sharing session (consent-gated; supersedes any prior session)
+ */
+export const mintSessionV1LocationsSessionsPost = <ThrowOnError extends boolean = false>(options: Options<MintSessionV1LocationsSessionsPostData, ThrowOnError>): RequestResult<MintSessionV1LocationsSessionsPostResponses, MintSessionV1LocationsSessionsPostErrors, ThrowOnError> => (options.client ?? client).post<MintSessionV1LocationsSessionsPostResponses, MintSessionV1LocationsSessionsPostErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/locations/sessions',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Stop sharing (owner-only; new channel joins are denied immediately)
+ */
+export const revokeSessionV1LocationsSessionsSessionIdDelete = <ThrowOnError extends boolean = false>(options: Options<RevokeSessionV1LocationsSessionsSessionIdDeleteData, ThrowOnError>): RequestResult<RevokeSessionV1LocationsSessionsSessionIdDeleteResponses, RevokeSessionV1LocationsSessionsSessionIdDeleteErrors, ThrowOnError> => (options.client ?? client).delete<RevokeSessionV1LocationsSessionsSessionIdDeleteResponses, RevokeSessionV1LocationsSessionsSessionIdDeleteErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/locations/sessions/{session_id}',
+    ...options
+});
+
+/**
+ * The caller's live session, if any (restores the sharing indicator)
+ */
+export const mySessionV1LocationsSessionsMineGet = <ThrowOnError extends boolean = false>(options?: Options<MySessionV1LocationsSessionsMineGetData, ThrowOnError>): RequestResult<MySessionV1LocationsSessionsMineGetResponses, unknown, ThrowOnError> => (options?.client ?? client).get<MySessionV1LocationsSessionsMineGetResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/locations/sessions/mine',
+    ...options
+});
+
+/**
+ * The caller's conversations, newest first (dead DMs are absent)
+ */
+export const listConversationsV1ConversationsGet = <ThrowOnError extends boolean = false>(options?: Options<ListConversationsV1ConversationsGetData, ThrowOnError>): RequestResult<ListConversationsV1ConversationsGetResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListConversationsV1ConversationsGetResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/conversations',
+    ...options
+});
+
+/**
+ * Start a DM (dedup-safe) or a group with accepted friends
+ */
+export const createConversationV1ConversationsPost = <ThrowOnError extends boolean = false>(options: Options<CreateConversationV1ConversationsPostData, ThrowOnError>): RequestResult<CreateConversationV1ConversationsPostResponses, CreateConversationV1ConversationsPostErrors, ThrowOnError> => (options.client ?? client).post<CreateConversationV1ConversationsPostResponses, CreateConversationV1ConversationsPostErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/conversations',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * History, newest first (members only; 404 otherwise)
+ */
+export const getMessagesV1ConversationsConversationIdMessagesGet = <ThrowOnError extends boolean = false>(options: Options<GetMessagesV1ConversationsConversationIdMessagesGetData, ThrowOnError>): RequestResult<GetMessagesV1ConversationsConversationIdMessagesGetResponses, GetMessagesV1ConversationsConversationIdMessagesGetErrors, ThrowOnError> => (options.client ?? client).get<GetMessagesV1ConversationsConversationIdMessagesGetResponses, GetMessagesV1ConversationsConversationIdMessagesGetErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/conversations/{conversation_id}/messages',
+    ...options
+});
+
+/**
+ * Send a message (sanitized, rate-limited; delivery fans out via Realtime)
+ */
+export const sendMessageV1ConversationsConversationIdMessagesPost = <ThrowOnError extends boolean = false>(options: Options<SendMessageV1ConversationsConversationIdMessagesPostData, ThrowOnError>): RequestResult<SendMessageV1ConversationsConversationIdMessagesPostResponses, SendMessageV1ConversationsConversationIdMessagesPostErrors, ThrowOnError> => (options.client ?? client).post<SendMessageV1ConversationsConversationIdMessagesPostResponses, SendMessageV1ConversationsConversationIdMessagesPostErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/conversations/{conversation_id}/messages',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Report a message (members only; goes to the moderation log)
+ */
+export const reportMessageV1ConversationsConversationIdMessagesMessageIdReportPost = <ThrowOnError extends boolean = false>(options: Options<ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostData, ThrowOnError>): RequestResult<ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostResponses, ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostErrors, ThrowOnError> => (options.client ?? client).post<ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostResponses, ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/conversations/{conversation_id}/messages/{message_id}/report',
     ...options
 });

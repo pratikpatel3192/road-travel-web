@@ -6,6 +6,8 @@ import {
   type BriefingResponse,
   type CheckoutSessionResponse,
   type ConsentInput,
+  type ConversationModel,
+  type ConversationsResponse,
   type DrivesResponse,
   type FriendshipModel,
   type FriendsResponse,
@@ -14,6 +16,8 @@ import {
   type ExploreResponse,
   type MeResponse,
   type MeStatsResponse,
+  type MessageModel,
+  type MessagesResponse,
   type OnboardingRequest,
   type PaywallResponse,
   type PlanTripRequest,
@@ -35,10 +39,15 @@ import {
   exploreFeedbackV1TripsExploreFeedbackPost,
   exploreV1TripsExplorePost,
   blockUserV1SocialBlocksPost,
+  createConversationV1ConversationsPost,
   friendDrivesV1SocialFriendsFriendshipIdDrivesGet,
+  getMessagesV1ConversationsConversationIdMessagesGet,
   getMyStatsV1MeStatsGet,
+  listConversationsV1ConversationsGet,
   listDrivesV1DrivesGet,
   listFriendsV1SocialFriendsGet,
+  reportMessageV1ConversationsConversationIdMessagesMessageIdReportPost,
+  sendMessageV1ConversationsConversationIdMessagesPost,
   listTripsV1TripsGet,
   listVehiclesV1VehiclesGet,
   removeFriendV1SocialFriendsFriendshipIdDelete,
@@ -276,6 +285,71 @@ export class ApiService {
       ...this.options(),
       body: { friendship_id: friendshipId },
     });
+    if (response && !response.ok) this.raise(response, error);
+  }
+
+  // --- F-007 P3 M8 chat (delivery rides Realtime; see AuthService.channel) -----------------------
+
+  /** Start (or dedupe into) the DM behind an accepted friendship. 404 covers pending, blocked,
+   * and nonexistent alike — indistinguishable by design. */
+  async openDm(friendshipId: string): Promise<ConversationModel> {
+    const { data, error, response } = await createConversationV1ConversationsPost({
+      ...this.options(),
+      body: { kind: 'dm', friendship_id: friendshipId },
+    });
+    if (error || !data) this.raise(response, error);
+    return data as ConversationModel;
+  }
+
+  /** Create a group from accepted friendships (2–7 friends) with an optional title. */
+  async createGroup(friendshipIds: string[], title: string | null): Promise<ConversationModel> {
+    const { data, error, response } = await createConversationV1ConversationsPost({
+      ...this.options(),
+      body: { kind: 'group', friendship_ids: friendshipIds, title },
+    });
+    if (error || !data) this.raise(response, error);
+    return data as ConversationModel;
+  }
+
+  /** The caller's conversations, newest first (dead DMs are absent — server-omitted). */
+  async listConversations(): Promise<ConversationsResponse> {
+    const { data, error, response } = await listConversationsV1ConversationsGet(this.options());
+    if (error || !data) this.raise(response, error);
+    return data as ConversationsResponse;
+  }
+
+  /** History, newest first (server-capped window; members only, 404 otherwise). */
+  async listMessages(conversationId: string): Promise<MessagesResponse> {
+    const { data, error, response } = await getMessagesV1ConversationsConversationIdMessagesGet({
+      ...this.options(),
+      path: { conversation_id: conversationId },
+    });
+    if (error || !data) this.raise(response, error);
+    return data as MessagesResponse;
+  }
+
+  /** Send a message (server-sanitized; 429 = rate limit, 404 = dead DM/non-member). */
+  async sendMessage(
+    conversationId: string,
+    body: string,
+    driveId: string | null = null,
+  ): Promise<MessageModel> {
+    const { data, error, response } = await sendMessageV1ConversationsConversationIdMessagesPost({
+      ...this.options(),
+      path: { conversation_id: conversationId },
+      body: { body, drive_id: driveId },
+    });
+    if (error || !data) this.raise(response, error);
+    return data as MessageModel;
+  }
+
+  /** Report a message to the moderation log (members only). */
+  async reportMessage(conversationId: string, messageId: string): Promise<void> {
+    const { error, response } =
+      await reportMessageV1ConversationsConversationIdMessagesMessageIdReportPost({
+        ...this.options(),
+        path: { conversation_id: conversationId, message_id: messageId },
+      });
     if (response && !response.ok) this.raise(response, error);
   }
 
