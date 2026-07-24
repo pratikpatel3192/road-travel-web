@@ -69,7 +69,12 @@ import { formatDistance } from '../plan/severity';
       @for (c of conversations(); track c.id) {
         <div class="convo">
           <button class="open" (click)="toggleConversation(c)">
-            <span class="names">{{ name(c) }}</span>
+            <span class="names">
+              {{ name(c) }}
+              @if (c.unread_count) {
+                <span class="unread">{{ c.unread_count }}</span>
+              }
+            </span>
             <span class="sub">{{ open()?.id === c.id ? 'hide' : preview(c) }}</span>
           </button>
           @if (open()?.id === c.id) {
@@ -80,7 +85,18 @@ import { formatDistance } from '../plan/severity';
                     <span class="who">{{ senderName(m) }}</span>
                   }
                   @if (m.drive; as d) {
-                    <span class="drive">🚗 {{ driveTitle(d) }} · {{ dist(d.distance_meters) }}</span>
+                    <button class="drive" (click)="toggleRoute(m.id)"
+                            [disabled]="!d.polyline?.length"
+                            [title]="d.polyline?.length ? 'Show the route' : ''">
+                      🚗 {{ driveTitle(d) }} · {{ dist(d.distance_meters) }}
+                    </button>
+                    @if (routeFor() === m.id && d.polyline?.length) {
+                      <svg class="route" viewBox="0 0 100 60" aria-label="Route preview">
+                        <path [attr.d]="routePath(d.polyline!)" fill="none"
+                              stroke="currentColor" stroke-width="2.5"
+                              stroke-linecap="round" stroke-linejoin="round" />
+                      </svg>
+                    }
                   }
                   <span class="body">{{ m.body }}</span>
                   <span class="meta">
@@ -226,6 +242,37 @@ import { formatDistance } from '../plan/severity';
       .drive {
         font-size: 12px;
         font-weight: 600;
+        border: none;
+        background: none;
+        color: inherit;
+        font-family: inherit;
+        padding: 0;
+        text-align: left;
+        cursor: pointer;
+        text-decoration: underline dotted;
+      }
+      .drive:disabled {
+        cursor: default;
+        text-decoration: none;
+      }
+      .route {
+        width: 100%;
+        max-width: 220px;
+        border: 1px solid currentColor;
+        border-radius: 8px;
+        opacity: 0.9;
+      }
+      .unread {
+        display: inline-block;
+        min-width: 18px;
+        padding: 1px 5px;
+        margin-left: 6px;
+        border-radius: 999px;
+        background: var(--accent);
+        color: var(--accent-contrast);
+        font-size: 11px;
+        font-weight: 700;
+        text-align: center;
       }
       .body {
         font-size: 14px;
@@ -361,6 +408,7 @@ export class Chats implements OnDestroy {
   readonly groupTitle = signal('');
   readonly selected = signal<Set<string>>(new Set());
   readonly busy = signal(false);
+  readonly routeFor = signal<string | null>(null); // message id whose route preview is open
 
   private channel: RealtimeChannel | null = null;
 
@@ -428,6 +476,9 @@ export class Chats implements OnDestroy {
         this.messages.set(r.messages);
         this.scrollThread();
       }
+      // Reading stamped the server-side cursor — refresh the list so badges clear/update.
+      const convos = await this.api.listConversations();
+      this.conversations.set(convos.conversations);
     } catch {
       this.error.set('Couldn’t load that conversation.');
     } finally {
@@ -497,6 +548,37 @@ export class Chats implements OnDestroy {
       })
       .catch(() => this.error.set('Couldn’t create the group — try again.'))
       .finally(() => this.busy.set(false));
+  }
+
+  toggleRoute(messageId: string): void {
+    this.routeFor.set(this.routeFor() === messageId ? null : messageId);
+  }
+
+  /** The card's polyline ([lat, lon] pairs) as an SVG path in a 100x60 box, aspect preserved. */
+  routePath(polyline: number[][]): string {
+    const pts = polyline.filter((p) => p.length >= 2);
+    if (pts.length < 2) return '';
+    const lats = pts.map((p) => p[0]);
+    const lons = pts.map((p) => p[1]);
+    const [minLat, maxLat] = [Math.min(...lats), Math.max(...lats)];
+    const [minLon, maxLon] = [Math.min(...lons), Math.max(...lons)];
+    const pad = 5;
+    const w = 100 - 2 * pad;
+    const h = 60 - 2 * pad;
+    // Fit the bounding box while preserving aspect (lon scaled by cos(midLat) ≈ meters).
+    const midLat = ((minLat + maxLat) / 2) * (Math.PI / 180);
+    const spanX = Math.max((maxLon - minLon) * Math.cos(midLat), 1e-9);
+    const spanY = Math.max(maxLat - minLat, 1e-9);
+    const scale = Math.min(w / spanX, h / spanY);
+    const offX = pad + (w - spanX * scale) / 2;
+    const offY = pad + (h - spanY * scale) / 2;
+    return pts
+      .map((p, i) => {
+        const x = offX + (p[1] - minLon) * Math.cos(midLat) * scale;
+        const y = offY + (maxLat - p[0]) * scale;
+        return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`;
+      })
+      .join(' ');
   }
 
   // --- formatting --------------------------------------------------------------------------------
