@@ -2899,6 +2899,10 @@ export type SaveDriveV1DrivesPostErrors = {
      */
     400: unknown;
     /**
+     * Recording is a Pro feature — subscription/trial paywall.
+     */
+    402: unknown;
+    /**
      * drive_too_short: fewer than two usable fixes after filtering.
      */
     422: unknown;
