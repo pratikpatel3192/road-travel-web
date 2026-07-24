@@ -25,7 +25,13 @@ import { formatDistance } from '../plan/severity';
       <header class="top">
         <a routerLink="/app" class="back" aria-label="Back">←</a>
         <h1>Driving</h1>
-        <a routerLink="/chats" class="chats-link">Chats →</a>
+        <a routerLink="/chats" class="chats-link">
+          Chats
+          @if (unreadTotal()) {
+            <span class="unread">{{ unreadTotal() }}</span>
+          }
+          →
+        </a>
       </header>
 
       @if (stats(); as s) {
@@ -198,6 +204,17 @@ import { formatDistance } from '../plan/severity';
         margin-left: auto;
         font-size: 14px;
         font-weight: 600;
+      }
+      .unread {
+        display: inline-block;
+        min-width: 18px;
+        padding: 1px 5px;
+        border-radius: 999px;
+        background: var(--accent);
+        color: var(--accent-contrast);
+        font-size: 11px;
+        font-weight: 700;
+        text-align: center;
       }
       .back {
         width: 34px;
@@ -423,6 +440,7 @@ export class Driving {
   readonly busy = signal(false);
   readonly notice = signal<string | null>(null);
   readonly friendError = signal<string | null>(null);
+  readonly unreadTotal = signal(0);
 
   constructor() {
     void this.refresh();
@@ -445,6 +463,15 @@ export class Driving {
       this.blocked.set(graph.blocked ?? []);
     } finally {
       this.loading.set(false);
+    }
+    // Unread badge for the Chats link — best-effort, never blocks the page.
+    try {
+      const convos = await this.api.listConversations();
+      this.unreadTotal.set(
+        convos.conversations.reduce((sum, c) => sum + (c.unread_count ?? 0), 0),
+      );
+    } catch {
+      /* badge is cosmetic */
     }
   }
 

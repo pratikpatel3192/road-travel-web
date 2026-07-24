@@ -268,6 +268,10 @@ export type BriefingResponse = {
  * ChatDriveModel
  *
  * The compact drive card attached to a message (sender's drive; absent if since deleted).
+ *
+ * Carries the simplified polyline so the card can open a route preview: sharing the card
+ * into the conversation is the sender's explicit choice, so members may see the route even
+ * when the drive itself isn't friends-visible.
  */
 export type ChatDriveModel = {
     /**
@@ -294,6 +298,12 @@ export type ChatDriveModel = {
      * Started At
      */
     started_at: string;
+    /**
+     * Polyline
+     *
+     * [latitude, longitude] pairs (engine-simplified).
+     */
+    polyline?: Array<Array<number>>;
 };
 
 /**
@@ -454,6 +464,12 @@ export type ConversationModel = {
      */
     members?: Array<PartyModel>;
     last_message?: MessageModel | null;
+    /**
+     * Unread Count
+     *
+     * Messages from other members since the caller last read this thread.
+     */
+    unread_count?: number;
     /**
      * Created At
      */
