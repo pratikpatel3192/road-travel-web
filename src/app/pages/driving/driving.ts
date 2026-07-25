@@ -9,6 +9,7 @@ import type {
 } from '@road-travel/sdk';
 
 import { ApiService } from '../../core/api.service';
+import { RemoteConfigService } from '../../core/remote-config.service';
 import { SettingsService } from '../../core/settings.service';
 import { formatDistance } from '../plan/severity';
 
@@ -25,6 +26,7 @@ import { formatDistance } from '../plan/severity';
       <header class="top">
         <a routerLink="/app" class="back" aria-label="Back">←</a>
         <h1>Driving</h1>
+        @if (remoteConfig.isEnabled('chat')) {
         <a routerLink="/chats" class="chats-link">
           Chats
           @if (unreadTotal()) {
@@ -32,6 +34,7 @@ import { formatDistance } from '../plan/severity';
           }
           →
         </a>
+        }
       </header>
 
       @if (stats(); as s) {
@@ -87,6 +90,7 @@ import { formatDistance } from '../plan/severity';
         <p class="empty">No vehicles yet. Add your car in the iOS app's Garage.</p>
       }
 
+      @if (remoteConfig.isEnabled('friends')) {
       <h2>Friends</h2>
       <form class="add" (submit)="sendRequest($event)">
         <input
@@ -129,7 +133,9 @@ import { formatDistance } from '../plan/severity';
                 <span class="sub">{{ expanded() === f.id ? 'hide' : 'shared drives' }}</span>
               </button>
               <span class="actions">
-                <button class="act accept" (click)="message(f)">Message</button>
+                @if (remoteConfig.isEnabled('chat')) {
+                  <button class="act accept" (click)="message(f)">Message</button>
+                }
                 <button class="act" (click)="remove(f)">Unfriend</button>
                 <button class="act warn" (click)="block(f)">Block</button>
               </span>
@@ -184,6 +190,7 @@ import { formatDistance } from '../plan/severity';
             </span>
           </div>
         }
+      }
       }
     </div>
   `,
@@ -424,6 +431,7 @@ export class Driving {
   private readonly api = inject(ApiService);
   private readonly settings = inject(SettingsService);
   private readonly router = inject(Router);
+  protected readonly remoteConfig = inject(RemoteConfigService);
 
   readonly stats = signal<MeStatsResponse | null>(null);
   readonly drives = signal<DriveModel[]>([]);

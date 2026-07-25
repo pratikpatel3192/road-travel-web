@@ -459,4 +459,8 @@ export const reportMessageV1ConversationsConversationIdMessagesMessageIdReportPo
     url: '/v1/conversations/{conversation_id}/messages/{message_id}/report',
     ...options
 });
+/**
+ * Force-upgrade verdict + feature flags for this platform/version
+ */
+export const getConfigV1ConfigGet = (options) => (options.client ?? client).get({ url: '/v1/config', ...options });
 //# sourceMappingURL=sdk.gen.js.map

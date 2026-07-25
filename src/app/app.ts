@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { RouterOutlet, RouterLink } from '@angular/router';
 
 import { AuthService } from './core/auth.service';
+import { RemoteConfigService } from './core/remote-config.service';
 import { ProfileService } from './core/profile.service';
 import { SettingsService } from './core/settings.service';
 import { Onboarding } from './pages/onboarding/onboarding';
@@ -20,4 +21,10 @@ export class App {
   protected readonly auth = inject(AuthService);
   // Identity chip text: profile name when set, else the account email.
   protected readonly profile = inject(ProfileService);
+  // ADR-0036: force-upgrade verdict + feature flags, fetched once at boot (fail open).
+  protected readonly remoteConfig = inject(RemoteConfigService);
+
+  constructor() {
+    void this.remoteConfig.fetch();
+  }
 }

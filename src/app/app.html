@@ -46,6 +46,23 @@
 
 <router-outlet />
 
+@if (remoteConfig.updateRequired()) {
+  <!-- ADR-0036 force upgrade: on the web the fix IS a reload (picks up the current bundle).
+       Full-screen and undismissable by design. -->
+  <div class="force-update" role="alertdialog" aria-modal="true"
+       aria-label="Update required">
+    <div class="force-update-card">
+      <h2>Update required</h2>
+      <p>
+        A newer version of Road Travel is available
+        @if (remoteConfig.latestVersion(); as v) { (v{{ v }}) }
+        — reload to keep planning and driving.
+      </p>
+      <button type="button" (click)="remoteConfig.reload()">Reload Road Travel</button>
+    </div>
+  </div>
+}
+
 <!-- App-wide paywall overlay (F-002): shown when a 402 free-tier cap fires. -->
 <app-paywall />
 
