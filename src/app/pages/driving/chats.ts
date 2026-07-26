@@ -1,5 +1,5 @@
 import { Component, OnDestroy, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type {
   ConversationModel,
@@ -9,6 +9,7 @@ import type {
 } from '@road-travel/sdk';
 
 import { ApiService } from '../../core/api.service';
+import { RemoteConfigService } from '../../core/remote-config.service';
 import { AuthService } from '../../core/auth.service';
 import { SettingsService } from '../../core/settings.service';
 import { formatDistance } from '../plan/severity';
@@ -390,6 +391,8 @@ export class Chats implements OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly settings = inject(SettingsService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly remoteConfig = inject(RemoteConfigService);
 
   readonly conversations = signal<ConversationModel[]>([]);
   readonly friends = signal<FriendshipModel[]>([]);
@@ -413,6 +416,11 @@ export class Chats implements OnDestroy {
   private channel: RealtimeChannel | null = null;
 
   constructor() {
+    // ADR-0036: deep links to a disabled feature bounce home (the server 403s regardless).
+    if (!this.remoteConfig.isEnabled('chat')) {
+      void this.router.navigate(['/driving']);
+      return;
+    }
     void this.refresh().then(() => {
       // Deep link from the Driving page: /chats?open=<conversation_id>.
       const openId = this.route.snapshot.queryParamMap.get('open');

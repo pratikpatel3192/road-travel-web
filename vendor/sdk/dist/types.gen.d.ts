@@ -346,6 +346,24 @@ export type ClaimModel = {
     end_index?: number | null;
 };
 /**
+ * ConfigResponse
+ */
+export type ConfigResponse = {
+    /**
+     * Platform
+     */
+    platform: 'ios' | 'web';
+    update: UpdateModel;
+    /**
+     * Features
+     *
+     * Feature kill switches for THIS platform. Absent flags read as enabled.
+     */
+    features?: {
+        [key: string]: boolean;
+    };
+};
+/**
  * ConsentInput
  *
  * A consent the client is granting/withdrawing. The server stamps ``document_version``.
@@ -2127,6 +2145,27 @@ export type UpdateDriveRequest = {
     visibility?: 'private' | 'friends' | null;
 };
 /**
+ * UpdateModel
+ */
+export type UpdateModel = {
+    /**
+     * Required
+     *
+     * True = block the app and send the user to update (below min_supported).
+     */
+    required?: boolean;
+    /**
+     * Latest Version
+     */
+    latest_version: string;
+    /**
+     * Url
+     *
+     * Where to update (App Store link on iOS; web reloads in place).
+     */
+    url?: string | null;
+};
+/**
  * ValidationError
  */
 export type ValidationError = {
@@ -3432,4 +3471,33 @@ export type ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPos
     204: void;
 };
 export type ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostResponse = ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostResponses[keyof ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostResponses];
+export type GetConfigV1ConfigGetData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Platform
+         */
+        platform: 'ios' | 'web';
+        /**
+         * Version
+         */
+        version: string;
+    };
+    url: '/v1/config';
+};
+export type GetConfigV1ConfigGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+export type GetConfigV1ConfigGetError = GetConfigV1ConfigGetErrors[keyof GetConfigV1ConfigGetErrors];
+export type GetConfigV1ConfigGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: ConfigResponse;
+};
+export type GetConfigV1ConfigGetResponse = GetConfigV1ConfigGetResponses[keyof GetConfigV1ConfigGetResponses];
 //# sourceMappingURL=types.gen.d.ts.map

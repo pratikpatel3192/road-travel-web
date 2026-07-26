@@ -117,3 +117,42 @@
   cursor: pointer;
   font-size: 14px;
 }
+
+
+/* ADR-0036 force-upgrade overlay — sits above everything, no dismiss path. */
+.force-update {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: var(--bg, #0f1722);
+  padding: 24px;
+}
+.force-update-card {
+  max-width: 420px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.force-update-card h2 {
+  margin: 0;
+  font-size: 22px;
+}
+.force-update-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+.force-update-card button {
+  margin-top: 8px;
+  padding: 12px 18px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
