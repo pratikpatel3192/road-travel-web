@@ -6,7 +6,8 @@ name: deploy-web-cloudrun
 #   feature/**     -> no deploy (PR only)
 # Also runnable by hand (Actions -> Run workflow). Per-env config lives in the GitHub *Environment*:
 #   Variables: GCP_PROJECT_ID, GCP_REGION, GCP_AR_REPO, GCP_WIF_PROVIDER, GCP_DEPLOY_SA,
-#              GCP_RUNTIME_SA, CONFIG_API_BASE_URL, CONFIG_SUPABASE_URL, CONFIG_SUPABASE_ANON_KEY
+#              GCP_RUNTIME_SA, CONFIG_API_BASE_URL, CONFIG_SUPABASE_URL, CONFIG_SUPABASE_ANON_KEY,
+#              CONFIG_REVENUECAT_WEB_API_KEY, CONFIG_REVENUECAT_OFFERING_ID (both optional)
 # The image is env-agnostic; the SPA's runtime config.json is generated at container start from the
 # CONFIG_* env vars (ADR-0024). The (publishable) Mapbox token is mounted from Secret Manager.
 
@@ -84,11 +85,11 @@ jobs:
             --allow-unauthenticated \
             --port 8080 --cpu 1 --memory 256Mi \
             --min-instances 0 --max-instances 5 --concurrency 80 \
-            --set-env-vars "CONFIG_API_BASE_URL=${{ vars.CONFIG_API_BASE_URL }},CONFIG_SUPABASE_URL=${{ vars.CONFIG_SUPABASE_URL }},CONFIG_SUPABASE_ANON_KEY=${{ vars.CONFIG_SUPABASE_ANON_KEY }}" \
-            --set-secrets "CONFIG_MAPBOX_TOKEN=road-travel-core-prod-routing-api-key:latest"
+            --set-env-vars "CONFIG_API_BASE_URL=${{ vars.CONFIG_API_BASE_URL }},CONFIG_SUPABASE_URL=${{ vars.CONFIG_SUPABASE_URL }},CONFIG_SUPABASE_ANON_KEY=${{ vars.CONFIG_SUPABASE_ANON_KEY }},CONFIG_REVENUECAT_WEB_API_KEY=${{ vars.CONFIG_REVENUECAT_WEB_API_KEY }},CONFIG_REVENUECAT_OFFERING_ID=${{ vars.CONFIG_REVENUECAT_OFFERING_ID }}" \
+            --set-secrets "CONFIG_MAPBOX_TOKEN=road-travel-core-${ENVIRONMENT}-routing-api-key:latest"
           # CONFIG_* are PUBLISHABLE client-side values baked into the served config.json at runtime.
-          # The Mapbox token is reused from core's routing secret (prod). For a separate uat env,
-          # point --set-secrets at that env's own token slot.
+          # The Mapbox token is mounted from THIS environment's routing secret slot
+          # (road-travel-core-<env>-routing-api-key), so uat serves the RoadTravel-UAT token.
 
       - name: Show service URL
         run: gcloud run services describe "${SERVICE}" --region "${{ vars.GCP_REGION }}" --format='value(status.url)'
