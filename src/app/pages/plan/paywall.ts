@@ -1,6 +1,7 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import type { PlanOption } from '@road-travel/sdk';
 
+import { AnalyticsService } from '../../core/analytics.service';
 import { ApiService } from '../../core/api.service';
 import { AuthService, type OAuthProvider } from '../../core/auth.service';
 import { EntitlementService } from '../../core/entitlement.service';
@@ -282,6 +283,7 @@ export class Paywall {
   readonly auth = inject(AuthService);
   private readonly api = inject(ApiService);
   private readonly entitlement = inject(EntitlementService);
+  private readonly analytics = inject(AnalyticsService);
 
   readonly selected = signal<string | null>(null);
   readonly busy = signal(false);
@@ -297,6 +299,25 @@ export class Paywall {
     const days = plan?.trial_days ?? 0;
     return days > 0 && this.trialOffered() ? `Start ${days}-day free trial` : 'Subscribe';
   });
+
+  constructor() {
+    // ADR-0037 `paywall_viewed` — parity with the iOS PaywallView `.task`. This component is mounted
+    // app-wide and only RENDERS when a payload arrives, so the null -> payload transition is the
+    // view. Guarded so re-renders (entitlement refresh, plan selection) don't double-count, and
+    // re-armed on dismiss so the next 402 counts again.
+    let counted = false;
+    effect(() => {
+      const payload = this.pw.payload();
+      if (!payload) {
+        counted = false;
+        return;
+      }
+      if (counted) return;
+      counted = true;
+      // The server's coarse reason code, exactly what iOS passes as `trigger`.
+      this.analytics.capture('paywall_viewed', { trigger: payload.reason });
+    });
+  }
 
   select(plan: PlanOption): void {
     this.selected.set(plan.product_id);

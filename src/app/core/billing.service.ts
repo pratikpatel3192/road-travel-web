@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import type { PlanOption } from '@road-travel/sdk';
 
+import { AnalyticsService } from './analytics.service';
 import { AuthService } from './auth.service';
 import { ConfigService } from './config';
 import { EntitlementService } from './entitlement.service';
@@ -20,6 +21,7 @@ export class BillingService {
   private readonly config = inject(ConfigService);
   private readonly auth = inject(AuthService);
   private readonly entitlement = inject(EntitlementService);
+  private readonly analytics = inject(AnalyticsService);
 
   // Lazily-created RevenueCat Purchases instance (dynamic import keeps it out of the initial bundle).
   private purchases: unknown = null;
@@ -57,6 +59,10 @@ export class BillingService {
     if (!pkg) throw new Error('That plan is not available right now. Please try again later.');
 
     await purchases.purchase({ rcPackage: pkg });
+    // ADR-0037: same event + `product` property the iOS PaywallModel emits, so a conversion is one
+    // row in one funnel regardless of platform. Revenue itself stays server-authoritative
+    // (RevenueCat/Stripe webhooks) — this event measures the funnel, not the money.
+    this.analytics.capture('purchase_completed', { product: plan.product_id });
     // The RevenueCat webhook has flipped is_pro server-side; pull the fresh state.
     await this.entitlement.refresh();
   }

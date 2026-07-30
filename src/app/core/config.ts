@@ -18,6 +18,10 @@ export interface AppConfig {
   revenueCatWebApiKey: string;
   /** RevenueCat offering id whose packages back the paywall plans (optional; SDK default if blank). */
   revenueCatOfferingId: string;
+  /** PostHog project API key (ADR-0037) — publishable, client-side. Absent → analytics disabled. */
+  posthogKey: string;
+  /** PostHog ingestion host (optional; the US cloud default is used when blank). */
+  posthogHost: string;
 }
 
 const DEFAULTS: AppConfig = {
@@ -27,6 +31,8 @@ const DEFAULTS: AppConfig = {
   mapboxToken: '',
   revenueCatWebApiKey: '',
   revenueCatOfferingId: '',
+  posthogKey: '',
+  posthogHost: '',
 };
 
 @Injectable({ providedIn: 'root' })

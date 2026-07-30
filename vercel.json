@@ -1,4 +1,0 @@
-{
-  "outputDirectory": "dist/road-travel-web/browser",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
-}

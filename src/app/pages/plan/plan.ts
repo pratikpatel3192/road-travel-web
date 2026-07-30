@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import type { BriefingResponse, PlaceCardModel, PlanTripResponse } from '@road-travel/sdk';
 
+import { AnalyticsService } from '../../core/analytics.service';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { EntitlementService } from '../../core/entitlement.service';
@@ -480,6 +481,7 @@ export class Plan implements OnInit {
   private readonly paywall = inject(PaywallService);
   private readonly geocode = inject(GeocodeService);
   private readonly router = inject(Router);
+  private readonly analytics = inject(AnalyticsService);
 
   readonly origin = signal<PlaceValue | null>({
     name: 'San Francisco, CA',
@@ -619,6 +621,9 @@ export class Plan implements OnInit {
         worstSeverity: p?.worst_severity as Severity | undefined,
         waypoints: toWaypoints(this.stops()),
       });
+      // ADR-0037: only the SAVE direction is an activation signal (un-starring isn't), and only
+      // after the server accepted it. No place names — the star state is the whole payload.
+      if (this.trips.isSaved(origin, destination)) this.analytics.capture('trip_saved');
     } catch (e) {
       if (e instanceof AccountRequiredError) this.router.navigate(['/login']);
       else this.error.set('Could not update the saved trip. Please try again.');
@@ -823,6 +828,11 @@ export class Plan implements OnInit {
           }),
         ),
       ]);
+      // ADR-0037 activation event, matching the iOS `trip_planned` (same name, same `distance_mi`
+      // property). Whole miles only — never the endpoints.
+      this.analytics.capture('trip_planned', {
+        distance_mi: Math.round(plan.distance_meters / 1609.344),
+      });
       this.plan.set(plan);
       this.briefing.set(briefing);
       this.briefingMemory.remember(identity, briefing.facts);
@@ -844,6 +854,9 @@ export class Plan implements OnInit {
         this.router.navigate(['/login']);
       } else if (e instanceof PaywallError) {
         // Signed in but not entitled -> show the server's store-trial paywall, not a generic error.
+        // ADR-0037: the 402 IS the free-cap block — the funnel step between "tried to plan" and
+        // "saw the paywall". `reason` is the server's coarse machine string, never a place.
+        this.analytics.capture('route_blocked_free_cap', { trigger: e.payload.reason });
         this.paywall.show(e.payload);
       } else {
         this.error.set(this.describe(e));
