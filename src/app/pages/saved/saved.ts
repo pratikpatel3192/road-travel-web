@@ -13,7 +13,7 @@ import { SEVERITY_COLOR, type Severity, formatDistance } from '../plan/severity'
   template: `
     <div class="page">
       <header class="top">
-        <a routerLink="/app" class="back" aria-label="Back">←</a>
+        <a routerLink="/plan" class="back" aria-label="Back">←</a>
         <h1>My trips</h1>
       </header>
 
@@ -188,7 +188,7 @@ export class Saved {
       departureAt: t.departure_at,
       waypoints: t.waypoints,
     });
-    this.router.navigate(['/app']);
+    this.router.navigate(['/plan']);
   }
 
   remove(id: string): void {
@@ -206,7 +206,7 @@ export class Saved {
       departureAt: t.departureAt,
       waypoints: t.waypoints,
     });
-    this.router.navigate(['/app']);
+    this.router.navigate(['/plan']);
   }
   removeRecent(t: RecentTrip): void {
     this.trips.removeRecent(this.key(t));

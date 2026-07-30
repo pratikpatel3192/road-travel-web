@@ -24,14 +24,14 @@ import { AuthService, type OAuthProvider } from '../../core/auth.service';
         <p class="note">
           Sign-in isn't configured for this environment — you can use the planner directly.
         </p>
-        <a routerLink="/app" class="go">Open the planner</a>
+        <a routerLink="/plan" class="go">Open the planner</a>
       } @else {
         @if (auth.hasRealAccount()) {
           <p class="note">You're signed in{{ auth.email() ? ' as ' + auth.email() : '' }}.</p>
-          <a routerLink="/app" class="go">Open the planner</a>
+          <a routerLink="/plan" class="go">Open the planner</a>
         } @else {
           <p class="note">Sign in to sync your trips and keep Pro across devices — or just
-            <a routerLink="/app">keep using the planner</a>.</p>
+            <a routerLink="/plan">keep using the planner</a>.</p>
           <div class="methods">
             <button class="oauth" (click)="oauth('apple')">Continue with Apple</button>
             <button class="oauth" (click)="oauth('google')">Continue with Google</button>

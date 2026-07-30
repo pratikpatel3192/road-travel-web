@@ -1,5 +1,8 @@
 <header class="site-header">
-  <a routerLink="/" class="logo" aria-label="Road Travel home">
+  <!-- ADR-0038: a plain href, NOT routerLink. `/` is the static landing page now, not an Angular
+       route — a routerLink="/" would find no match and throw NG04002. A real navigation is also the
+       correct semantics: this leaves the app for the marketing home page. -->
+  <a href="/" class="logo" aria-label="Road Travel home">
     <img class="brand-logo brand-logo-light" src="logo-horizontal-light-2x.png"
          srcset="logo-horizontal-light-2x.png 2x" alt="Road Travel" />
     <img class="brand-logo brand-logo-dark" src="logo-horizontal-dark-2x.png"

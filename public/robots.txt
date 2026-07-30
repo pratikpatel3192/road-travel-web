@@ -1,0 +1,14 @@
+# Road Travel — https://roadtravel.info/
+# The landing page at / is static, fully-rendered HTML (see docker/nginx.conf.template). Every path
+# below is a client-rendered Angular route behind an auth guard: there is nothing there for a crawler
+# to read, and indexing them would only produce thin duplicates of the app shell.
+
+User-agent: *
+Allow: /
+Disallow: /settings
+Disallow: /saved
+Disallow: /driving
+Disallow: /chats
+Disallow: /friends
+
+Sitemap: https://roadtravel.info/sitemap.xml

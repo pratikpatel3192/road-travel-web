@@ -1,8 +1,9 @@
 # RoadTravelWeb
 
 The Road Travel web client (Angular 22). A **thin** client (ADR-0011): all routing/weather/AI is
-server-side in `road-travel-core`; this renders it. Marketing pages live at `/`; the planner is the
-auth-gated `/app` route.
+server-side in `road-travel-core`; this renders it. The static marketing landing page is served at
+`/` straight from `public/landing.html` (ADR-0038 — it is NOT an Angular route); the planner is the
+auth-gated `/plan` route, and `/app` redirects to it for old links.
 
 ## Run the app locally
 
@@ -15,7 +16,7 @@ auth-gated `/app` route.
    `mapboxToken` (public `pk.…`) enables the live Mapbox map (otherwise an SVG route fallback renders).
 2. **Backend** — run `road-travel-core` (e.g. `uvicorn road_travel_core.main:app --port 8000`); its
    default CORS allows `http://localhost:4200`.
-3. **Web** — `npm install && npm start`, then open `http://localhost:4200/app`.
+3. **Web** — `npm install && npm start`, then open `http://localhost:4200/plan`.
 
 Uses the generated **`@road-travel/sdk`** (from `road-travel-contracts`) — never hand-write API calls;
 regenerate the SDK from the OpenAPI spec.

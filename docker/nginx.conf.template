@@ -29,9 +29,52 @@ server {
         try_files $uri =404;
     }
 
-    # SPA: unknown client-side routes fall back to the app shell (inherits the headers above).
+    # ADR-0038: the ROOT is the static marketing landing page, not the app shell. An exact-match
+    # location wins over every prefix and regex location, so this affects `/` and nothing else. It
+    # declares its own add_header (no-store, so landing-copy deploys take effect immediately), and
+    # nginx header inheritance is REPLACE-NOT-MERGE, so the full security block is repeated.
+    location = / {
+        try_files /landing.html =404;
+        add_header Cache-Control "no-store" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "geolocation=(self), camera=(), microphone=(), payment=()" always;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header Content-Security-Policy "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'" always;
+    }
+
+    # ADR-0038: the SPA fallback now applies ONLY to known app routes. It used to apply to
+    # everything, so every mistyped URL answered HTTP 200 with app content — a soft-404 farm.
+    #
+    # The list is the Angular route table (src/app/app.routes.ts) plus the paths that only ever
+    # arrive from OUTSIDE, which is why dropping any of them breaks a live flow:
+    #   app            OAuth redirectTo, magic-link emailRedirectTo, Stripe Checkout
+    #                  success_url AND cancel_url (a 404 straight after a successful charge), and the
+    #                  start_url baked into every already-installed PWA
+    #   auth-callback  the live Supabase magic-link email template ({{ .SiteURL }}/auth-callback?…)
+    #                  and the path the AASA claims for the iOS app — web must serve it whenever the
+    #                  app isn't installed, or the mail client bypasses Universal Links
+    #   friends        matched as a PREFIX: the only route is the two-segment /friends/respond, the
+    #                  target of every friend-invite email. An anchored `$` here would 404 them all.
+    # Regex locations are evaluated before prefix locations, so this beats `location /` below.
+    # `try_files $uri` first, so a real file living under one of these prefixes still wins.
+    # No add_header here, so the server-level security headers are inherited.
+    location ~ ^/(plan|app|auth-callback|login|settings|saved|driving|chats|friends|privacy|terms|support)(/|$) {
+        try_files $uri /index.html;
+    }
+
+    # Everything else: serve real files (the Angular application-builder emits main-*.js, chunk-*.js,
+    # favicons, pwa icons, og images, media/ etc. at the web ROOT, so this location does most of the
+    # static serving), and return a REAL 404 for anything unknown instead of the app shell.
     location / {
-        try_files $uri $uri/ /index.html;
+        try_files $uri =404;
+    }
+
+    # The 404 body. `error_page` keeps the 404 status — it is not a 200 or a redirect.
+    error_page 404 /404.html;
+    location = /404.html {
+        internal;
     }
 
     # Never cache the runtime config or the app shell (deploys must take effect immediately). These

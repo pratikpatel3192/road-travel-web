@@ -1,6 +1,6 @@
 import { Component, type OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import type { BriefingResponse, PlaceCardModel, PlanTripResponse } from '@road-travel/sdk';
 
 import { AnalyticsService } from '../../core/analytics.service';
@@ -481,18 +481,15 @@ export class Plan implements OnInit {
   private readonly paywall = inject(PaywallService);
   private readonly geocode = inject(GeocodeService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly analytics = inject(AnalyticsService);
 
-  readonly origin = signal<PlaceValue | null>({
-    name: 'San Francisco, CA',
-    latitude: 37.7749,
-    longitude: -122.4194,
-  });
-  readonly destination = signal<PlaceValue | null>({
-    name: 'Los Angeles, CA',
-    latitude: 34.0522,
-    longitude: -118.2437,
-  });
+  // ADR-0038: no hardcoded demo route. A San Francisco → Los Angeles pair used to sit here as a
+  // helpful demo when / WAS the planner; with a landing page in front, a stranger's first screen
+  // pre-filled with someone else's trip reads as the app having misread them. Empty fields plus the
+  // geolocation origin prefill (ADR-0026) is the correct initial state.
+  readonly origin = signal<PlaceValue | null>(null);
+  readonly destination = signal<PlaceValue | null>(null);
 
   departureAt = this.defaultDeparture();
 
@@ -564,22 +561,74 @@ export class Plan implements OnInit {
   ngOnInit(): void {
     // Know the entitlement/usage up front so gating is correct (server-authoritative; F-002).
     void this.entitlement.refresh();
-    this.locate();
     // A trip queued from Recents/Saved: prefill the fields (stops included — a saved multi-stop
     // trip re-plans as a multi-stop trip, F-006 US-4) and plan it immediately.
     const staged = this.trips.takeStaged();
-    if (!staged) return;
-    this.origin.set(staged.origin);
-    this.destination.set(staged.destination);
-    this.stops.set(fromWaypoints(staged.waypoints));
-    if (staged.departureAt) this.departureAt = this.toLocalInput(new Date(staged.departureAt));
-    void this.submit();
+    if (staged) {
+      this.locate();
+      this.origin.set(staged.origin);
+      this.destination.set(staged.destination);
+      this.stops.set(fromWaypoints(staged.waypoints));
+      if (staged.departureAt) this.departureAt = this.toLocalInput(new Date(staged.departureAt));
+      void this.submit();
+      return;
+    }
+    // ADR-0038: the landing-page form hands off as /plan?from=…&to=…. Absent params this is a no-op,
+    // so today's behaviour is unchanged. Present params own the origin, so the geolocation prefill is
+    // skipped — otherwise the async fix could land on top of the route the user just asked for.
+    const params = this.route.snapshot.queryParamMap;
+    const from = params.get('from')?.trim();
+    const to = params.get('to')?.trim();
+    if (from || to) {
+      void this.applyHandoff(from, to);
+      return;
+    }
+    this.locate();
+  }
+
+  /**
+   * ADR-0038: resolve the landing page's `from`/`to` text to places and plan the trip.
+   *
+   * Both lookups run concurrently through the SAME geocoder the place fields use, and we take the
+   * first result — the landing page sends city-level text ("Chicago, IL"), which is exactly what
+   * Photon ranks well. A miss is NOT an error state: whatever resolved is filled in and the form is
+   * left for the user to finish. Someone who just clicked a CTA must never meet an error page or an
+   * empty planner.
+   */
+  private async applyHandoff(from?: string, to?: string): Promise<void> {
+    const [origin, destination] = await Promise.all([this.resolve(from), this.resolve(to)]);
+    if (origin) this.origin.set(origin);
+    if (destination) this.destination.set(destination);
+    if (origin && destination) {
+      void this.submit();
+      return;
+    }
+    // Partial (or total) failure: fall back to the normal idle screen, including the live-location
+    // map + origin prefill the user would otherwise have got.
+    this.locate();
+  }
+
+  /**
+   * First geocoder hit for a query, or null (blank, too short, no match, or the lookup failed).
+   * Swallows failures HERE rather than relying on GeocodeService's own try/catch, so the "never show
+   * a blank planner to someone who just clicked a CTA" guarantee doesn't depend on another class's
+   * internals.
+   */
+  private async resolve(query?: string): Promise<PlaceValue | null> {
+    if (!query) return null;
+    try {
+      const results = await this.geocode.search(query);
+      return results[0] ?? null;
+    } catch {
+      return null;
+    }
   }
 
   /**
    * ADR-0026: center the home map on the user and pre-fill the origin — permission-gated and
    * non-blocking. Denied/insecure-context/unavailable all fall back to the default view + manual
-   * entry. Only replaces the origin while it is still the untouched demo default.
+   * entry. Only fills an EMPTY origin: since ADR-0038 removed the hardcoded demo route, anything
+   * already in the field was put there by the user, a saved trip, or a landing-page handoff.
    */
   private locate(): void {
     if (!('geolocation' in navigator) || !window.isSecureContext) return;
@@ -587,8 +636,7 @@ export class Plan implements OnInit {
       (pos) => {
         const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
         this.userLocation.set(loc);
-        const o = this.origin();
-        if (!o || (o.name === 'San Francisco, CA' && o.latitude === 37.7749)) {
+        if (!this.origin()) {
           this.origin.set({ name: 'Current location', ...loc });
         }
       },

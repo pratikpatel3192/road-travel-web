@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Page not found — Road Travel</title>
+<meta name="robots" content="noindex, follow" />
+<!-- Served by nginx with a real HTTP 404 for any path that is neither a file nor a known app route
+     (docker/nginx.conf.template). Static, so it costs no JavaScript and works for crawlers. -->
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap" rel="stylesheet" />
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{--navy:#1B3A5C;--navy-deep:#16304F;--muted-2:#4A6076;--line:#E2E8F0;--bg:#F0F3F7;--link:#2a78d6}
+  body{min-height:100vh;display:grid;place-items:center;padding:28px;background:var(--bg);
+    font-family:Nunito,system-ui,-apple-system,sans-serif;color:var(--navy);font-weight:600;line-height:1.6}
+  main{max-width:520px;text-align:center}
+  img{height:36px;width:auto;margin-bottom:30px}
+  h1{font-size:clamp(1.6rem,4vw,2.1rem);font-weight:800;letter-spacing:-.02em;line-height:1.15;margin-bottom:12px}
+  p{color:var(--muted-2);font-size:16.5px;margin-bottom:26px}
+  .row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  a.btn{background:var(--navy);color:#fff;font-weight:800;font-size:15px;padding:13px 24px;border-radius:12px;
+    text-decoration:none}
+  a.btn:hover{background:var(--navy-deep)}
+  a.ghost{background:#fff;border:1.5px solid var(--line);color:var(--navy)}
+  a.ghost:hover{background:#fff;border-color:var(--navy)}
+</style>
+</head>
+<body>
+<main>
+  <a href="/"><img src="/logo-horizontal-light-2x.png" srcset="/logo-horizontal-light-2x.png 2x"
+                   width="158" height="36" alt="Road Travel" /></a>
+  <h1>That page doesn't exist.</h1>
+  <p>The link may be broken or the page may have moved. You can still plan a drive.</p>
+  <div class="row">
+    <a class="btn" href="/plan">Plan a drive</a>
+    <a class="btn ghost" href="/">Back to the home page</a>
+  </div>
+</main>
+</body>
+</html>

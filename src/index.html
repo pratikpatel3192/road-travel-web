@@ -2,9 +2,15 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Road Travel</title>
+    <title>Road Travel — plan a drive, weather timed to arrival</title>
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- This file is the APP SHELL, not a landing page: the marketing copy and the SEO surface live
+         in public/landing.html, served at / (ADR-0038). Keep this short — it describes the planner,
+         which is client-rendered and deliberately not the indexable page. The canonical points at the
+         landing page because that is the page we want ranked for the product. -->
+    <meta name="description" content="Plan a drive and see the weather for every stretch of the route at the hour you'll actually be there, plus a plain-language AI briefing on when to leave." />
+    <link rel="canonical" href="https://roadtravel.info/" />
 
     <!-- Design 6a type (docs/DESIGN_SYSTEM.md): Nunito 600/700/800, system-ui fallback. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -24,14 +30,17 @@
     <meta name="theme-color" content="#e9f1f9" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0f1722" media="(prefers-color-scheme: dark)" />
 
-    <!-- Social cards -->
+    <!-- Social cards. og:image MUST be an absolute URL — Reddit (the primary launch channel) and
+         most other unfurlers do not resolve a root-relative path, so the preview silently loses its
+         image. The night variant was a second og:image tag, which just made the choice ambiguous;
+         one canonical image is what unfurlers actually want. -->
     <meta property="og:title" content="Road Travel" />
     <meta property="og:description" content="Weather along your route, time-shifted to your ETA — with an AI briefing." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="/og-image.png" />
-    <meta property="og:image" content="/og-image-night.png" />
+    <meta property="og:url" content="https://roadtravel.info/" />
+    <meta property="og:image" content="https://roadtravel.info/og-image.png" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content="/og-image.png" />
+    <meta name="twitter:image" content="https://roadtravel.info/og-image.png" />
     <!-- Apply the saved appearance before first paint to avoid a light/dark flash. -->
     <script>
       try {

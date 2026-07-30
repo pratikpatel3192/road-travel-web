@@ -24,7 +24,7 @@ import { formatDistance } from '../plan/severity';
   template: `
     <div class="page">
       <header class="top">
-        <a routerLink="/app" class="back" aria-label="Back">←</a>
+        <a routerLink="/plan" class="back" aria-label="Back">←</a>
         <h1>Driving</h1>
         @if (remoteConfig.isEnabled('chat')) {
         <a routerLink="/chats" class="chats-link">
