@@ -8,6 +8,4 @@ node_modules
 *.log
 .env
 .env.*
-.vercelignore
-vercel.json
 serve.py

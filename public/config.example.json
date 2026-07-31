@@ -4,5 +4,7 @@
   "supabaseAnonKey": "",
   "mapboxToken": "",
   "revenueCatWebApiKey": "",
-  "revenueCatOfferingId": ""
+  "revenueCatOfferingId": "",
+  "posthogKey": "",
+  "posthogHost": ""
 }

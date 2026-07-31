@@ -2,7 +2,7 @@
   "name": "Road Travel",
   "short_name": "Road Travel",
   "description": "Weather along your route, time-shifted to your ETA — with an AI briefing.",
-  "start_url": "/app",
+  "start_url": "/plan",
   "display": "standalone",
   "theme_color": "#2563eb",
   "background_color": "#e9f1f9",

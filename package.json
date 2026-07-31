@@ -20,9 +20,9 @@
     "@revenuecat/purchases-js": "^1.47.0",
     "@road-travel/sdk": "file:./vendor/sdk",
     "@supabase/supabase-js": "^2.110.0",
-    "@vercel/analytics": "^2.0.1",
     "leaflet": "^1.9.4",
     "mapbox-gl": "^3.25.0",
+    "posthog-js": "^1.408.1",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },

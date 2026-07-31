@@ -7,6 +7,7 @@ import {
 import { provideRouter, withInMemoryScrolling } from '@angular/router';
 
 import { routes } from './app.routes';
+import { AnalyticsService } from './core/analytics.service';
 import { AuthService } from './core/auth.service';
 import { ConfigService } from './core/config';
 
@@ -21,8 +22,14 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(async () => {
       const config = inject(ConfigService);
       const auth = inject(AuthService);
+      const analytics = inject(AnalyticsService);
       try {
         await config.load();
+        // ADR-0037: start analytics as soon as the key is known — before auth, so `app_launched` and
+        // the first `$pageview` land even if the session bootstrap is slow or fails. Non-blocking
+        // (the SDK is imported lazily) and inert when no project key is configured.
+        analytics.init();
+        analytics.capture('app_launched');
         await auth.init();
       } catch (err) {
         console.error('[startup] config/auth init failed; continuing degraded', err);

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Only the landing page is listed. /privacy, /terms and /support are still client-rendered Angular
+     routes, so a crawler sees an empty app shell there — listing them would ask Google to index
+     thin pages. Add them here if and when they are pre-rendered. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://roadtravel.info/</loc>
+    <lastmod>2026-07-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>

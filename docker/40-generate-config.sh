@@ -9,7 +9,9 @@ cat > /usr/share/nginx/html/config.json <<JSON
   "supabaseAnonKey": "${CONFIG_SUPABASE_ANON_KEY:-}",
   "mapboxToken": "${CONFIG_MAPBOX_TOKEN:-}",
   "revenueCatWebApiKey": "${CONFIG_REVENUECAT_WEB_API_KEY:-}",
-  "revenueCatOfferingId": "${CONFIG_REVENUECAT_OFFERING_ID:-}"
+  "revenueCatOfferingId": "${CONFIG_REVENUECAT_OFFERING_ID:-}",
+  "posthogKey": "${CONFIG_POSTHOG_KEY:-}",
+  "posthogHost": "${CONFIG_POSTHOG_HOST:-}"
 }
 JSON
-echo "[config] wrote /config.json (apiBaseUrl=${CONFIG_API_BASE_URL:-https://api.roadtravel.info}, supabase=${CONFIG_SUPABASE_URL:+set}, mapbox=${CONFIG_MAPBOX_TOKEN:+set})"
+echo "[config] wrote /config.json (apiBaseUrl=${CONFIG_API_BASE_URL:-https://api.roadtravel.info}, supabase=${CONFIG_SUPABASE_URL:+set}, mapbox=${CONFIG_MAPBOX_TOKEN:+set}, posthog=${CONFIG_POSTHOG_KEY:+set})"

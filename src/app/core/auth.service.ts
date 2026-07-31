@@ -119,8 +119,10 @@ export class AuthService {
     if (error) {
       this.authError.set('That sign-in link is invalid or has expired — request a new one.');
     }
-    // Strip the single-use token from the URL so a reload/share can't replay it, and land on the app.
-    history.replaceState(null, '', '/');
+    // Strip the single-use token from the URL so a reload/share can't replay it, and land on the
+    // app. MUST be an app route: this runs before the router initializes, and '/' is now the
+    // static landing page rather than an Angular route (ADR-0038).
+    history.replaceState(null, '', '/plan');
   }
 
   private lastActive(): number {
@@ -161,7 +163,7 @@ export class AuthService {
   async continueWithOAuth(provider: OAuthProvider): Promise<{ error?: string }> {
     if (!this.supabase) return { error: 'Sign-in is not configured for this environment.' };
     const options: { redirectTo: string; queryParams?: Record<string, string> } = {
-      redirectTo: `${window.location.origin}/app`,
+      redirectTo: `${window.location.origin}/plan`,
     };
     // `prompt=select_account` is a Google param — always show its account chooser so multi-account
     // users don't get silently signed in as the wrong identity. Apple has no such param and its
@@ -185,7 +187,7 @@ export class AuthService {
    */
   async continueWithEmail(email: string): Promise<{ error?: string }> {
     if (!this.supabase) return { error: 'Sign-in is not configured for this environment.' };
-    const redirect = { emailRedirectTo: `${window.location.origin}/app` };
+    const redirect = { emailRedirectTo: `${window.location.origin}/plan` };
     if (this.isAnonymous()) {
       // Try to upgrade the anonymous session in place (keeps trips/usage on the SAME user_id).
       const { error } = await this.supabase.auth.updateUser({ email }, redirect);

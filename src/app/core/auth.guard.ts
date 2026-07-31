@@ -4,7 +4,7 @@ import { type CanActivateFn, Router } from '@angular/router';
 import { AuthService } from './auth.service';
 
 /**
- * Gate the /app route. When Supabase auth isn't configured (local dev), allow through — the backend's
+ * Gate the /plan route. When Supabase auth isn't configured (local dev), allow through — the backend's
  * local-dev path accepts unauthenticated requests, so developers aren't blocked. When it IS
  * configured, require a session and otherwise bounce to /login. The silent ANONYMOUS session passes:
  * ADR-0025 §1 keeps browsing + trip entry open to everyone (the wall is at the value action).

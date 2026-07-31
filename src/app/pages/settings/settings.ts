@@ -18,7 +18,7 @@ const APPLE_SUBSCRIPTIONS_URL = 'https://account.apple.com/account/manage';
   template: `
     <div class="page">
       <header class="top">
-        <a routerLink="/app" class="back" aria-label="Back">←</a>
+        <a routerLink="/plan" class="back" aria-label="Back">←</a>
         <h1>Settings</h1>
       </header>
 

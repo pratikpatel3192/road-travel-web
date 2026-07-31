@@ -1,22 +1,32 @@
 import { Routes } from '@angular/router';
 
 import { authGuard, realAccountGuard } from './core/auth.guard';
+import { NotFound } from './pages/not-found/not-found';
 import { Privacy } from './pages/privacy/privacy';
 import { Support } from './pages/support/support';
 import { Terms } from './pages/terms/terms';
 
 export const routes: Routes = [
-  // The root IS the product: the trip planner renders directly at / (T-021). The old marketing home
-  // page is gone — land users straight in the planner. Guests may browse (authGuard passes an
-  // anonymous session, ADR-0025 §1); the wall is at the value action, not the front door.
+  // ADR-0038 REVERSES T-021 ("the root IS the product"). The root is now a static, fully-rendered
+  // marketing landing page served by nginx from public/landing.html — it is NOT an Angular route and
+  // deliberately has no entry here. The planner moved to /plan, keeping its guard: guests may browse
+  // (authGuard passes an anonymous session, ADR-0025 §1); the wall is at the value action.
   {
-    path: '',
+    path: 'plan',
     loadComponent: () => import('./pages/plan/plan').then((m) => m.Plan),
     canActivate: [authGuard],
   },
-  // Back-compat: the planner used to live at /app. Keep old bookmarks/links resolving to the new
-  // root instead of 404ing (T-021). Exact-match so it can't shadow any future /app/* route.
-  { path: 'app', redirectTo: '', pathMatch: 'full' },
+  // Back-compat: the planner lived at /app before T-021 and at / after it. `/app` is still the live
+  // return target for Supabase OAuth, magic links, Stripe Checkout success/cancel and the installed
+  // PWA's start_url, so this redirect is load-bearing, not just a courtesy for old bookmarks.
+  // Exact-match so it can't shadow any future /app/* route. (nginx must also allowlist `app` — see
+  // docker/nginx.conf.template.)
+  { path: 'app', redirectTo: 'plan', pathMatch: 'full' },
+  // Magic-link / Universal-Link callback. AuthService.init() consumes the token during the app
+  // initializer, BEFORE routing, and rewrites the URL; this route exists for the case it cannot
+  // (the `#tokens` fragment variant, which Supabase reads without a URL rewrite). Until ADR-0038
+  // this path resolved only by accident, via the '**' catch-all being deleted below.
+  { path: 'auth-callback', redirectTo: 'plan', pathMatch: 'full' },
   { path: 'login', loadComponent: () => import('./pages/login/login').then((m) => m.Login) },
   // ADR-0025 §1: saved trips + Settings are LOGIN-ONLY (real account; the anonymous session doesn't count).
   {
@@ -50,5 +60,8 @@ export const routes: Routes = [
   { path: 'privacy', component: Privacy },
   { path: 'terms', component: Terms },
   { path: 'support', component: Support },
-  { path: '**', redirectTo: '' },
+  // ADR-0038: a real NotFound, NOT `redirectTo: ''`. The old catch-all answered every mistyped URL
+  // with HTTP 200 and app content — a soft-404 farm. nginx now 404s unknown paths outright, so this
+  // only catches bad IN-APP navigations (and keeps them from throwing NG04002).
+  { path: '**', component: NotFound },
 ];
