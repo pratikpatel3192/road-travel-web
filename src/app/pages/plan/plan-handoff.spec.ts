@@ -28,6 +28,8 @@ describe('Plan — landing-page ?from=&to= handoff', () => {
   let search: ReturnType<typeof vi.fn>;
   let planTrip: ReturnType<typeof vi.fn>;
   let getCurrentPosition: ReturnType<typeof vi.fn>;
+  /** ADR-0025: only a REAL account may generate a briefing; an anonymous guest gets a 401. */
+  let hasRealAccount = true;
 
   function build(params: Record<string, string>) {
     search = vi.fn(async (query: string) => {
@@ -65,7 +67,10 @@ describe('Plan — landing-page ?from=&to= handoff', () => {
         },
         { provide: AnalyticsService, useValue: { capture: vi.fn() } },
         { provide: PaywallService, useValue: { show: vi.fn() } },
-        { provide: AuthService, useValue: { configured: () => true, hasRealAccount: () => true } },
+        {
+          provide: AuthService,
+          useValue: { configured: () => true, hasRealAccount: () => hasRealAccount },
+        },
         {
           provide: SettingsService,
           useValue: { units: () => 'imperial', home: () => null, work: () => null, setUnits: vi.fn() },
@@ -76,6 +81,7 @@ describe('Plan — landing-page ?from=&to= handoff', () => {
   }
 
   beforeEach(() => {
+    hasRealAccount = true;
     getCurrentPosition = vi.fn();
     vi.stubGlobal('navigator', { geolocation: { getCurrentPosition } });
     vi.stubGlobal('isSecureContext', true);
@@ -97,6 +103,24 @@ describe('Plan — landing-page ?from=&to= handoff', () => {
     expect(plan.destination()).toEqual(DENVER);
     expect(planTrip).toHaveBeenCalledTimes(1);
     expect(plan.plan()).toBeTruthy();
+  });
+
+  it('prefills but does NOT auto-plan for a guest — the CTA must not dead-end on /login', async () => {
+    // Regression: auto-submitting for an anonymous session 401s (ADR-0025 §1 — a briefing needs a
+    // REAL account), and submit()'s AccountRequiredError branch navigates to /login. A cold visitor
+    // clicking the landing CTA therefore landed on a context-free sign-in page instead of the
+    // planner. The wall belongs at Get briefing, not at the front door.
+    hasRealAccount = false;
+    const plan = build({ from: 'Chicago, IL', to: 'Denver, CO' });
+    plan.ngOnInit();
+    await settle();
+
+    // Their route IS resolved and shown — they see the product with their own trip in it.
+    expect(plan.origin()).toEqual(CHICAGO);
+    expect(plan.destination()).toEqual(DENVER);
+    // …but nothing is submitted, so nothing can 401 and redirect them away.
+    expect(planTrip).not.toHaveBeenCalled();
+    expect(plan.error()).toBeNull();
   });
 
   it('fills what it can and leaves the form when a lookup returns nothing', async () => {
