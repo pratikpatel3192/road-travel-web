@@ -599,12 +599,19 @@ export class Plan implements OnInit {
     const [origin, destination] = await Promise.all([this.resolve(from), this.resolve(to)]);
     if (origin) this.origin.set(origin);
     if (destination) this.destination.set(destination);
-    if (origin && destination) {
+
+    // ADR-0025 §1 puts the wall at the VALUE ACTION, not the front door. Generating a briefing needs
+    // a REAL account, so auto-submitting for a guest gets a 401 and `submit()` sends them to /login —
+    // which turned a landing-page CTA click into a context-free sign-in page, the exact dead end the
+    // handoff exists to avoid. For a guest we prefill and stop: they see the planner with their own
+    // route in it, and meet the wall when they press Get briefing, where ADR-0025 intends it.
+    const canPlan = !this.auth.configured() || this.auth.hasRealAccount();
+    if (origin && destination && canPlan) {
       void this.submit();
       return;
     }
-    // Partial (or total) failure: fall back to the normal idle screen, including the live-location
-    // map + origin prefill the user would otherwise have got.
+    // Guest, or a partial/failed lookup: fall back to the normal idle screen, including the
+    // live-location map + origin prefill the user would otherwise have got.
     this.locate();
   }
 
