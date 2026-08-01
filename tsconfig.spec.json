@@ -4,7 +4,14 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./out-tsc/spec",
-    "types": ["vitest/globals"]
+    "types": ["vitest/globals"],
+    /* F-012: the spec suite reads the SHARED trip-key vectors from road-travel-docs
+       (repos checked out side by side), so Python/Swift/TS assert one oracle. */
+    "resolveJsonModule": true
   },
-  "include": ["src/**/*.d.ts", "src/**/*.spec.ts"]
+  "include": [
+    "src/**/*.d.ts",
+    "src/**/*.spec.ts",
+    "../road-travel-docs/test-vectors/*.vectors.json"
+  ]
 }

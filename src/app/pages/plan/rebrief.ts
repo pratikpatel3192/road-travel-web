@@ -4,22 +4,44 @@ import type { PlaceValue } from './place-field';
 import { waypointsKey } from './waypoints';
 
 /**
- * F-001 v2 (US-11) re-brief helpers: remember the last briefing's `facts` per trip identity so a
- * re-generated briefing for the SAME trip carries `previous_facts` (the server then returns a
- * grounded `diff` and leads the prose with what changed). Trip identity is endpoints + departure +
- * the F-006 waypoints/dwell key — change ANY of those and it is a different trip, so no
- * `previous_facts` is sent (a diff against a different trip would be meaningless).
- * Framework-free, like waypoints.ts, so the send/don't-send decision is unit-testable.
+ * Re-brief keys and the remembered facts behind the US-11 "what changed" line.
+ *
+ * **Two keys, two jobs (F-012 / ADR-0040).** They used to be one, which is why a deliberate edit
+ * could never produce a diff:
+ *
+ * - {@link tripIdentityKey} — *"does the shown briefing still describe the shown plan?"* Endpoints
+ *   + departure + waypoints/dwell. Any plan change invalidates the displayed briefing. This is the
+ *   F-001 US-3 / ADR-0031 §3 staleness rule and it deliberately has NOT relaxed: loosening it would
+ *   leave a briefing about the old plan sitting next to the new one.
+ * - {@link tripBaselineKey} — *"which remembered facts do I diff against?"* Endpoints only. Move
+ *   your departure two hours and the baseline still matches, so the server can tell you the pass
+ *   went from rain to ice. A genuinely different **trip** still matches nothing, which is correct
+ *   and stays.
+ *
+ * Both are pinned against `road-travel-docs/test-vectors/trip-keys.vectors.json`, shared with the
+ * Swift implementation — the two platforms had already drifted on the departure component before
+ * those vectors existed.
  */
 
-/** The full trip identity a briefing was generated for (extends ADR-0031 §3 with endpoints+departure). */
-export function tripIdentityKey(args: {
+/** Coordinates compare at ~11 m on both platforms, so JSON float noise is not an edit. */
+const COORD_DECIMALS = 4;
+
+function place(p: PlaceValue): string {
+  return `${p.name}@${p.latitude.toFixed(COORD_DECIMALS)},${p.longitude.toFixed(COORD_DECIMALS)}`;
+}
+
+export interface TripKeyInputs {
   origin: PlaceValue;
   destination: PlaceValue;
   departureAt: string;
   waypoints?: readonly WaypointModel[];
-}): string {
-  const place = (p: PlaceValue) => `${p.name}@${p.latitude},${p.longitude}`;
+}
+
+/**
+ * Full plan identity — endpoints + departure + the F-006 waypoints/dwell key. Changing ANY of them
+ * means the shown briefing no longer describes the shown plan, so it must be regenerated.
+ */
+export function tripIdentityKey(args: TripKeyInputs): string {
   return [
     place(args.origin),
     place(args.destination),
@@ -29,22 +51,44 @@ export function tripIdentityKey(args: {
 }
 
 /**
- * Single-slot memory of the last briefing's facts + the trip identity they were generated for.
- * `previousFactsFor` yields the facts ONLY when the identity matches — the caller puts the result
- * straight into the request body (undefined = key omitted).
+ * Which trip this is, independent of *which version of the plan*. Departure and stops are
+ * deliberately absent: they are the plan, not the trip. Pass `savedTripId` when the trip is a saved
+ * one — then the server's own baseline (ADR-0039) is authoritative and this is only the local key.
  */
-export class BriefingMemory {
-  private key: string | null = null;
-  private facts: BriefingFactsModel | null = null;
+export function tripBaselineKey(
+  args: Pick<TripKeyInputs, 'origin' | 'destination'> & { savedTripId?: string | null },
+): string {
+  if (args.savedTripId) return `trip:${args.savedTripId}`;
+  return [place(args.origin), place(args.destination)].join('>');
+}
 
-  /** The prior facts to send when re-briefing `key` — undefined when it's a different trip. */
+/**
+ * Remembered facts per trip, for the local (unsaved / signed-out) re-brief path.
+ *
+ * Keyed by {@link tripBaselineKey} — a map, not the single slot this used to be. The old shape held
+ * one key and one fact set, so briefing trip A, then trip B, then returning to A lost A's baseline
+ * entirely. Bounded so a long session can't grow without limit; the server-side baseline (ADR-0039)
+ * is what actually survives a reload and crosses devices.
+ */
+const MAX_REMEMBERED_TRIPS = 20;
+
+export class BriefingMemory {
+  private readonly facts = new Map<string, BriefingFactsModel>();
+
+  /** The prior facts to send for this trip — undefined when it has never been briefed here. */
   previousFactsFor(key: string): BriefingFactsModel | undefined {
-    return this.key === key && this.facts ? this.facts : undefined;
+    return this.facts.get(key);
   }
 
-  /** Store the freshly returned facts as the new baseline for `key`. */
+  /** Store the freshly returned facts as this trip's new baseline (most-recent-wins). */
   remember(key: string, facts: BriefingFactsModel): void {
-    this.key = key;
-    this.facts = facts;
+    // Re-insert so Map iteration order tracks recency, then evict the oldest.
+    this.facts.delete(key);
+    this.facts.set(key, facts);
+    while (this.facts.size > MAX_REMEMBERED_TRIPS) {
+      const oldest = this.facts.keys().next();
+      if (oldest.done) break;
+      this.facts.delete(oldest.value);
+    }
   }
 }

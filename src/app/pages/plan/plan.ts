@@ -16,7 +16,7 @@ import { AheadBanner } from './ahead-banner';
 import { BriefingCard } from './briefing-card';
 import { ExplorePanel } from './explore-panel';
 import { PlaceField, type PlaceValue } from './place-field';
-import { BriefingMemory, tripIdentityKey } from './rebrief';
+import { BriefingMemory, tripBaselineKey } from './rebrief';
 import { RouteMap } from './route-map';
 import { type Severity, formatDuration } from './severity';
 import { StopList } from './stop-list';
@@ -791,10 +791,12 @@ export class Plan implements OnInit {
     if (!base || !ctx) return;
     const departureAt = new Date(base.getTime() + this.departureOffset() * 60_000).toISOString();
     const waypoints = toWaypoints(this.stops());
-    // US-11: previous_facts ride along ONLY when this is still the same trip the remembered
-    // briefing was generated for (a stop/dwell edit or scrubbed departure = a different trip).
-    const identity = tripIdentityKey({ ...ctx, departureAt, waypoints });
-    const previousFacts = this.briefingMemory.previousFactsFor(identity);
+    // F-012: previous_facts now ride along across a PLAN edit of the same trip — the departure
+    // scrubber and stop edits are exactly the cases worth diffing. The identity key still governs
+    // whether the SHOWN briefing is stale (ADR-0031 §3); the baseline key governs what to diff
+    // against. A genuinely different trip still matches nothing.
+    const baselineKey = tripBaselineKey(ctx);
+    const previousFacts = this.briefingMemory.previousFactsFor(baselineKey);
     this.replanning.set(true);
     try {
       const [plan, briefing] = await Promise.all([
@@ -814,7 +816,7 @@ export class Plan implements OnInit {
       this.plan.set(plan);
       if (briefing) {
         this.briefing.set(briefing);
-        this.briefingMemory.remember(identity, briefing.facts);
+        this.briefingMemory.remember(baselineKey, briefing.facts);
       }
       this.plannedWaypointsKey = waypointsKey(waypoints);
       this.selected.set(null);
@@ -865,10 +867,10 @@ export class Plan implements OnInit {
     const departureAt = base.toISOString();
     // F-006: the plan AND the briefing carry the same waypoints (the briefing narrates the stops).
     const waypoints = toWaypoints(this.stops());
-    // US-11 re-brief: submitting the SAME trip again (same endpoints/departure/stops) carries the
-    // prior facts so the server can diff; any changed input is a new trip — nothing is sent.
-    const identity = tripIdentityKey({ origin, destination, departureAt, waypoints });
-    const previousFacts = this.briefingMemory.previousFactsFor(identity);
+    // F-012 re-brief: the prior facts for this TRIP (endpoints), whatever plan version they were
+    // generated for — so re-submitting with a moved departure still produces a labelled diff.
+    const baselineKey = tripBaselineKey({ origin, destination });
+    const previousFacts = this.briefingMemory.previousFactsFor(baselineKey);
     try {
       const [plan, briefing] = await Promise.all([
         this.api.planTrip(buildPlanRequest({ origin, destination, departureAt, waypoints })),
@@ -890,7 +892,7 @@ export class Plan implements OnInit {
       });
       this.plan.set(plan);
       this.briefing.set(briefing);
-      this.briefingMemory.remember(identity, briefing.facts);
+      this.briefingMemory.remember(baselineKey, briefing.facts);
       this.plannedContext.set({ origin, destination });
       this.plannedBase.set(base);
       this.plannedWaypointsKey = waypointsKey(waypoints);

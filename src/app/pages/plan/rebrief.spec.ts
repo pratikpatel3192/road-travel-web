@@ -1,6 +1,6 @@
 import type { BriefingFactsModel } from '@road-travel/sdk';
 
-import { BriefingMemory, tripIdentityKey } from './rebrief';
+import { BriefingMemory, tripBaselineKey, tripIdentityKey } from './rebrief';
 import { buildBriefingRequest, newStop, toWaypoints } from './waypoints';
 
 const SF = { name: 'San Francisco, CA', latitude: 37.7749, longitude: -122.4194 };
@@ -30,60 +30,122 @@ const trip = () => ({
 });
 
 /**
- * F-001 v2 (US-11): `previous_facts` is sent on a re-brief of the SAME trip identity — endpoints +
- * departure + waypoints/dwell (the F-006 key) — and NEVER when any of those changed. This mirrors
- * exactly how plan.ts composes the request: memory lookup by identity → buildBriefingRequest.
+ * F-012 (ADR-0040): two keys, two jobs.
+ *
+ * This suite previously asserted that a departure change or a stop edit suppressed
+ * `previous_facts`. That was correct for the single overloaded key, and it is exactly the
+ * behaviour F-012 changes: it made the headline scenario — *you moved departure two hours and the
+ * pass goes from rain to ice* — unreachable by construction. The invalidation half of that key is
+ * unchanged and still asserted below.
  */
-describe('F-001 v2 re-brief identity (previous_facts)', () => {
-  function requestFor(memory: BriefingMemory, args = trip()) {
-    return buildBriefingRequest({
-      ...args,
-      units: 'imperial' as const,
-      previousFacts: memory.previousFactsFor(tripIdentityKey(args)),
+describe('F-012 re-brief keys', () => {
+  describe('tripIdentityKey — invalidation (F-001 US-3 / ADR-0031 §3, deliberately NOT relaxed)', () => {
+    it.each([
+      ['a different departure', { ...trip(), departureAt: '2026-07-17T18:00:00.000Z' }],
+      ['a changed dwell', { ...trip(), waypoints: toWaypoints([newStop(HARRIS, 60)]) }],
+      ['a removed stop', { ...trip(), waypoints: [] }],
+      ['a different destination', { ...trip(), destination: SAC }],
+    ])('changes after %s, so a shown briefing is never left describing an old plan', (_w, edited) => {
+      expect(tripIdentityKey(edited)).not.toBe(tripIdentityKey(trip()));
     });
-  }
 
-  it('sends previous_facts when re-briefing the same trip identity', () => {
-    const memory = new BriefingMemory();
-    memory.remember(tripIdentityKey(trip()), FACTS);
-    const body = requestFor(memory);
-    expect(body.previous_facts).toEqual(FACTS);
-  });
-
-  it('omits previous_facts entirely on the FIRST briefing (nothing remembered)', () => {
-    const body = requestFor(new BriefingMemory());
-    expect('previous_facts' in body).toBe(false);
-  });
-
-  it.each([
-    ['a different destination', { ...trip(), destination: SAC }],
-    ['a different origin', { ...trip(), origin: SAC }],
-    ['a different departure time', { ...trip(), departureAt: '2026-07-17T18:00:00.000Z' }],
-    ['a changed dwell', { ...trip(), waypoints: toWaypoints([newStop(HARRIS, 60)]) }],
-    ['a removed stop', { ...trip(), waypoints: [] }],
-  ])('does NOT send previous_facts after %s (different trip identity)', (_what, changed) => {
-    const memory = new BriefingMemory();
-    memory.remember(tripIdentityKey(trip()), FACTS);
-    const body = requestFor(memory, changed);
-    expect('previous_facts' in body).toBe(false);
-  });
-
-  it('re-baselines on every response: the newest facts become the next previous_facts', () => {
-    const memory = new BriefingMemory();
-    const key = tripIdentityKey(trip());
-    memory.remember(key, FACTS);
-    const newer: BriefingFactsModel = { ...FACTS, overall_severity: 'caution' };
-    memory.remember(key, newer);
-    expect(memory.previousFactsFor(key)?.overall_severity).toBe('caution');
-  });
-
-  it('waypoint dwell is part of the identity via the F-006 waypointsKey (order matters too)', () => {
-    const a = tripIdentityKey(trip());
-    const reordered = tripIdentityKey({
-      ...trip(),
-      waypoints: toWaypoints([newStop(HARRIS, 30), newStop(SAC, 0)]),
+    it('is stable for identical inputs', () => {
+      expect(tripIdentityKey(trip())).toBe(tripIdentityKey(trip()));
     });
-    expect(reordered).not.toBe(a);
-    expect(tripIdentityKey(trip())).toBe(a); // stable for identical inputs
+  });
+
+  describe('tripBaselineKey — which baseline to diff against', () => {
+    it('survives a departure edit, so the diff can finally fire on one', () => {
+      expect(tripBaselineKey({ origin: SF, destination: LA })).toBe(
+        tripBaselineKey({ origin: SF, destination: LA }),
+      );
+    });
+
+    it('survives stop edits — those are the plan, not the trip', () => {
+      const before = tripBaselineKey({ origin: SF, destination: LA });
+      expect(tripBaselineKey({ origin: SF, destination: LA })).toBe(before);
+    });
+
+    it.each([
+      ['destination', { origin: SF, destination: SAC }],
+      ['origin', { origin: SAC, destination: LA }],
+    ])('CHANGES for a different %s — a different trip still sends nothing', (_w, other) => {
+      expect(tripBaselineKey(other)).not.toBe(tripBaselineKey({ origin: SF, destination: LA }));
+    });
+
+    it('prefers the saved-trip id when there is one', () => {
+      expect(tripBaselineKey({ origin: SF, destination: LA, savedTripId: 'abc' })).toBe('trip:abc');
+    });
+
+    it('ignores coordinate noise below 4 dp', () => {
+      expect(
+        tripBaselineKey({ origin: { ...SF, latitude: 37.77490001 }, destination: LA }),
+      ).toBe(tripBaselineKey({ origin: SF, destination: LA }));
+    });
+  });
+
+  describe('BriefingMemory — keyed by trip, not a single slot', () => {
+    const keyA = tripBaselineKey({ origin: SF, destination: LA });
+    const keyB = tripBaselineKey({ origin: SF, destination: SAC });
+
+    it('keeps trip A after briefing trip B (the single-slot bug)', () => {
+      const memory = new BriefingMemory();
+      memory.remember(keyA, FACTS);
+      memory.remember(keyB, { ...FACTS, destination_name: SAC.name });
+      expect(memory.previousFactsFor(keyA)).toEqual(FACTS);
+    });
+
+    it('re-baselines on every response', () => {
+      const memory = new BriefingMemory();
+      memory.remember(keyA, FACTS);
+      memory.remember(keyA, { ...FACTS, overall_severity: 'caution' });
+      expect(memory.previousFactsFor(keyA)?.overall_severity).toBe('caution');
+    });
+
+    it('returns undefined for a trip it has never seen', () => {
+      expect(new BriefingMemory().previousFactsFor(keyA)).toBeUndefined();
+    });
+
+    it('is bounded, evicting least-recently-briefed trips', () => {
+      const memory = new BriefingMemory();
+      for (let i = 0; i < 25; i++) memory.remember(`trip:${i}`, FACTS);
+      expect(memory.previousFactsFor('trip:0')).toBeUndefined();
+      expect(memory.previousFactsFor('trip:24')).toEqual(FACTS);
+    });
+  });
+
+  describe('request composition (mirrors plan.ts)', () => {
+    it('sends previous_facts across a departure edit of the same trip', () => {
+      const memory = new BriefingMemory();
+      memory.remember(tripBaselineKey({ origin: SF, destination: LA }), FACTS);
+      const moved = { ...trip(), departureAt: '2026-07-17T17:00:00.000Z' };
+      const body = buildBriefingRequest({
+        ...moved,
+        units: 'imperial' as const,
+        previousFacts: memory.previousFactsFor(tripBaselineKey(moved)),
+      });
+      expect(body.previous_facts).toEqual(FACTS);
+    });
+
+    it('omits previous_facts entirely on a first briefing', () => {
+      const body = buildBriefingRequest({
+        ...trip(),
+        units: 'imperial' as const,
+        previousFacts: new BriefingMemory().previousFactsFor(tripBaselineKey(trip())),
+      });
+      expect('previous_facts' in body).toBe(false);
+    });
+
+    it('omits previous_facts for a genuinely different trip', () => {
+      const memory = new BriefingMemory();
+      memory.remember(tripBaselineKey({ origin: SF, destination: LA }), FACTS);
+      const elsewhere = { ...trip(), destination: SAC };
+      const body = buildBriefingRequest({
+        ...elsewhere,
+        units: 'imperial' as const,
+        previousFacts: memory.previousFactsFor(tripBaselineKey(elsewhere)),
+      });
+      expect('previous_facts' in body).toBe(false);
+    });
   });
 });
