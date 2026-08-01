@@ -88,6 +88,12 @@
   nav.top .links a{color:var(--muted)}
   nav.top .links a:hover{color:var(--navy)}
   .btn-sm{background:var(--navy);color:#fff!important;padding:9px 18px;border-radius:10px;font-weight:800;font-size:14px}
+  /* Sign in is the RETURNING-user door, so it is deliberately quieter than the App Store CTA and
+     is NOT .hide-sm: on mobile the hero form always starts a new trip, so without this a returning
+     user has no way back into their account. Auth is passwordless (Apple/Google/passkey/magic
+     link), so /login creates an account just as readily as it resumes one — there is no separate
+     sign-up route to link to, and inventing one would be two doors to the same room. */
+  nav.top .links a.signin{white-space:nowrap}
   .btn-sm:hover{background:var(--navy-deep);color:#fff!important}
 
   /* ---------- hero ---------- */
@@ -238,6 +244,7 @@
     <div class="links">
       <a href="#how" class="hide-sm">How it works</a>
       <a href="#faq" class="hide-sm">FAQ</a>
+      <a class="signin" href="/login">Sign in</a>
       <a class="btn-sm" href="https://apps.apple.com/us/app/road-travel-drive-weather/id6785563236">Get the iOS app</a>
     </div>
   </div>
@@ -276,7 +283,8 @@
         </button>
       </form>
 
-      <p class="planner-note">Starts with a free trial — cancel before it ends and you're not charged.</p>
+      <p class="planner-note">Starts with a free trial — cancel before it ends and you're not charged.
+        Already have an account? <a href="/login">Sign in</a>.</p>
 
       <p class="chips-label">Or try a real route —</p>
       <div class="chips">
