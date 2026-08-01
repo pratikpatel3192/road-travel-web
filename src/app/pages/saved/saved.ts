@@ -187,6 +187,9 @@ export class Saved {
       },
       departureAt: t.departure_at,
       waypoints: t.waypoints,
+      // F-012: carries the server baseline through, so re-briefing this trip on ANY device leads
+      // with what changed since it was last briefed.
+      savedTripId: t.id,
     });
     this.router.navigate(['/plan']);
   }

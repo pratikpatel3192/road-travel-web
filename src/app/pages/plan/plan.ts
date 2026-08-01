@@ -510,6 +510,13 @@ export class Plan implements OnInit {
   private readonly plannedBase = signal<Date | null>(null);
   /** The endpoints the SHOWN plan was generated with (a signal — Explore binds to it). */
   readonly plannedContext = signal<{ origin: PlaceValue; destination: PlaceValue } | null>(null);
+  /**
+   * F-012: the SERVER trip id when this session opened a saved trip. Sent as `trip_id` so the
+   * briefing diffs against that trip's stored baseline (ADR-0039) — the half of the re-brief that
+   * survives a reload and crosses devices. Cleared the moment the user retargets the endpoints,
+   * because the baseline belongs to that trip, not to whatever is in the form now.
+   */
+  private savedTrip: { id: string; endpointKey: string } | null = null;
   private scrubTimer: ReturnType<typeof setTimeout> | undefined;
   // F-006: what the shown plan/briefing were generated with — trip identity now includes the
   // waypoints + dwell (ADR-0031 §3), so stop edits know when to re-plan + refresh the briefing.
@@ -569,6 +576,16 @@ export class Plan implements OnInit {
       this.origin.set(staged.origin);
       this.destination.set(staged.destination);
       this.stops.set(fromWaypoints(staged.waypoints));
+      this.savedTrip = staged.savedTripId
+        ? {
+            id: staged.savedTripId,
+            // Pinned to the endpoints it was staged for, so retargeting the form drops it.
+            endpointKey: tripBaselineKey({
+              origin: staged.origin,
+              destination: staged.destination,
+            }),
+          }
+        : null;
       if (staged.departureAt) this.departureAt = this.toLocalInput(new Date(staged.departureAt));
       void this.submit();
       return;
@@ -785,6 +802,21 @@ export class Plan implements OnInit {
     this.exploreSelected.set(null);
   }
 
+  /**
+   * The staged saved-trip id, but ONLY while the form still points at that trip's endpoints. A
+   * submit can retarget them, and the server baseline belongs to the trip it was stored on — sending
+   * it for a different route would diff two unrelated trips, which is the one thing F-012 must not do.
+   */
+  private savedTripIdFor(origin: PlaceValue, destination: PlaceValue): string | undefined {
+    const saved = this.savedTrip;
+    if (!saved) return undefined;
+    if (saved.endpointKey !== tripBaselineKey({ origin, destination })) {
+      this.savedTrip = null;
+      return undefined;
+    }
+    return saved.id;
+  }
+
   private async replan(opts: { refreshBriefing?: boolean } = {}): Promise<void> {
     const base = this.plannedBase();
     const ctx = this.plannedContext();
@@ -795,7 +827,8 @@ export class Plan implements OnInit {
     // scrubber and stop edits are exactly the cases worth diffing. The identity key still governs
     // whether the SHOWN briefing is stale (ADR-0031 §3); the baseline key governs what to diff
     // against. A genuinely different trip still matches nothing.
-    const baselineKey = tripBaselineKey(ctx);
+    const savedTripId = this.savedTripIdFor(ctx.origin, ctx.destination);
+    const baselineKey = tripBaselineKey({ ...ctx, savedTripId });
     const previousFacts = this.briefingMemory.previousFactsFor(baselineKey);
     this.replanning.set(true);
     try {
@@ -809,6 +842,7 @@ export class Plan implements OnInit {
                 waypoints,
                 units: this.settings.units(),
                 previousFacts,
+                savedTripId,
               }),
             )
           : Promise.resolve(null),
@@ -869,7 +903,8 @@ export class Plan implements OnInit {
     const waypoints = toWaypoints(this.stops());
     // F-012 re-brief: the prior facts for this TRIP (endpoints), whatever plan version they were
     // generated for — so re-submitting with a moved departure still produces a labelled diff.
-    const baselineKey = tripBaselineKey({ origin, destination });
+    const savedTripId = this.savedTripIdFor(origin, destination);
+    const baselineKey = tripBaselineKey({ origin, destination, savedTripId });
     const previousFacts = this.briefingMemory.previousFactsFor(baselineKey);
     try {
       const [plan, briefing] = await Promise.all([
@@ -882,6 +917,7 @@ export class Plan implements OnInit {
             waypoints,
             units: this.settings.units(),
             previousFacts,
+            savedTripId,
           }),
         ),
       ]);

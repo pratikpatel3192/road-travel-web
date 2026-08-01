@@ -12,6 +12,12 @@ export interface StagedTrip {
   departureAt?: string;
   /** F-006: a saved multi-stop trip re-opens WITH its stops + dwell. */
   waypoints?: WaypointModel[];
+  /**
+   * F-012: the SERVER trip id, when this came from My Trips. Sent as `trip_id` on the briefing so
+   * the server diffs against that trip's stored baseline — the half of the feature that survives a
+   * reload and crosses devices. Absent for local recents, which have no server row.
+   */
+  savedTripId?: string;
 }
 
 /**

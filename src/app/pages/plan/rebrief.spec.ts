@@ -149,3 +149,34 @@ describe('F-012 re-brief keys', () => {
     });
   });
 });
+
+/**
+ * F-012 gap 2: the SERVER baseline. `trip_id` is what makes a diff survive a reload and cross
+ * devices; without it the browser's in-memory map is the only baseline, which dies with the tab.
+ */
+describe('F-012 saved-trip baseline (trip_id)', () => {
+  it('sends trip_id when the trip came from My Trips', () => {
+    const body = buildBriefingRequest({
+      ...trip(),
+      units: 'imperial' as const,
+      savedTripId: '2b7e1f00-0000-4000-8000-000000000001',
+    });
+    expect(body.trip_id).toBe('2b7e1f00-0000-4000-8000-000000000001');
+  });
+
+  it('omits trip_id entirely for an unsaved trip, so the request is unchanged from before', () => {
+    const body = buildBriefingRequest({ ...trip(), units: 'imperial' as const });
+    expect('trip_id' in body).toBe(false);
+  });
+
+  it('keys the local baseline by the saved id, so it survives every plan edit of that trip', () => {
+    const saved = { origin: SF, destination: LA, savedTripId: 'abc' };
+    expect(tripBaselineKey(saved)).toBe(tripBaselineKey({ ...saved, destination: SAC }));
+  });
+
+  it('still separates two different SAVED trips', () => {
+    expect(tripBaselineKey({ origin: SF, destination: LA, savedTripId: 'a' })).not.toBe(
+      tripBaselineKey({ origin: SF, destination: LA, savedTripId: 'b' }),
+    );
+  });
+});

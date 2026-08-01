@@ -177,9 +177,15 @@ export type BriefingRequest = {
      */
     step_meters?: number | null;
     /**
-     * The prior briefing's `facts` for this trip (v2 US-11 re-brief): when set, the response includes a grounded diff and the prose leads with what changed.
+     * The prior briefing's `facts` for this trip (v2 US-11 re-brief): when set, the response includes a grounded diff and the prose leads with what changed. Ignored when `trip_id` resolves to a stored baseline, which is strictly better (it also carries the prior PLAN version, so the cause of a change is authoritative).
      */
     previous_facts?: BriefingFactsModel | null;
+    /**
+     * Trip Id
+     *
+     * A SAVED trip of the caller's (F-012/ADR-0039). When set and owned, the server diffs against that trip's stored baseline — so the diff survives an app relaunch and crosses devices — and stores the new facts as the next baseline. A trip that is missing, not yours, or malformed is treated identically: no diff, no error, no existence signal.
+     */
+    trip_id?: string | null;
     /**
      * Units
      */
@@ -900,12 +906,18 @@ export type FactsDiffEntryModel = {
      * To Severity
      */
     to_severity?: 'clear' | 'caution' | 'severe' | null;
+    /**
+     * Residual Minutes
+     *
+     * F-012: movement left once the driver's own departure edit is discounted. Set only on a plan-version diff; null on a forecast-only re-brief.
+     */
+    residual_minutes?: number | null;
 };
 
 /**
  * FactsDiffModel
  *
- * What changed vs `previous_facts` (US-11) — grounding for the 'Update:' line.
+ * What changed vs the previous briefing (US-11) — grounding for the 'Update:' line.
  */
 export type FactsDiffModel = {
     /**
@@ -924,6 +936,18 @@ export type FactsDiffModel = {
      * Overall To
      */
     overall_to: 'clear' | 'caution' | 'severe';
+    /**
+     * Cause
+     *
+     * F-012/ADR-0040: WHY the two fact sets differ — `forecast` (the sky moved), `plan_edit` (the baseline was a DIFFERENT plan version — narrate the delta relative to that plan, never as a forecast change), or `unattributed`. Server-computed; the model never picks it. Without this a plan edit and a forecast slip produce identical prose.
+     */
+    cause?: 'forecast' | 'plan_edit' | 'unattributed';
+    /**
+     * Omitted Entries
+     *
+     * F-012: entries beyond what the prose renders. The briefing states the count, so a long diff can never read as though nothing else changed.
+     */
+    omitted_entries?: number;
 };
 
 /**
