@@ -6,7 +6,7 @@
 <!-- iOS Safari shows a native App Store install banner. Free, high-intent conversion. -->
 <meta name="apple-itunes-app" content="app-id=6785563236">
 <title>Weather Along Your Route, Timed to Arrival — Road Travel</title>
-<meta name="description" content="See the weather for every stretch of your drive at the hour you'll actually be there, plus a plain-language AI briefing telling you when to leave. Free to try." />
+<meta name="description" content="See the weather for every stretch of your drive at the hour you'll actually be there, plus a plain-language AI briefing telling you when to leave. Starts with a free trial." />
 <link rel="canonical" href="https://roadtravel.info/" />
 
 <meta property="og:title" content="Your weather app knows your city. This one knows your drive." />
@@ -34,7 +34,7 @@
     "@type": "Offer",
     "price": "0",
     "priceCurrency": "USD",
-    "description": "Free to try. Road Travel Pro is $7.99/month or $49.99/year with a 3-day free trial."
+    "description": "Free download. Planning trips requires Road Travel Pro — $7.99/month or $49.99/year, starting with a free trial."
   }
 }
 </script>
@@ -43,7 +43,7 @@
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": [
-    {"@type":"Question","name":"Is Road Travel free?","acceptedAnswer":{"@type":"Answer","text":"Your first trips are free with full features. Road Travel Pro ($7.99/month, or $49.99/year — about $4.15/month — with a 3-day free trial) unlocks unlimited trips."}},
+    {"@type":"Question","name":"Is it free?","acceptedAnswer":{"@type":"Answer","text":"The app is a free download, and Road Travel Pro starts with a free trial — plan real routes, get real AI briefings, and if you cancel before the trial ends you're not charged. You'll enter payment details to start it. After that it's $7.99/month, or $49.99/year — about $4.15/month. Why more than a basic weather app? Every AI briefing runs real computation over your whole route's forecast, timed to your arrival at each point along it."}},
     {"@type":"Question","name":"Where does the weather come from? Does the AI make it up?","acceptedAnswer":{"@type":"Answer","text":"Forecasts come from Apple WeatherKit. The AI never predicts weather — it reads the real forecast along your route and explains it. Your trips are never used to train any model."}},
     {"@type":"Question","name":"Will it work for towing, RVs or trucks?","acceptedAnswer":{"@type":"Answer","text":"Yes — wind and severity along the route are exactly why RV drivers use it. Adjustable towing-speed ETAs are on the roadmap."}},
     {"@type":"Question","name":"How is this different from other route weather apps?","acceptedAnswer":{"@type":"Answer","text":"Three things. Road Travel saves your trips and syncs them, so you never re-enter a route you drive twice a year. It supports multiple stops with per-stop timing. And instead of leaving you to read a wall of icons, an AI briefing reads the whole route's forecast and gives you one plain-language verdict — including when to leave."}},
@@ -112,7 +112,13 @@
   .go{width:100%;border:0;background:var(--navy);color:#fff;font:800 16px Nunito,sans-serif;padding:14px;border-radius:12px;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center;gap:9px}
   .go:hover{background:var(--navy-deep);transform:translateY(-1px)}
 
-  .chips-label{font-size:13px;font-weight:700;color:var(--muted);margin:18px 0 9px}
+  /* chips-label top margin trimmed 18px -> 12px to pay for .planner-note below, so the App Store
+     badge still clears the 1280x900 fold (measured: 886px bottom, ~14px clearance). */
+  .chips-label{font-size:13px;font-weight:700;color:var(--muted);margin:12px 0 8px}
+  /* Sets the expectation BEFORE the click: the planner hands off to /plan, which requires an
+     account and an active trial or subscription. Without this line a stranger meets that wall
+     with no warning. Full terms are in the first FAQ item, which renders expanded. */
+  .planner-note{font-size:12.5px;font-weight:700;color:var(--muted);margin:8px 0 -12px;max-width:620px}
   .chips{display:flex;flex-wrap:wrap;gap:7px}
   .chip{background:rgba(255,255,255,.8);border:1.5px solid rgba(27,58,92,.12);color:var(--navy);font:700 13px Nunito,sans-serif;padding:7px 13px;border-radius:99px;cursor:pointer;transition:.15s;white-space:nowrap}
   .chip:hover{background:#fff;border-color:var(--navy-mid);transform:translateY(-1px)}
@@ -269,6 +275,8 @@
           </svg>
         </button>
       </form>
+
+      <p class="planner-note">Starts with a free trial — cancel before it ends and you're not charged.</p>
 
       <p class="chips-label">Or try a real route —</p>
       <div class="chips">
@@ -486,10 +494,11 @@
     <details open>
       <summary>Is it free?</summary>
       <div class="body">
-        Your first trips are free with full features. <strong>Road Travel Pro</strong> is $7.99/month, or
-        $49.99/year — about $4.15/month — with a 3-day free trial, and unlocks unlimited trips.
-        Why more than a basic weather app? Every AI briefing runs real computation over your whole
-        route's forecast. Try it free and judge.
+        The app is a free download, and <strong>Road Travel Pro</strong> starts with a free trial — plan real
+        routes, get real AI briefings, and if you cancel before the trial ends you're not charged. You'll
+        enter payment details to start it. After that it's $7.99/month, or $49.99/year — about
+        $4.15/month. Why more than a basic weather app? Every AI briefing runs real computation over
+        your whole route's forecast, timed to your arrival at each point along it.
       </div>
     </details>
 
@@ -534,7 +543,7 @@
 <section class="closing">
   <div class="wrap">
     <h2>Never get surprised by weather 300 miles from home.</h2>
-    <p>Plan your next drive in about ten seconds. First trips are free.</p>
+    <p>Plan your next drive in about ten seconds. Starts with a free trial.</p>
     <div class="row">
       <a class="btn-white" href="#planner" id="topcta">Plan a route</a>
       <a class="btn-ghost" href="https://apps.apple.com/us/app/road-travel-drive-weather/id6785563236">Download on the App Store</a>
