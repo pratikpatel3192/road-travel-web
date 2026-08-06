@@ -1,8 +1,7 @@
+/* Organic 3.1.0 shell: cream header over the cream page, capsule nav, terracotta CTA. */
 .site-header {
-  /* design 6a header: surface card with border, logo left, nav right (kit section 1) */
-  background: var(--surface);
+  background: var(--bg);
   border-bottom: 1px solid var(--border);
-  box-shadow: var(--shadow-card);
   padding: 14px 24px;
   display: flex;
   align-items: center;
@@ -12,56 +11,79 @@
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 8px;
 }
 
 .nav-link {
-  /* 6a nav links: 700/14, secondary ink, primary ink when active/hover */
   text-decoration: none;
   color: var(--muted);
-  font-size: 16px;
+  font-family: var(--font-body);
+  font-size: 14px;
   font-weight: 700;
   background: none;
   border: none;
-  padding: 0;
+  padding: 7px 14px;
+  border-radius: var(--radius-pill);
   cursor: pointer;
-  font-family: inherit;
+  white-space: nowrap;
+  transition: color 150ms ease-out, background 150ms ease-out;
 }
 
-.nav-link:hover { color: var(--text); }
+.nav-link:hover { color: var(--text); text-decoration: none; }
 
+/* Active route = selected-chip language. */
+.nav-link[aria-current],
+.nav-link.active {
+  background: var(--accent-100);
+  color: var(--accent-800);
+}
+
+/* Sign-in CTA: small .btn-primary capsule. */
 .nav-cta {
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 0.35rem 0.9rem;
-  color: var(--text);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border: none;
+  padding: 9px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+  transition: background 150ms ease-out;
 }
 
-.nav-cta:hover { border-color: var(--accent); color: var(--accent); }
+.nav-cta:hover { background: var(--accent-hover); color: var(--accent-contrast); }
 
-/* App Store link (T-021): a nav-cta pill with an Apple glyph, marking it as an external store link
-   rather than an in-app destination. The glyph inherits currentColor so it swaps with the theme. */
+/* App Store link (T-021): a surface capsule with an Apple glyph, marking it as an external store
+   link rather than an in-app destination. The glyph inherits currentColor so it swaps with theme. */
 .nav-store {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
+  background: var(--surface);
+  color: var(--text);
+  border: 1.5px solid var(--border);
+  box-shadow: none;
 }
+.nav-store:hover { background: var(--surface-2); color: var(--text); }
 .apple-glyph { display: block; }
 
+/* Identity chip: quiet well capsule. */
 .nav-id {
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 0.3rem 0.8rem;
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 7px 14px;
   color: var(--text);
   font-size: 14px;
+  font-weight: 700;
   text-decoration: none;
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: border-color 150ms ease-out;
 }
 
-.nav-id:hover { border-color: var(--accent); }
+.nav-id:hover { border-color: var(--border-strong); text-decoration: none; }
 
 @media (max-width: 520px) {
   .nav-id { max-width: 120px; }
@@ -74,29 +96,28 @@
   text-decoration: none;
 }
 
-
-
 .site-footer {
   padding: 2rem;
   text-align: center;
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 12.5px;
+  font-weight: 600;
+  background: var(--bg);
   border-top: 1px solid var(--border);
   margin-top: auto;
 }
 
-.site-footer a {
-  color: var(--muted);
-  text-decoration: none;
-}
+.site-footer a { color: var(--link); text-decoration: none; }
 
-.site-footer a:hover { color: var(--text); }
+.site-footer a:hover { color: var(--link-hover); text-decoration: underline; }
 
 :host {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
 }
+
+/* Auth failure banner: full-strength severe fill, white ink. */
 .auth-error {
   display: flex;
   align-items: center;
@@ -104,20 +125,24 @@
   gap: 12px;
   margin: 12px 24px 0;
   padding: 12px 16px;
-  border: 1px solid var(--sev-severe);
+  border: none;
   border-radius: var(--radius-md);
-  background: var(--surface);
-  color: var(--text);
+  background: var(--sev-severe);
+  color: #fff;
   font-size: 14px;
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
 }
 .auth-error button {
   border: none;
   background: none;
-  color: var(--muted);
+  color: #fff;
   cursor: pointer;
   font-size: 14px;
+  opacity: 0.85;
+  transition: opacity 150ms ease-out;
 }
-
+.auth-error button:hover { opacity: 1; }
 
 /* ADR-0036 force-upgrade overlay — sits above everything, no dismiss path. */
 .force-update {
@@ -126,7 +151,7 @@
   z-index: 1000;
   display: grid;
   place-items: center;
-  background: var(--bg, #0f1722);
+  background: var(--bg);
   padding: 24px;
 }
 .force-update-card {
@@ -135,24 +160,32 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 32px 28px;
 }
 .force-update-card h2 {
   margin: 0;
-  font-size: 22px;
+  font-size: 26px;
 }
 .force-update-card p {
   margin: 0;
   color: var(--muted);
   font-size: 15px;
 }
+/* Mirrors the global .btn-primary capsule. */
 .force-update-card button {
   margin-top: 8px;
-  padding: 12px 18px;
+  align-self: center;
+  padding: 13px 26px;
   border: none;
-  border-radius: var(--radius);
+  border-radius: var(--radius-pill);
   background: var(--accent);
   color: var(--accent-contrast);
-  font: inherit;
-  font-weight: 600;
+  font: 700 16px var(--font-body);
   cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: background 150ms ease-out;
 }
+.force-update-card button:hover { background: var(--accent-hover); }

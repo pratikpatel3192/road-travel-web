@@ -1,6 +1,7 @@
 import { Component, computed, effect, inject, input, model, signal } from '@angular/core';
 
 import { type GeoResult, GeocodeService } from '../../core/geocode.service';
+import { IconComponent } from '../../ui/icon';
 
 export interface PlaceValue {
   name: string;
@@ -14,6 +15,7 @@ export interface PlaceValue {
  */
 @Component({
   selector: 'app-place-field',
+  imports: [IconComponent],
   template: `
     <div class="field">
       <span
@@ -35,7 +37,9 @@ export interface PlaceValue {
         [attr.aria-label]="placeholder()"
       />
       @if (query()) {
-        <button type="button" class="clear" (mousedown)="clear($event)" aria-label="Clear">×</button>
+        <button type="button" class="clear" (mousedown)="clear($event)" aria-label="Clear">
+          <app-icon name="x" [size]="14" />
+        </button>
       }
 
       @if (open() && (loading() || suggestions().length)) {
@@ -44,7 +48,10 @@ export interface PlaceValue {
             <li class="hint">Searching…</li>
           }
           @for (s of suggestions(); track s.name + s.latitude) {
-            <li role="option" (mousedown)="pick($event, s)">{{ s.name }}</li>
+            <li role="option" (mousedown)="pick($event, s)">
+              <app-icon name="map-pin" [size]="14" />
+              {{ s.name }}
+            </li>
           }
           @if (!loading() && !suggestions().length && query().length >= 3) {
             <li class="hint">No matches</li>
@@ -59,83 +66,111 @@ export interface PlaceValue {
         position: relative;
         display: flex;
         align-items: center;
-        gap: 10px;
-        padding: 12px 12px;
+        padding: 6px 12px;
       }
       .dot {
-        flex: 0 0 auto;
-        width: 12px;
-        height: 12px;
+        position: absolute;
+        left: 26px;
+        z-index: 1;
+        pointer-events: none;
+        width: 10px;
+        height: 10px;
         border-radius: 50%;
       }
       .dot.origin {
-        background: var(--accent);
+        background: var(--origin-dot);
       }
       .dot.dest {
-        background: transparent;
-        border: 3px solid var(--sev-severe);
+        background: var(--destination-dot);
       }
       /* F-006 stop rows: a numbered badge instead of the plain origin/destination dot. */
       .dot.stop {
-        width: 16px;
-        height: 16px;
-        margin-left: -2px;
-        background: var(--accent);
-        color: var(--accent-contrast);
+        left: 21px;
+        width: 20px;
+        height: 20px;
+        background: var(--accent-500);
+        color: #ffffff;
         display: grid;
         place-items: center;
-        font-size: 10px;
+        font-size: 12px;
         font-weight: 700;
         line-height: 1;
       }
       input {
         flex: 1;
         min-width: 0;
-        border: none;
-        background: transparent;
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius-pill);
+        background: var(--surface);
         color: var(--text);
-        font: inherit;
-        outline: none;
+        font: 600 15px var(--font-body);
+        padding: 11px 16px 11px 38px;
+        transition: border-color 150ms ease-out;
+      }
+      input:focus {
+        border-color: var(--accent);
       }
       input::placeholder {
         color: var(--muted);
+        font-weight: 500;
       }
       .clear {
+        position: absolute;
+        right: 22px;
+        display: grid;
+        place-items: center;
+        width: 24px;
+        height: 24px;
         border: none;
+        border-radius: 50%;
         background: transparent;
         color: var(--muted);
-        font-size: 20px;
-        line-height: 1;
         cursor: pointer;
-        padding: 0 2px;
+        padding: 0;
+        transition: color 150ms ease-out;
+      }
+      .clear:hover {
+        color: var(--text);
       }
       .menu {
         position: absolute;
         z-index: 20;
         top: calc(100% - 2px);
-        left: 34px;
-        right: 8px;
+        left: 12px;
+        right: 12px;
         list-style: none;
         margin: 0;
-        padding: 4px;
+        padding: 6px;
         background: var(--surface);
         border: 1px solid var(--border);
-        border-radius: 12px;
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-md);
         max-height: 260px;
         overflow-y: auto;
       }
       .menu li {
+        display: flex;
+        align-items: center;
+        gap: 8px;
         padding: 9px 10px;
-        border-radius: 8px;
+        border-radius: var(--radius-sm);
         font-size: 14px;
+        font-weight: 600;
+        color: var(--text);
         cursor: pointer;
+        transition: background 150ms ease-out;
+      }
+      .menu li app-icon {
+        flex: 0 0 auto;
+        color: var(--muted);
       }
       .menu li[role='option']:hover {
         background: var(--surface-2);
       }
       .hint {
         color: var(--muted);
+        font-size: 12px;
+        font-weight: 500;
         cursor: default;
       }
     `,
