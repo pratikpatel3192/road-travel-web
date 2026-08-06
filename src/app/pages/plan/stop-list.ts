@@ -1,6 +1,7 @@
 import { Component, input, model } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
+import { IconComponent } from '../../ui/icon';
 import { PlaceField, type PlaceValue } from './place-field';
 import { DWELL_PRESETS, type DwellMinutes, MAX_STOPS, type StopDraft, newStop } from './waypoints';
 
@@ -12,7 +13,7 @@ import { DWELL_PRESETS, type DwellMinutes, MAX_STOPS, type StopDraft, newStop } 
  */
 @Component({
   selector: 'app-stop-list',
-  imports: [FormsModule, PlaceField],
+  imports: [FormsModule, PlaceField, IconComponent],
   template: `
     @for (s of stops(); track s.id; let i = $index; let last = $last) {
       <div class="stop-row">
@@ -26,7 +27,7 @@ import { DWELL_PRESETS, type DwellMinutes, MAX_STOPS, type StopDraft, newStop } 
             (placeChange)="setPlace(i, $event)"
           />
           <button class="tool remove" type="button" (click)="remove(i)" [attr.aria-label]="'Remove stop ' + (i + 1)">
-            ✕
+            <app-icon name="x" [size]="14" />
           </button>
         </div>
         <div class="stop-tools">
@@ -50,7 +51,7 @@ import { DWELL_PRESETS, type DwellMinutes, MAX_STOPS, type StopDraft, newStop } 
             [disabled]="i === 0"
             [attr.aria-label]="'Move stop ' + (i + 1) + ' earlier'"
           >
-            ↑
+            <app-icon name="arrow-up" [size]="14" />
           </button>
           <button
             class="tool"
@@ -59,7 +60,7 @@ import { DWELL_PRESETS, type DwellMinutes, MAX_STOPS, type StopDraft, newStop } 
             [disabled]="last"
             [attr.aria-label]="'Move stop ' + (i + 1) + ' later'"
           >
-            ↓
+            <app-icon name="arrow-down" [size]="14" />
           </button>
         </div>
         <div class="divider"></div>
@@ -86,55 +87,54 @@ import { DWELL_PRESETS, type DwellMinutes, MAX_STOPS, type StopDraft, newStop } 
       .stop-tools {
         display: flex;
         align-items: center;
-        gap: 6px;
-        padding: 0 12px 10px 34px;
+        gap: 8px;
+        padding: 6px 12px 12px 50px;
       }
       .dwell {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 8px;
         font-size: 12px;
+        font-weight: 600;
         color: var(--muted);
         margin-right: auto;
       }
       .dwell select {
-        padding: 5px 8px;
+        padding: 6px 12px;
         border: 1px solid var(--border);
-        border-radius: 8px;
-        font: inherit;
-        font-size: 12px;
-        background: var(--surface);
+        border-radius: var(--radius-pill);
+        font: 600 12.5px var(--font-body);
+        background: var(--surface-2);
         color: var(--text);
+        cursor: pointer;
+        transition: border-color 150ms ease-out;
+      }
+      .dwell select:hover {
+        border-color: var(--border-strong);
       }
       .tool {
-        width: 26px;
-        height: 26px;
+        width: 28px;
+        height: 28px;
         display: grid;
         place-items: center;
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        background: var(--surface);
+        border: none;
+        border-radius: var(--radius-pill);
+        background: var(--surface-2);
         color: var(--muted);
-        font-size: 13px;
         cursor: pointer;
         padding: 0;
+        transition: background 150ms ease-out, color 150ms ease-out;
       }
       .tool:hover:not(:disabled) {
-        border-color: var(--accent);
+        background: var(--border);
         color: var(--text);
       }
       .tool:disabled {
-        opacity: 0.35;
+        opacity: 0.45;
         cursor: default;
       }
       .tool.remove {
-        border: none;
-        background: transparent;
-        font-size: 13px;
         margin-right: 8px;
-      }
-      .tool.remove:hover {
-        color: var(--sev-severe);
       }
       .add {
         display: block;
@@ -142,20 +142,19 @@ import { DWELL_PRESETS, type DwellMinutes, MAX_STOPS, type StopDraft, newStop } 
         text-align: left;
         border: none;
         background: transparent;
-        color: var(--accent);
-        font: inherit;
-        font-size: 13px;
-        font-weight: 600;
-        padding: 10px 12px 10px 34px;
+        color: var(--link);
+        font: 700 14px var(--font-body);
+        padding: 10px 12px 10px 50px;
         cursor: pointer;
+        transition: color 150ms ease-out;
       }
       .add:hover {
-        text-decoration: underline;
+        color: var(--link-hover);
       }
       .divider {
         height: 1px;
         background: var(--border);
-        margin-left: 34px;
+        margin-left: 50px;
       }
     `,
   ],

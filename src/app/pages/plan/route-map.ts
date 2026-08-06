@@ -13,7 +13,8 @@ import type { PlanTripResponse } from '@road-travel/sdk';
 import * as L from 'leaflet';
 
 import { SettingsService } from '../../core/settings.service';
-import { SEVERITY_COLOR, type Severity, weatherEmoji } from './severity';
+import { IconComponent, LUCIDE } from '../../ui/icon';
+import { SEVERITY_COLOR, type Severity, weatherIcon } from './severity';
 
 // Free, keyless tile sources. Esri World Imagery gives satellite; its reference layers add roads +
 // labels for "hybrid".
@@ -37,32 +38,33 @@ const ESRI_LABELS =
 @Component({
   selector: 'app-route-map',
   host: { '(document:keydown.escape)': 'onEscape()' },
+  imports: [IconComponent],
   template: `
     <div class="wrap" [class.expanded]="expanded()">
       <div #mapEl class="map" [class.expanded]="expanded()" role="img" aria-label="Route map colored by weather severity"></div>
       <div class="layers" role="group" aria-label="Map layers">
         <button
           type="button"
-          class="expand"
+          class="map-chip expand"
           (click)="toggleExpand()"
           [attr.aria-label]="expanded() ? 'Collapse map' : 'Expand map'"
           [title]="expanded() ? 'Collapse map (Esc)' : 'Expand map'"
         >
-          {{ expanded() ? '⤡' : '⤢' }}
+          <app-icon [name]="expanded() ? 'minimize-2' : 'maximize-2'" [size]="15" />
         </button>
         @if (userLocation()) {
-          <button type="button" class="expand" (click)="recenter()" aria-label="Recenter on your location" title="Your location">
-            ◎
+          <button type="button" class="map-chip expand" (click)="recenter()" aria-label="Recenter on your location" title="Your location">
+            <app-icon name="locate-fixed" [size]="15" />
           </button>
         }
         <span class="sep"></span>
-        <button type="button" [class.on]="settings.mapStyle() === 'standard'" (click)="settings.setMapStyle('standard')">
+        <button type="button" class="map-chip" [class.on]="settings.mapStyle() === 'standard'" (click)="settings.setMapStyle('standard')">
           Map
         </button>
-        <button type="button" [class.on]="settings.mapStyle() === 'satellite'" (click)="settings.setMapStyle('satellite')">
+        <button type="button" class="map-chip" [class.on]="settings.mapStyle() === 'satellite'" (click)="settings.setMapStyle('satellite')">
           Satellite
         </button>
-        <button type="button" [class.on]="settings.mapStyle() === 'hybrid'" (click)="settings.setMapStyle('hybrid')">
+        <button type="button" class="map-chip" [class.on]="settings.mapStyle() === 'hybrid'" (click)="settings.setMapStyle('hybrid')">
           Hybrid
         </button>
       </div>
@@ -96,44 +98,36 @@ const ESRI_LABELS =
         border-radius: 0;
         border: none;
       }
+      /* Floating chip cluster (kit map canvas): each control is its own white .map-chip capsule. */
       .layers {
         position: absolute;
-        top: 8px;
-        right: 8px;
+        top: 10px;
+        right: 10px;
         z-index: 500;
         display: inline-flex;
         align-items: center;
-        gap: 2px;
-        padding: 3px;
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
+        gap: 6px;
       }
       .layers button {
-        border: none;
-        background: transparent;
-        color: var(--text);
-        font: inherit;
-        font-size: 12px;
-        font-weight: 600;
-        padding: 5px 9px;
-        border-radius: 7px;
-        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 7px 14px;
+        border: 2px solid transparent;
+        transition: background 150ms ease-out, border-color 150ms ease-out;
       }
       .layers button.on {
-        background: var(--accent);
-        color: var(--accent-contrast);
+        background: var(--accent-100);
+        border-color: var(--accent);
+        color: var(--accent-800);
       }
       .layers button.expand {
-        font-size: 15px;
-        padding: 4px 8px;
+        width: 32px;
+        height: 32px;
+        padding: 0;
       }
       .sep {
-        width: 1px;
-        align-self: stretch;
-        background: var(--border);
-        margin: 2px 1px;
+        width: 2px;
       }
     `,
   ],
@@ -167,7 +161,7 @@ export class RouteMap implements OnDestroy {
   private resizeObserver: ResizeObserver | null = null;
   private readonly markers = new Map<
     number,
-    { marker: L.Marker; sev: Severity; emoji: string; stop: number | null }
+    { marker: L.Marker; sev: Severity; icon: string; temp: string; stop: number | null }
   >();
   private unbindLongPress: (() => void) | null = null;
   private exploreLayer: L.LayerGroup | null = null;
@@ -177,6 +171,7 @@ export class RouteMap implements OnDestroy {
     effect(() => {
       const plan = this.plan();
       this.userLocation(); // idle-mode marker/center track the fix as it arrives
+      this.settings.units(); // weather chips show the temp — redraw when units flip
       const el = this.mapEl().nativeElement;
       setTimeout(() => this.render(el, plan), 0);
     });
@@ -242,30 +237,53 @@ export class RouteMap implements OnDestroy {
     this.markers.clear();
 
     const bounds = L.latLngBounds([]);
-    for (const seg of plan.segments) {
-      const latlngs = seg.coordinates.map((c) => [c.latitude, c.longitude] as L.LatLngTuple);
-      latlngs.forEach((ll) => bounds.extend(ll));
-      L.polyline(latlngs, {
-        color: SEVERITY_COLOR[seg.severity as Severity] ?? SEVERITY_COLOR.clear,
-        weight: 5,
-        opacity: 0.9,
+    const segLatLngs = plan.segments.map((seg) =>
+      seg.coordinates.map((c) => [c.latitude, c.longitude] as L.LatLngTuple),
+    );
+    segLatLngs.forEach((lls) => lls.forEach((ll) => bounds.extend(ll)));
+    // Kit route (mock 3a/4a): one contrast casing under all severity segments. The rt-* classes
+    // drive the SVG strokes (theme-live); the color options are non-SVG fallbacks only.
+    if (segLatLngs.length) {
+      L.polyline(segLatLngs, {
+        className: 'rt-route-casing',
+        color: '#ffffff', // matches --route-casing (light); the class wins on SVG renders
+        weight: 12,
+        lineCap: 'round',
+        lineJoin: 'round',
+        interactive: false,
       }).addTo(layer);
     }
+    plan.segments.forEach((seg, i) => {
+      const sev: Severity = SEVERITY_COLOR[seg.severity as Severity] ? (seg.severity as Severity) : 'clear';
+      L.polyline(segLatLngs[i], {
+        className: 'rt-sev-' + sev,
+        color: SEVERITY_COLOR[sev],
+        weight: 6.5,
+        opacity: 1,
+        lineCap: 'round',
+        lineJoin: 'round',
+      }).addTo(layer);
+    });
 
-    // A weather pin at every milestone: the condition emoji in a white badge ringed by severity
-    // color (first = origin, last = destination). Stop-marked samples (F-006) get a numbered pin
-    // instead, above the weather pins. Click-to-select stays synced with the timeline.
+    // A weather chip at every milestone: the condition glyph + temp on a .wx-pin pill (hazard
+    // tint when severity isn't clear; first = origin, last = destination). Stop-marked samples
+    // (F-006) get a numbered pin instead, above the weather pins. Click-to-select stays synced
+    // with the timeline.
+    const units = this.settings.units();
     for (const s of plan.samples) {
       const sev = (s.weather?.severity as Severity) ?? 'clear';
-      const emoji = weatherEmoji(s.weather?.condition_symbol, s.weather?.condition_text);
+      const icon = weatherIcon(s.weather?.condition_symbol, s.weather?.condition_text);
+      const temp = s.weather
+        ? `${Math.round(units === 'metric' ? s.weather.temperature_c : s.weather.temperature_c * 1.8 + 32)}°`
+        : '';
       const stop = s.waypoint_index ?? null;
       const marker = L.marker([s.latitude, s.longitude], {
-        icon: stop != null ? this.stopIcon(stop + 1, sev, false) : this.pinIcon(emoji, sev, false),
+        icon: stop != null ? this.stopIcon(stop + 1, sev, false) : this.pinIcon(icon, temp, sev, false),
         keyboard: false,
         zIndexOffset: stop != null ? 500 : 0,
       });
       // F-006: label stop pins with their name ("Stop 1 — Santa Fe"); weather milestones stay
-      // emoji-only to avoid clutter (there are ~14 of them).
+      // chip-only to avoid clutter (there are ~14 of them).
       if (stop != null) {
         const wpName = plan.waypoints?.[stop]?.name?.split(',')[0]?.trim(); // short label (drop ", CA, USA")
         marker.bindTooltip(`Stop ${stop + 1}${wpName ? ' — ' + wpName : ''}`, {
@@ -280,7 +298,7 @@ export class RouteMap implements OnDestroy {
         this.zoomTo(s.latitude, s.longitude); // click-to-zoom (a little), centered on the milestone
       });
       marker.addTo(layer);
-      this.markers.set(s.index, { marker, sev, emoji, stop });
+      this.markers.set(s.index, { marker, sev, icon, temp, stop });
     }
 
     this.bounds = bounds.isValid() ? bounds : null;
@@ -331,6 +349,9 @@ export class RouteMap implements OnDestroy {
     this.overlayLayers = [];
 
     const style = this.settings.mapStyle();
+    // Cream/night cartography filter (styles.css .rt-tiles-warm) applies to the OSM raster only —
+    // never to satellite/hybrid imagery.
+    map.getContainer().classList.toggle('rt-tiles-warm', style === 'standard');
     if (style === 'standard') {
       this.baseLayer = L.tileLayer(OSM, {
         maxZoom: 19,
@@ -360,9 +381,9 @@ export class RouteMap implements OnDestroy {
 
   private applySelection(): void {
     const sel = this.selected();
-    this.markers.forEach(({ marker, sev, emoji, stop }, idx) => {
+    this.markers.forEach(({ marker, sev, icon, temp, stop }, idx) => {
       const on = idx === sel;
-      marker.setIcon(stop != null ? this.stopIcon(stop + 1, sev, on) : this.pinIcon(emoji, sev, on));
+      marker.setIcon(stop != null ? this.stopIcon(stop + 1, sev, on) : this.pinIcon(icon, temp, sev, on));
       marker.setZIndexOffset(on ? 1000 : stop != null ? 500 : 0);
     });
   }
@@ -416,18 +437,15 @@ export class RouteMap implements OnDestroy {
   }
 
   /**
-   * F-005 explore pin: the 1-based result number on a blue teardrop-cornered badge — visually
-   * distinct from the accent/severity stop pins and the white emoji weather dots.
+   * F-005 explore pin: the 1-based result number on the kit's sage .rt-explore-pin badge —
+   * visually distinct from the terracotta stop pins and the white weather chips.
    */
   private exploreIcon(n: number, selected: boolean): L.DivIcon {
-    const size = selected ? 32 : 25;
-    const border = selected ? 3 : 2;
-    const font = selected ? 15 : 12;
+    const size = selected ? 32 : 26;
     const html =
-      `<div style="width:${size}px;height:${size}px;border-radius:50% 50% 50% 4px;` +
-      `display:flex;align-items:center;justify-content:center;` +
-      `background:#2a78d6;color:#fff;border:${border}px solid #fff;` +
-      `box-shadow:0 1px 4px rgba(0,0,0,0.35);font-size:${font}px;font-weight:700;line-height:1;">${n}</div>`;
+      `<div class="rt-explore-pin" style="width:${size}px;height:${size}px` +
+      (selected ? ';font-size:15px;box-shadow:var(--shadow-md)' : '') +
+      `">${n}</div>`;
     return L.divIcon({
       html,
       className: 'wx-explore-pin',
@@ -437,19 +455,16 @@ export class RouteMap implements OnDestroy {
   }
 
   /**
-   * F-006 stop pin: the 1-based stop number on the accent badge, ringed by the stop's arrival
-   * severity — visually distinct from the emoji weather pins and the endpoint samples.
+   * F-006 stop pin: the 1-based stop number on the kit's terracotta .rt-stop-pin badge —
+   * visually distinct from the weather chips and the endpoint samples. (Severity still colors
+   * the route under it; the pin itself is the kit badge.)
    */
-  private stopIcon(n: number, sev: Severity, selected: boolean): L.DivIcon {
-    const size = selected ? 34 : 27;
-    const border = selected ? 4 : 3;
-    const font = selected ? 16 : 13;
+  private stopIcon(n: number, _sev: Severity, selected: boolean): L.DivIcon {
+    const size = selected ? 34 : 26;
     const html =
-      `<div style="width:${size}px;height:${size}px;border-radius:50%;` +
-      `display:flex;align-items:center;justify-content:center;` +
-      `background:var(--accent);color:var(--accent-contrast);` +
-      `border:${border}px solid ${SEVERITY_COLOR[sev]};box-shadow:0 1px 4px rgba(0,0,0,0.35);` +
-      `font-size:${font}px;font-weight:700;line-height:1;">${n}</div>`;
+      `<div class="rt-stop-pin" style="width:${size}px;height:${size}px` +
+      (selected ? ';font-size:16px;box-shadow:var(--shadow-md)' : '') +
+      `">${n}</div>`;
     return L.divIcon({
       html,
       className: 'wx-stop-pin',
@@ -523,21 +538,22 @@ export class RouteMap implements OnDestroy {
     };
   }
 
-  /** A weather-emoji map pin: white badge, severity-colored ring, enlarged when selected. */
-  private pinIcon(emoji: string, sev: Severity, selected: boolean): L.DivIcon {
-    const size = selected ? 32 : 24;
-    const border = selected ? 3 : 2;
-    const font = selected ? 18 : 13;
+  /** Weather milestone chip (kit .wx-pin): Lucide condition glyph + temp on a white pill;
+   *  hazard tint when severity isn't clear, accent ring + slight grow when selected. */
+  private pinIcon(icon: string, temp: string, sev: Severity, selected: boolean): L.DivIcon {
+    const hazard = sev !== 'clear';
+    const svg =
+      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" ` +
+      `stroke-linecap="round" stroke-linejoin="round">${LUCIDE[icon] ?? LUCIDE['thermometer']}</svg>`;
     const html =
-      `<div style="width:${size}px;height:${size}px;border-radius:50%;` +
-      `display:flex;align-items:center;justify-content:center;background:#ffffff;` +
-      `border:${border}px solid ${SEVERITY_COLOR[sev]};box-shadow:0 1px 4px rgba(0,0,0,0.35);` +
-      `font-size:${font}px;line-height:1;">${emoji}</div>`;
+      `<span class="wx-pin${hazard ? ' hazard' : ''}" style="width:100%;height:100%;justify-content:center` +
+      (selected ? ';border-color:var(--accent);transform:scale(1.12)' : '') +
+      `">${svg}${temp}</span>`;
     return L.divIcon({
       html,
-      className: 'wx-pin',
-      iconSize: [size, size],
-      iconAnchor: [size / 2, size / 2],
+      className: '',
+      iconSize: [64, 26],
+      iconAnchor: [32, 13],
     });
   }
 

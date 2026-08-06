@@ -1,6 +1,7 @@
 import { Component, computed, input } from '@angular/core';
 import type { PlanTripResponse } from '@road-travel/sdk';
 
+import { IconComponent } from '../../ui/icon';
 import { SEVERITY_LABEL, type Severity, formatTemp, formatWind } from './severity';
 
 /**
@@ -10,10 +11,11 @@ import { SEVERITY_LABEL, type Severity, formatTemp, formatWind } from './severit
  */
 @Component({
   selector: 'app-ahead-banner',
+  imports: [IconComponent],
   template: `
     @if (ahead(); as a) {
       <div class="banner" [class.severe]="a.severity === 'severe'" role="status">
-        <span class="ic">{{ a.severity === 'severe' ? '⛔' : '⚠️' }}</span>
+        <span class="ic" aria-hidden="true"><app-icon name="triangle-alert" [size]="20" /></span>
         <div class="body">
           <div class="head">{{ label(a.severity) }} weather ~{{ a.miles }} mi in</div>
           <div class="detail">
@@ -30,16 +32,18 @@ import { SEVERITY_LABEL, type Severity, formatTemp, formatWind } from './severit
         align-items: center;
         gap: 12px;
         padding: 11px 14px;
-        border-radius: var(--radius);
+        border-radius: var(--radius-md);
         background: var(--sev-caution);
         color: #ffffff;
+        box-shadow: var(--shadow-md);
       }
       .banner.severe {
         background: var(--sev-severe);
       }
       .ic {
-        font-size: 20px;
-        line-height: 1;
+        flex: 0 0 auto;
+        display: inline-flex;
+        line-height: 0;
       }
       .head {
         font-weight: 700;
@@ -49,6 +53,15 @@ import { SEVERITY_LABEL, type Severity, formatTemp, formatWind } from './severit
         font-size: 12px;
         opacity: 0.95;
         margin-top: 1px;
+      }
+      /* Night: the severity fills lighten, so the ink flips dark for contrast. */
+      :host-context([data-theme='dark']) .banner {
+        color: var(--neutral-900);
+      }
+      @media (prefers-color-scheme: dark) {
+        :host-context(:root:not([data-theme])) .banner {
+          color: var(--neutral-900);
+        }
       }
     `,
   ],

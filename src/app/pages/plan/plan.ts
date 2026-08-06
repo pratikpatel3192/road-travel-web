@@ -12,6 +12,7 @@ import { GeocodeService } from '../../core/geocode.service';
 import { PaywallService } from '../../core/paywall.service';
 import { SettingsService } from '../../core/settings.service';
 import { TripsService } from '../../core/trips.service';
+import { IconComponent } from '../../ui/icon';
 import { AheadBanner } from './ahead-banner';
 import { BriefingCard } from './briefing-card';
 import { ExplorePanel } from './explore-panel';
@@ -40,7 +41,7 @@ import {
  */
 @Component({
   selector: 'app-plan',
-  imports: [FormsModule, RouterLink, PlaceField, StopList, RouteMap, Timeline, BriefingCard, AheadBanner, ExplorePanel],
+  imports: [FormsModule, RouterLink, PlaceField, StopList, RouteMap, Timeline, BriefingCard, AheadBanner, ExplorePanel, IconComponent],
   template: `
     <div class="shell">
       <section class="panel">
@@ -55,13 +56,13 @@ import {
               [attr.aria-label]="isCurrentSaved() ? 'Remove from saved' : 'Save trip'"
               title="Save trip"
             >
-              {{ isCurrentSaved() ? '★' : '☆' }}
+              <app-icon name="star" [size]="16" />
             </button>
           }
           @if (!auth.configured() || auth.hasRealAccount()) {
             <!-- ADR-0025 §1: My Trips is LOGIN-ONLY — hidden from guests (the route is walled by
                  realAccountGuard). ADR-0029 removed Recents; Saved is the server's list. -->
-            <a class="icon" routerLink="/saved" aria-label="My trips" title="My trips">🔖</a>
+            <a class="icon" routerLink="/saved" aria-label="My trips" title="My trips"><app-icon name="bookmark" [size]="16" /></a>
           }
         </div>
       </header>
@@ -75,7 +76,7 @@ import {
           (placeChange)="origin.set($event)"
         />
         <div class="divider">
-          <button class="swap" type="button" (click)="swap()" aria-label="Swap origin and destination">⇅</button>
+          <button class="swap" type="button" (click)="swap()" aria-label="Swap origin and destination"><app-icon name="arrow-up-down" [size]="14" /></button>
         </div>
         <!-- F-006: up to 3 ordered stops between origin and destination; every edit re-plans. -->
         <app-stop-list [stops]="stops()" [near]="stopBias()" (stopsChange)="onStopsChange($event)" />
@@ -92,10 +93,10 @@ import {
         <div class="favs">
           <span class="favs-label">Go to</span>
           @if (settings.home(); as h) {
-            <button class="chip" (click)="useFavorite(h)" title="Set destination to Home">🏠 Home</button>
+            <button class="chip" (click)="useFavorite(h)" title="Set destination to Home"><app-icon name="house" [size]="13" /> Home</button>
           }
           @if (settings.work(); as w) {
-            <button class="chip" (click)="useFavorite(w)" title="Set destination to Work">💼 Work</button>
+            <button class="chip" (click)="useFavorite(w)" title="Set destination to Work"><app-icon name="briefcase" [size]="13" /> Work</button>
           }
         </div>
       }
@@ -144,6 +145,7 @@ import {
             step="5"
             [value]="departureOffset()"
             (input)="onScrub($event)"
+            [style.background]="scrubGradient()"
             aria-label="Shift departure time"
           />
           <div class="scrub-ticks"><span>now</span><span>+3h</span></div>
@@ -159,7 +161,7 @@ import {
              the existing paywall modal — never client-decided). -->
         @if (!exploreOpen()) {
           <button class="explore-open card" type="button" (click)="exploreOpen.set(true)">
-            <span>🧭 Explore along the way</span>
+            <span class="explore-label"><app-icon name="compass" [size]="15" /> Explore along the way</span>
             <span class="explore-sub">stops · food · fuel · scenic</span>
           </button>
         } @else if (plannedContext(); as ctx) {
@@ -205,23 +207,31 @@ import {
   `,
   styles: [
     `
-      /* Full-viewport two-pane shell (ADR-0026 / DESIGN_SYSTEM "fill the viewport"): content
-         panel left with its own scroll, dominant map pane filling the rest. Stacks on mobile. */
+      /* One-canvas shell (kit option 3a): the map fills the viewport below the header and the
+         trip panel floats over it, left — cream surface, radius 20, shadow-lg, own scroll.
+         Stacks on mobile. */
       .shell {
-        display: grid;
-        grid-template-columns: minmax(400px, 480px) 1fr;
+        position: relative;
         height: calc(100dvh - 73px); /* viewport minus the app header */
         min-height: 480px;
       }
       .panel {
+        position: absolute;
+        top: 16px;
+        left: 16px;
+        bottom: 16px;
+        width: min(352px, calc(100vw - 32px));
+        z-index: 1;
         overflow-y: auto;
-        padding: 18px 20px 48px;
-        min-width: 0;
+        padding: 18px;
+        border-radius: 20px;
+        background: var(--bg);
+        box-shadow: var(--shadow-lg);
       }
       .map-pane {
-        position: relative;
+        position: absolute;
+        inset: 0;
         min-height: 0;
-        border-left: 1px solid var(--border);
         /* Contain Leaflet's internal z-indexes (panes 400-700, controls 1000) in their own
            stacking context — without this the map paints OVER app modals (onboarding z-90,
            paywall z-100). */
@@ -234,15 +244,19 @@ import {
           flex-direction: column;
           height: auto;
         }
+        .panel {
+          position: static;
+          width: auto;
+          border-radius: 0;
+          box-shadow: none;
+          padding: 14px 14px 40px;
+        }
         .map-pane {
+          position: static;
           order: -1;
           height: 42vh;
           min-height: 260px;
-          border-left: none;
           border-bottom: 1px solid var(--border);
-        }
-        .panel {
-          padding: 14px 14px 40px;
         }
       }
       .top {
@@ -252,7 +266,7 @@ import {
         margin-bottom: 14px;
       }
       h1 {
-        font-size: 28px;
+        font-size: 24px;
         margin: 0;
       }
       .actions {
@@ -266,21 +280,21 @@ import {
         display: grid;
         place-items: center;
         border-radius: 50%;
-        border: 1px solid var(--border);
+        border: none;
         background: var(--surface);
         color: var(--text);
-        font-size: 16px;
+        box-shadow: var(--shadow-sm);
         cursor: pointer;
         text-decoration: none;
         padding: 0;
+        transition: background 150ms ease-out;
       }
       .icon:hover {
-        border-color: var(--accent);
+        background: var(--surface-2);
         text-decoration: none;
       }
       .icon.on {
         background: var(--accent);
-        border-color: var(--accent);
         color: var(--accent-contrast);
       }
       .icon:disabled {
@@ -289,9 +303,9 @@ import {
       }
       .card {
         background: var(--surface);
-        border: 1px solid var(--border);
+        border: none;
         border-radius: var(--radius);
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        box-shadow: var(--shadow-sm);
       }
       .inputs {
         position: relative;
@@ -307,17 +321,22 @@ import {
         color: var(--muted);
       }
       .chip {
-        border: 1px solid var(--border);
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        border: 2px solid var(--border);
         background: var(--surface);
         color: var(--text);
-        font: inherit;
-        font-size: 13px;
-        padding: 6px 12px;
-        border-radius: 999px;
+        font: 600 13px var(--font-body);
+        padding: 6px 13px;
+        border-radius: var(--radius-pill);
         cursor: pointer;
+        white-space: nowrap;
+        transition: background 150ms ease-out, border-color 150ms ease-out;
       }
       .chip:hover {
-        border-color: var(--accent);
+        background: var(--accent-100);
+        border-color: var(--accent-300);
       }
       .divider {
         position: relative;
@@ -328,15 +347,21 @@ import {
       .swap {
         position: absolute;
         right: 10px;
-        top: -15px;
-        width: 30px;
-        height: 30px;
+        top: -16px;
+        width: 32px;
+        height: 32px;
+        display: grid;
+        place-items: center;
         border-radius: 50%;
-        border: 1px solid var(--border);
-        background: var(--surface);
-        color: var(--muted);
+        border: none;
+        background: var(--surface-2);
+        color: var(--accent-700);
+        box-shadow: var(--shadow-sm);
         cursor: pointer;
-        font-size: 14px;
+        transition: background 150ms ease-out;
+      }
+      .swap:hover {
+        background: var(--accent-100);
       }
       .controls {
         display: flex;
@@ -354,37 +379,48 @@ import {
       }
       .ctl input,
       .ctl select {
-        padding: 8px 10px;
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        font: inherit;
+        padding: 8px 14px;
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius-pill);
+        font: 600 13px var(--font-body);
         background: var(--surface);
         color: var(--text);
+        transition: border-color 150ms ease-out;
       }
       .go {
         margin-left: auto;
+        flex: 1 1 100%;
         background: var(--accent);
         color: var(--accent-contrast);
         border: none;
-        border-radius: 10px;
-        padding: 11px 20px;
-        font-weight: 600;
+        border-radius: var(--radius-pill);
+        padding: 13px 20px;
+        font: 700 15px var(--font-body);
         cursor: pointer;
+        box-shadow: var(--shadow-md);
+        transition: background 150ms ease-out;
+      }
+      .go:hover {
+        background: var(--accent-hover);
       }
       .go:disabled {
-        opacity: 0.5;
+        opacity: 0.45;
         cursor: default;
       }
       .error {
-        background: color-mix(in srgb, var(--sev-severe) 12%, var(--surface));
-        border: 1px solid color-mix(in srgb, var(--sev-severe) 40%, var(--surface));
+        background: var(--accent-100);
+        border: 1.5px solid var(--accent-300);
         color: var(--sev-severe);
-        padding: 10px 12px;
-        border-radius: 10px;
+        font-weight: 600;
+        padding: 10px 14px;
+        border-radius: var(--radius-md);
         margin: 14px 0;
       }
       .section {
-        font-size: 14px;
+        font: 800 11px var(--font-body);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted);
         margin: 18px 0 8px;
       }
       app-ahead-banner,
@@ -413,11 +449,17 @@ import {
       .explore-open:hover {
         border-color: var(--accent);
       }
+      .explore-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+      }
       .explore-sub {
         font-size: 12px;
         font-weight: 500;
         color: var(--muted);
       }
+      /* The arrival heading (kit 3a): Caprasimo display time over the drive meta. */
       .summary {
         display: flex;
         align-items: baseline;
@@ -425,8 +467,9 @@ import {
         gap: 10px;
         flex-wrap: wrap;
         margin-top: 12px;
-        padding: 11px 14px;
+        padding: 12px 14px;
         font-size: 13px;
+        font-weight: 600;
         color: var(--muted);
       }
       .sum-drive {
@@ -434,7 +477,10 @@ import {
       }
       .sum-arrive strong {
         color: var(--text);
-        font-size: 14px;
+        font-family: var(--font-heading);
+        font-weight: 400;
+        font-size: 24px;
+        line-height: 1.1;
         font-variant-numeric: tabular-nums;
       }
       .scrubber {
@@ -458,9 +504,34 @@ import {
         margin-left: auto;
         color: var(--accent);
       }
+      /* Condition-band scrub (kit 1d): the track IS the trip — colored by what you'll hit
+         ([style.background] gradient) — with a white accent-ringed handle. */
       .scrubber input[type='range'] {
         width: 100%;
-        accent-color: var(--accent);
+        appearance: none;
+        -webkit-appearance: none;
+        height: 13px;
+        border-radius: var(--radius-pill);
+        background: var(--cond-clear);
+        outline-offset: 4px;
+        cursor: pointer;
+      }
+      .scrubber input[type='range']::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: var(--route-casing);
+        border: 3px solid var(--accent);
+        box-shadow: var(--shadow-md);
+      }
+      .scrubber input[type='range']::-moz-range-thumb {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--route-casing);
+        border: 3px solid var(--accent);
+        box-shadow: var(--shadow-md);
       }
       .scrub-ticks {
         display: flex;
@@ -528,6 +599,35 @@ export class Plan implements OnInit {
   private readonly briefingMemory = new BriefingMemory();
 
   readonly canSubmit = computed(() => !!this.origin() && !!this.destination());
+
+  /**
+   * The scrubber's condition band (kit option 1d): the track is a linear gradient of what the
+   * trip will hit — clear / clouds / rain / heavy per sample, positioned by distance fraction.
+   * Uses var(--cond-*) names so the band re-tints live when the theme flips. Presentation only.
+   */
+  readonly scrubGradient = computed(() => {
+    const p = this.plan();
+    const samples = p?.samples ?? [];
+    const last = samples[samples.length - 1];
+    const total = last?.distance_from_start_meters ?? 0;
+    if (!total) return 'var(--cond-clear)';
+    const stops: string[] = [];
+    let prev = 0;
+    for (const s of samples) {
+      const frac = Math.min((s.distance_from_start_meters / total) * 100, 100);
+      const w = s.weather;
+      let cond = 'var(--cond-clear)';
+      if (w?.severity === 'severe') cond = 'var(--cond-heavy)';
+      else if (w?.severity === 'caution') cond = 'var(--cond-rain)';
+      else {
+        const texture = `${w?.condition_symbol ?? ''} ${w?.condition_text ?? ''}`.toLowerCase();
+        if (/cloud|overcast|fog|haze|mist/.test(texture)) cond = 'var(--cond-clouds)';
+      }
+      stops.push(`${cond} ${prev.toFixed(1)}%`, `${cond} ${frac.toFixed(1)}%`);
+      prev = frac;
+    }
+    return `linear-gradient(to right, ${stops.join(', ')})`;
+  });
 
   /** Proximity bias for stop autocomplete: the midpoint of origin↔destination (the route corridor),
    *  so a typed stop name resolves near the trip — "Santa Fe" on an Austin→LA route is New Mexico,

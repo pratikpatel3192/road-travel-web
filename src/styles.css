@@ -1,90 +1,162 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* Palette mirrors the iOS app (Core/Settings/Theme + asset catalog): blue accent, a soft blue-tinted
-   background that is never pure white, surface cards above it. Light by default; dark either forced
-   via [data-theme="dark"] (the in-app Appearance setting) or, when no override is set, by the OS. */
+/* Organic 3.1.0 (road-travel-docs/branding/branding-3.1.0): warm cream ground, terracotta +
+   sage accents, Caprasimo display over Figtree, pills and 8/16/28 radii. Palette mirrors the
+   iOS app (Core/Settings/Theme.swift). Tokens only; components must reference variables, never
+   hex. Light first; dark ("night") below via [data-theme] / OS scheme — keep the two dark
+   blocks in sync. */
 :root {
-  /* design 6a (docs/DESIGN_SYSTEM.md + branding/web-kit-6a.html) — tokens only; components must
-     reference variables, never hex. Light first; dark below via [data-theme] / OS scheme. */
-  --radius-sm: 10px;
-  --radius-md: 12px;
-  --radius-lg: 14px;
-  --radius-xl: 16px;
-  --radius: 14px;               /* legacy alias (cards) */
-  --shadow-card: 0 1px 3px rgba(27, 58, 92, 0.06);
-  --sev-clear: #16a34a;
-  --sev-caution: #f59e0b;
-  --sev-severe: #dc2626;
+  /* Radii: 8 / 16 / 28, pills & inputs 999. */
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 28px;
+  --radius-xl: 28px;
+  --radius: 16px;               /* legacy alias (cards) */
+  --radius-pill: 999px;
 
-  /* Light */
-  --page-gradient: #F0F3F7;
-  --bg: #F0F3F7;                /* page background */
-  --surface: #FFFFFF;           /* cards / header */
-  --surface-2: #F4F8FD;         /* inputs / wells */
-  --ink: #1B3A5C;
-  --ink-2: #5E7B99;
+  /* Elevation — ink-tinted, the kit's three shadows. */
+  --shadow-sm: 0 1px 2px rgba(46, 43, 37, 0.14);
+  --shadow-md: 0 3px 10px rgba(46, 43, 37, 0.16);
+  --shadow-lg: 0 12px 32px rgba(46, 43, 37, 0.22);
+  --shadow-card: var(--shadow-sm);
+
+  /* Type */
+  --font-heading: "Caprasimo", system-ui, sans-serif;   /* weight 400 only; display */
+  --font-body: "Figtree", system-ui, sans-serif;        /* everything else; 600-800 UI labels */
+
+  /* Terracotta accent ramp — actions, route, rain/hazard. */
+  --accent-100: #fff2eb; --accent-200: #ffe1d0; --accent-300: #ffc6a5;
+  --accent-400: #f6a06b; --accent-500: #d67f48; --accent-600: #b2622d;
+  --accent-700: #8c491a; --accent-800: #643312; --accent-900: #402310;
+
+  /* Sage accent ramp — all-clear, AI surfaces, Pro. */
+  --accent-2: #7a8a5e;
+  --accent-2-100: #f0fae1; --accent-2-200: #e1eecc; --accent-2-300: #ccdbb2;
+  --accent-2-400: #aebf92; --accent-2-500: #8fa073; --accent-2-600: #728157;
+  --accent-2-700: #56633f; --accent-2-800: #3d472b; --accent-2-900: #272e1b;
+
+  /* Warm neutrals — never grey. */
+  --neutral-100: #f9f4ed; --neutral-200: #eee7db; --neutral-300: #dcd3c4;
+  --neutral-400: #c0b6a5; --neutral-500: #a19786; --neutral-600: #82796a;
+  --neutral-700: #645c50; --neutral-800: #474238; --neutral-900: #2e2b25;
+
+  /* Severity (product semantics, re-hued): all-clear = sage, hazard = terracotta. */
+  --sev-clear: #7a8a5e;
+  --sev-caution: #f6a06b;
+  --sev-severe: #b2622d;
+
+  /* Condition band (timeline) + map semantics. */
+  --cond-clear: var(--accent-2-300);
+  --cond-clouds: var(--neutral-300);
+  --cond-rain: var(--accent-400);
+  --cond-heavy: var(--accent-600);
+  --route-line: #c67139;
+  --route-casing: #ffffff;
+  --origin-dot: var(--accent-2);
+  --destination-dot: #c67139;
+
+  /* Ground */
+  --page-gradient: #f5ead8;
+  --bg: #f5ead8;                /* page background */
+  --surface: #ffffff;           /* cards / floating chrome */
+  --surface-2: #f9f4ed;         /* inputs / wells */
+  --ink: #201e1d;
+  --ink-2: #82796a;
   --text: var(--ink);
   --muted: var(--ink-2);
   --body-muted: var(--ink-2);
-  --border: #E2E8F0;
-  --border-strong: #B9CCDD;
-  --muted-bg: #DEE3EA;
-  --hero-gradient: linear-gradient(#F4F8FD, #C9DCEF);
-  --hero-border: #dbe5ee;
-  --hero-tagline: #4A6076;
-  --accent: #1B3A5C;            /* primary action = ink (6a primary button) */
-  --accent-contrast: #FFFFFF;
-  --btn-secondary-bg: rgba(255, 255, 255, 0.75);
-  --btn-secondary-border: #B9CCDD;
-  --link: #2a78d6;
-  --link-hover: #1b5aa8;
+  --border: #eee7db;
+  --border-strong: #dcd3c4;
+  --muted-bg: #eee7db;
+  --hero-gradient: linear-gradient(#f9f4ed, #ebddc5);
+  --hero-border: #eee7db;
+  --hero-tagline: #645c50;
+  --accent: #c67139;            /* primary action = terracotta */
+  --accent-contrast: #ffffff;
+  --accent-hover: #b2622d;      /* one ramp step past base on light */
+  --btn-secondary-bg: #ffffff;
+  --btn-secondary-border: #eee7db;
+  --link: #8c491a;              /* accent-700 — base accent isn't enough for text on cream */
+  --link-hover: #643312;
   color-scheme: light;
 }
 
-/* Dark — deep navy gradient page, inverted primary button. Shared by the explicit override and the
-   system default. */
+/* Night — warm charcoal, never grey-black. Route accent-400, hazard tints flip to the deep end,
+   primary CTA stays solid accent with white text (hover accent-400). */
 :root[data-theme='dark'] {
-  --page-gradient: linear-gradient(#2A4E75, #122A44);
-  --bg: #122A44;
-  --surface: #16304F;
-  --surface-2: rgba(255, 255, 255, 0.08);
-  --ink: #FFFFFF;
-  --ink-2: rgba(255, 255, 255, 0.75);
-  --border: rgba(255, 255, 255, 0.22);
-  --border-strong: rgba(255, 255, 255, 0.35);
-  --muted-bg: rgba(255, 255, 255, 0.12);
-  --hero-gradient: linear-gradient(#2A4E75, #122A44);
+  --page-gradient: #2e2b25;
+  --bg: #2e2b25;
+  --surface: #474238;
+  --surface-2: #2e2b25;
+  --ink: #f9f4ed;
+  --ink-2: #c0b6a5;
+  --border: #645c50;
+  --border-strong: #82796a;
+  --muted-bg: #645c50;
+  --hero-gradient: linear-gradient(#474238, #2e2b25);
   --hero-border: transparent;
-  --hero-tagline: #B9CCDD;
-  --accent: #FFFFFF;
-  --accent-contrast: #1B3A5C;
-  --btn-secondary-bg: rgba(255, 255, 255, 0.12);
-  --btn-secondary-border: rgba(255, 255, 255, 0.35);
-  --link: #9FB6CE;
-  --link-hover: #FFFFFF;
+  --hero-tagline: #c0b6a5;
+  --accent: #c67139;
+  --accent-contrast: #ffffff;
+  --accent-hover: #f6a06b;      /* one step lighter on dark */
+  --btn-secondary-bg: #474238;
+  --btn-secondary-border: #645c50;
+  --link: #ffc6a5;
+  --link-hover: #ffe1d0;
+  --sev-clear: #aebf92;
+  --sev-caution: #f6a06b;
+  --sev-severe: #d67f48;
+  --cond-clear: var(--accent-2-700);
+  --cond-clouds: var(--neutral-700);
+  --cond-rain: var(--accent-700);
+  --cond-heavy: var(--accent-800);
+  --route-line: #f6a06b;
+  --route-casing: #2e2b25;
+  --origin-dot: var(--accent-2-400);
+  --destination-dot: #f6a06b;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 3px 10px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --shadow-card: var(--shadow-sm);
   color-scheme: dark;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    --page-gradient: linear-gradient(#2A4E75, #122A44);
-    --bg: #122A44;
-    --surface: #16304F;
-    --surface-2: rgba(255, 255, 255, 0.08);
-    --ink: #FFFFFF;
-    --ink-2: rgba(255, 255, 255, 0.75);
-    --border: rgba(255, 255, 255, 0.22);
-    --border-strong: rgba(255, 255, 255, 0.35);
-    --muted-bg: rgba(255, 255, 255, 0.12);
-    --hero-gradient: linear-gradient(#2A4E75, #122A44);
+    --page-gradient: #2e2b25;
+    --bg: #2e2b25;
+    --surface: #474238;
+    --surface-2: #2e2b25;
+    --ink: #f9f4ed;
+    --ink-2: #c0b6a5;
+    --border: #645c50;
+    --border-strong: #82796a;
+    --muted-bg: #645c50;
+    --hero-gradient: linear-gradient(#474238, #2e2b25);
     --hero-border: transparent;
-    --hero-tagline: #B9CCDD;
-    --accent: #FFFFFF;
-    --accent-contrast: #1B3A5C;
-    --btn-secondary-bg: rgba(255, 255, 255, 0.12);
-    --btn-secondary-border: rgba(255, 255, 255, 0.35);
-    --link: #9FB6CE;
-    --link-hover: #FFFFFF;
+    --hero-tagline: #c0b6a5;
+    --accent: #c67139;
+    --accent-contrast: #ffffff;
+    --accent-hover: #f6a06b;
+    --btn-secondary-bg: #474238;
+    --btn-secondary-border: #645c50;
+    --link: #ffc6a5;
+    --link-hover: #ffe1d0;
+    --sev-clear: #aebf92;
+    --sev-caution: #f6a06b;
+    --sev-severe: #d67f48;
+    --cond-clear: var(--accent-2-700);
+    --cond-clouds: var(--neutral-700);
+    --cond-rain: var(--accent-700);
+    --cond-heavy: var(--accent-800);
+    --route-line: #f6a06b;
+    --route-casing: #2e2b25;
+    --origin-dot: var(--accent-2-400);
+    --destination-dot: #f6a06b;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 3px 10px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+    --shadow-card: var(--shadow-sm);
     color-scheme: dark;
   }
 }
@@ -93,70 +165,211 @@ body {
   background: var(--page-gradient);
   background-attachment: fixed;
   color: var(--text);
-  /* design 6a type, bumped scale (2026-07-10): Nunito everywhere, body 700/16, ~1.5 line-height */
-  font-family: Nunito, system-ui, sans-serif;
+  /* Organic type: Figtree everywhere (UI labels lean 600-800), Caprasimo for display only. */
+  font-family: var(--font-body);
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.5;
   min-height: 100vh;
 }
 
-h1, h2, h3 { font-weight: 800; line-height: 1.15; }
+h1, h2, h3 {
+  font-family: var(--font-heading);
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+}
 
 button { font-family: inherit; }
 
-/* 6a buttons: primary = ink-on-light / white-on-dark (via --accent); secondary = translucent. */
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+::selection { background: rgba(198, 113, 57, 0.3); }
+
+/* Organic buttons: capsule, terracotta primary (hover one ramp step), white secondary. */
 .btn-primary {
   background: var(--accent);
   color: var(--accent-contrast);
-  font: 800 17px Nunito, system-ui, sans-serif;
+  font: 700 16px var(--font-body);
   padding: 13px 26px;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-pill);
   cursor: pointer;
   text-decoration: none;
   display: inline-block;
+  box-shadow: var(--shadow-md);
+  transition: background 150ms ease-out;
 }
+.btn-primary:hover { background: var(--accent-hover); text-decoration: none; }
 .btn-secondary {
   background: var(--btn-secondary-bg);
   color: var(--text);
-  font: 800 17px Nunito, system-ui, sans-serif;
+  font: 700 16px var(--font-body);
   padding: 13px 26px;
   border: 1.5px solid var(--btn-secondary-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-pill);
   cursor: pointer;
   text-decoration: none;
   display: inline-block;
+  transition: background 150ms ease-out, border-color 150ms ease-out;
 }
-.btn-primary:hover, .btn-secondary:hover { text-decoration: none; filter: brightness(1.05); }
+.btn-secondary:hover { background: var(--surface-2); text-decoration: none; }
+.btn-primary:disabled, .btn-secondary:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* ADR-0026 "you are here" dot (Leaflet divIcon — global because it renders outside components). */
 .rt-you {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #2a78d6;
+  background: var(--origin-dot);
   border: 3px solid #ffffff;
-  box-shadow: 0 0 0 2px rgba(42, 120, 214, 0.35), 0 1px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0 2px rgba(122, 138, 94, 0.35), 0 1px 6px rgba(0, 0, 0, 0.3);
 }
 
 /* Map pin labels for stops (F-006) + explore results (F-005) — Leaflet permanent tooltips render
-   outside components, so this is global. Compact, high-contrast so it reads on satellite too. */
+   outside components, so this is global. Pill-shaped, token-driven, reads on satellite too. */
 .leaflet-tooltip.wx-map-label {
   background: rgba(255, 255, 255, 0.94);
-  color: #1a2233;
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  border-radius: 7px;
-  padding: 2px 7px;
+  color: #201e1d;
+  border: 1px solid rgba(32, 30, 29, 0.15);
+  border-radius: var(--radius-pill);
+  padding: 2px 9px;
+  font-family: var(--font-body);
   font-size: 11px;
   font-weight: 700;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+  box-shadow: var(--shadow-sm);
   white-space: nowrap;
 }
 .leaflet-tooltip.wx-map-label::before { display: none; } /* drop the little pointer arrow */
 
-/* 6a cards: white surface, #E2E8F0 border, radius 14, soft shadow — token-driven app-wide. */
+/* Cartography tint (kit: cream ground / warm night). Raster tiles can't be restyled directly, so
+   the standard-map layer gets a warm filter; route-map toggles .rt-tiles-warm ONLY for the
+   standard style (never satellite/hybrid imagery). */
+.rt-tiles-warm .leaflet-tile-pane {
+  filter: sepia(0.3) saturate(0.78) brightness(1.03) contrast(0.94) hue-rotate(-8deg);
+}
+:root[data-theme='dark'] .rt-tiles-warm .leaflet-tile-pane {
+  filter: invert(0.92) hue-rotate(185deg) saturate(0.35) brightness(0.92) contrast(0.9) sepia(0.22);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .rt-tiles-warm .leaflet-tile-pane {
+    filter: invert(0.92) hue-rotate(185deg) saturate(0.35) brightness(0.92) contrast(0.9) sepia(0.22);
+  }
+}
+
+/* Organic cards: white surface on cream, radius 16, kit shadows — token-driven app-wide. */
 .card { box-shadow: var(--shadow-card); }
+
+/* Route line (Leaflet SVG paths take these as CSS classes so strokes are theme-live):
+   terracotta over a white casing; severity shifts the ramp step (clear=base/caution=400/
+   severe=800-ish via --sev-*). */
+.rt-route-casing { stroke: var(--route-casing); }
+.rt-sev-clear { stroke: var(--route-line); }
+.rt-sev-caution { stroke: var(--sev-caution); }
+.rt-sev-severe { stroke: var(--accent-800); }
+.rt-route-dim { stroke: var(--neutral-400); opacity: 0.45; }
+
+/* Map weather chip (Leaflet divIcon — renders outside components): white pill with the
+   condition glyph + temp; hazard flips to the terracotta tint (deep end at night). */
+.wx-pin {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  border: 1.5px solid var(--border);
+  box-shadow: var(--shadow-md);
+  font: 700 12.5px var(--font-body);
+  white-space: nowrap;
+}
+.wx-pin svg { width: 13px; height: 13px; }
+.wx-pin.hazard {
+  background: var(--accent-100);
+  border-color: var(--accent-300);
+  color: var(--accent-800);
+}
+:root[data-theme='dark'] .wx-pin.hazard {
+  background: var(--accent-900);
+  border-color: var(--accent-700);
+  color: var(--accent-100);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .wx-pin.hazard {
+    background: var(--accent-900);
+    border-color: var(--accent-700);
+    color: var(--accent-100);
+  }
+}
+/* Small severity-ringed dot for in-between milestones (decluttered map). */
+.wx-dot {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2.5px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.wx-dot.caution { border-color: var(--sev-caution); }
+.wx-dot.severe { border-color: var(--sev-severe); }
+
+/* Numbered stop pin (terracotta) + explore pin (sage) — divIcon HTML, global for the same reason. */
+.rt-stop-pin, .rt-explore-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  color: #ffffff;
+  border: 2px solid var(--route-casing);
+  box-shadow: var(--shadow-sm);
+  font: 700 13px var(--font-body);
+}
+.rt-stop-pin { background: var(--accent-500); }
+.rt-explore-pin { background: var(--accent-2-600); }
+
+/* Leaflet chrome: round white zoom stack + attribution, in the kit's chip language. */
+.leaflet-control-zoom.leaflet-bar {
+  border: none;
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+.leaflet-control-zoom.leaflet-bar a {
+  background: var(--surface);
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  width: 34px;
+  height: 34px;
+  line-height: 34px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  transition: background 150ms ease-out;
+}
+.leaflet-control-zoom.leaflet-bar a:hover { background: var(--surface-2); }
+.leaflet-container .leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--neutral-600);
+  font-family: var(--font-body);
+  font-size: 10px;
+  border-radius: var(--radius-sm) 0 0 0;
+}
+
+/* Floating map chip — shared look for map controls (layers, zoom, radar/satellite pills). */
+.map-chip {
+  background: var(--surface);
+  color: var(--text);
+  border: none;
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-md);
+  font: 700 13.5px var(--font-body);
+  cursor: pointer;
+  transition: background 150ms ease-out;
+}
+.map-chip:hover { background: var(--surface-2); }
 
 /* Brand logo (docs/BRANDING.md): every surface renders BOTH day/night <img>s and CSS shows exactly
    one, resolved the SAME way as the palette above — forced [data-theme] wins, else the OS scheme.
@@ -174,5 +387,5 @@ button { font-family: inherit; }
   :root:not([data-theme]) .brand-logo-dark { display: inline-block; }
 }
 
-a { color: var(--link); text-decoration: none; }
-a:hover { color: var(--link-hover); text-decoration: underline; }
+a { color: var(--link); text-decoration: none; transition: color 150ms ease-out; }
+a:hover { color: var(--link-hover); text-decoration: underline; text-underline-offset: 3px; }

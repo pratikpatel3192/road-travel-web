@@ -1,6 +1,7 @@
 import { Component, computed, input, linkedSignal, output } from '@angular/core';
 import type { BriefingResponse, ClaimModel } from '@road-travel/sdk';
 
+import { IconComponent } from '../../ui/icon';
 import { SEVERITY_COLOR, SEVERITY_LABEL, type Severity, formatDistance } from './severity';
 
 /** The engine's F-001 v2 verdict scale (US-6) — always server-decided, never derived here. */
@@ -27,10 +28,12 @@ const VERDICT_LABEL: Record<Verdict, string> = {
  */
 @Component({
   selector: 'app-briefing-card',
+  imports: [IconComponent],
   template: `
     @if (briefing(); as b) {
       <section class="briefing">
         <header>
+          <span class="ai-disc" aria-hidden="true"><app-icon name="sparkles" [size]="14" /></span>
           @if (!b.verdict) {
             <!-- pre-v2 fallback: severity badge (still server data — never derived client-side) -->
             <span class="badge" [style.background]="color(b.facts.overall_severity)">
@@ -41,7 +44,9 @@ const VERDICT_LABEL: Record<Verdict, string> = {
           @if (b.diff?.material) {
             <!-- US-11: the forecast moved materially since the last briefing of this same trip;
                  the prose itself already leads with what changed. -->
-            <span class="updated" title="The forecast changed since your last briefing">Updated</span>
+            <span class="updated" title="The forecast changed since your last briefing"
+              ><app-icon name="refresh-cw" [size]="11" />Updated</span
+            >
           }
         </header>
 
@@ -57,7 +62,7 @@ const VERDICT_LABEL: Record<Verdict, string> = {
         @if (b.stale) {
           <!-- US-11 staleness: glanceable icon + one line; the prose carries the full sentence. -->
           <p class="stale-note">
-            <span class="stale-icon" aria-hidden="true">🕒</span>
+            <span class="stale-icon" aria-hidden="true"><app-icon name="clock" [size]="12" /></span>
             forecast &gt;12 h out — re-check before leaving
           </p>
         }
@@ -118,12 +123,13 @@ const VERDICT_LABEL: Record<Verdict, string> = {
   `,
   styles: [
     `
+      /* Organic 3.1.0: the sage AI card (mock 3a) — no border, sage fill, deep-sage ink. */
       .briefing {
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
+        border-radius: var(--radius-md);
         padding: 16px 18px;
-        background: var(--surface);
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        background: var(--accent-2-100);
+        color: var(--accent-2-900);
+        box-shadow: var(--shadow-sm);
       }
       header {
         display: flex;
@@ -131,26 +137,40 @@ const VERDICT_LABEL: Record<Verdict, string> = {
         gap: 10px;
         margin-bottom: 8px;
       }
+      .ai-disc {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--accent-2);
+        color: #ffffff;
+      }
       h2 {
         font-size: 16px;
         margin: 0;
       }
       .badge {
         color: #fff;
-        font-size: 11px;
-        font-weight: 700;
+        font: 700 11px var(--font-body);
         text-transform: uppercase;
         letter-spacing: 0.04em;
-        padding: 3px 8px;
-        border-radius: 999px;
+        padding: 3px 10px;
+        border-radius: var(--radius-pill);
+        white-space: nowrap;
       }
       .updated {
-        font-size: 11px;
-        font-weight: 700;
-        color: var(--accent);
-        border: 1px solid var(--accent);
-        padding: 2px 8px;
-        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font: 700 11px var(--font-body);
+        background: var(--accent-2-200);
+        color: var(--accent-2-800);
+        padding: 3px 10px;
+        border-radius: var(--radius-pill);
+        white-space: nowrap;
       }
       .verdict-row {
         display: flex;
@@ -158,46 +178,46 @@ const VERDICT_LABEL: Record<Verdict, string> = {
         gap: 10px;
         margin: 0 0 10px;
       }
-      /* Verdict chip — the existing severity token colors (clear/caution/severe). */
+      /* Verdict chip — sage all-clear, terracotta ramp for caution / consider-waiting. */
       .chip {
         flex: 0 0 auto;
         color: #fff;
-        font-size: 12px;
-        font-weight: 700;
+        font: 700 12px var(--font-body);
         letter-spacing: 0.02em;
-        padding: 3px 10px;
-        border-radius: 999px;
+        padding: 4px 12px;
+        border-radius: var(--radius-pill);
         white-space: nowrap;
       }
       .chip.v-clear {
-        background: var(--sev-clear);
+        background: var(--accent-2);
       }
       .chip.v-caution {
-        background: var(--sev-caution);
+        background: var(--accent-400);
       }
       .chip.v-consider-waiting {
-        background: var(--sev-severe);
+        background: var(--accent-600);
       }
       .verdict-line {
-        font-size: 14px;
-        font-weight: 600;
-        color: var(--text);
+        font-family: var(--font-heading);
+        font-weight: 400;
+        font-size: 19px;
+        line-height: 1.2;
       }
       .stale-note {
         display: flex;
         align-items: center;
         gap: 6px;
         font-size: 12px;
-        color: var(--muted);
+        opacity: 0.7;
         margin: 0 0 10px;
       }
       .stale-icon {
-        line-height: 1;
+        display: inline-flex;
+        line-height: 0;
       }
       .prose {
-        font-size: 15px;
-        line-height: 1.5;
-        color: var(--text);
+        font-size: 13.5px;
+        line-height: 1.45;
         margin: 0 0 6px;
       }
       /* US-13: only sentences WITH a sample-range ref read as tappable. */
@@ -205,24 +225,23 @@ const VERDICT_LABEL: Record<Verdict, string> = {
         cursor: pointer;
         text-decoration: underline;
         text-decoration-style: dotted;
-        text-decoration-color: var(--accent);
+        text-decoration-color: var(--accent-2-700);
         text-underline-offset: 3px;
+        transition: color 150ms ease-out;
       }
       .claim.linked:hover,
       .claim.linked:focus-visible {
-        color: var(--accent);
-        outline: none;
+        color: var(--accent-2-700);
       }
       .more {
         background: none;
         border: none;
         padding: 0;
         margin: 0 0 12px;
-        font: inherit;
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--accent);
+        font: 700 13px var(--font-body);
+        color: var(--accent-2-700);
         cursor: pointer;
+        transition: color 150ms ease-out;
       }
       .hazards {
         list-style: none;
@@ -231,9 +250,14 @@ const VERDICT_LABEL: Record<Verdict, string> = {
         display: grid;
         gap: 6px;
       }
+      /* Hazard rows: soft terracotta chips on the sage card. */
       .hazards li {
         font-size: 13px;
-        color: var(--text);
+        background: var(--accent-100);
+        border: 1px solid var(--accent-300);
+        border-radius: 12px;
+        color: var(--accent-800);
+        padding: 7px 11px;
       }
       .hzdot {
         display: inline-block;
@@ -244,28 +268,66 @@ const VERDICT_LABEL: Record<Verdict, string> = {
         vertical-align: middle;
       }
       .peak {
-        color: var(--muted);
+        opacity: 0.75;
       }
       .clear-note {
         font-size: 13px;
-        color: var(--muted);
+        opacity: 0.75;
       }
       footer {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-top: 12px;
-        border-top: 1px solid var(--border);
+        border-top: 1px solid color-mix(in srgb, currentColor 25%, transparent);
         padding-top: 8px;
+        font-size: 11px;
+        opacity: 0.6;
       }
       .model {
         font-size: 11px;
-        color: var(--muted);
       }
       .attribution {
-        font-size: 12px;
-        color: var(--muted);
+        font-size: 11px;
+        color: inherit;
         text-decoration: none;
+      }
+      /* Night flip — sage card inverts to the deep end; hazard chips flip like .wx-pin.hazard. */
+      :host-context([data-theme='dark']) .briefing {
+        background: var(--accent-2-900);
+        color: var(--accent-2-100);
+      }
+      :host-context([data-theme='dark']) .hazards li {
+        background: var(--accent-900);
+        border-color: var(--accent-700);
+        color: var(--accent-100);
+      }
+      :host-context([data-theme='dark']) .claim.linked {
+        text-decoration-color: var(--accent-2-400);
+      }
+      :host-context([data-theme='dark']) .claim.linked:hover,
+      :host-context([data-theme='dark']) .claim.linked:focus-visible,
+      :host-context([data-theme='dark']) .more {
+        color: var(--accent-2-300);
+      }
+      @media (prefers-color-scheme: dark) {
+        :host-context(:root:not([data-theme])) .briefing {
+          background: var(--accent-2-900);
+          color: var(--accent-2-100);
+        }
+        :host-context(:root:not([data-theme])) .hazards li {
+          background: var(--accent-900);
+          border-color: var(--accent-700);
+          color: var(--accent-100);
+        }
+        :host-context(:root:not([data-theme])) .claim.linked {
+          text-decoration-color: var(--accent-2-400);
+        }
+        :host-context(:root:not([data-theme])) .claim.linked:hover,
+        :host-context(:root:not([data-theme])) .claim.linked:focus-visible,
+        :host-context(:root:not([data-theme])) .more {
+          color: var(--accent-2-300);
+        }
       }
     `,
   ],

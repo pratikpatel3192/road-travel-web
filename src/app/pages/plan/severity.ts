@@ -1,10 +1,13 @@
 // The engine's 3-level severity scale (ADR-0002). Values match the API contract.
 export type Severity = 'clear' | 'caution' | 'severe';
 
+// Organic 3.1.0 hues (branding-3.1.0 tokens): all-clear = sage, hazard = terracotta ramp.
+// The 3-level scale itself is untouched — this is presentation only. Mirrors iOS
+// Color.rtSeverity. Keep in sync with the --sev-* variables in src/styles.css.
 export const SEVERITY_COLOR: Record<Severity, string> = {
-  clear: '#16a34a', // green
-  caution: '#f59e0b', // amber
-  severe: '#dc2626', // red
+  clear: '#7a8a5e', // sage
+  caution: '#f6a06b', // terracotta accent-400
+  severe: '#b2622d', // terracotta accent-600
 };
 
 export const SEVERITY_LABEL: Record<Severity, string> = {
@@ -68,4 +71,32 @@ export function weatherEmoji(symbol?: string, conditionText?: string): string {
   if (has('moon')) return '🌙';
   if (has('sun', 'clear', 'fair')) return '☀️';
   return '🌡️';
+}
+
+/**
+ * The Lucide icon name for a milestone (Organic 3.1.0 — one icon set everywhere, matching the
+ * iOS `weatherLucide`). SAME decision order as `weatherEmoji` above, including the ADR-0027
+ * night rule; render via `<app-icon>` (src/app/ui/icon.ts).
+ */
+export function weatherIcon(symbol?: string, conditionText?: string): string {
+  const s = (symbol ?? '').toLowerCase();
+  const t = (conditionText ?? '').toLowerCase();
+  const has = (...keys: string[]): boolean => keys.some((k) => s.includes(k) || t.includes(k));
+
+  if (has('tornado')) return 'tornado';
+  if (has('hurricane', 'tropicalstorm')) return 'waves';
+  if (has('bolt', 'thunder')) return 'cloud-lightning';
+  if (has('snow', 'sleet', 'flurr', 'blizzard', 'wintry')) return 'cloud-snow';
+  if (has('hail')) return 'cloud-snow';
+  if (has('heavyrain', 'rain', 'shower')) return 'cloud-rain';
+  if (has('drizzle')) return 'cloud-drizzle';
+  if (has('fog', 'haze', 'mist', 'smoke')) return 'cloud-fog';
+  if (has('wind', 'breez')) return 'wind';
+  if (has('cloud.moon')) return 'cloud-moon';
+  if (has('moon.stars')) return 'moon-star';
+  if (has('cloud.sun', 'partly')) return 'cloud-sun';
+  if (has('cloud', 'overcast')) return 'cloud';
+  if (has('moon')) return 'moon';
+  if (has('sun', 'clear', 'fair')) return 'sun';
+  return 'thermometer';
 }
