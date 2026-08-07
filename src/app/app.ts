@@ -7,6 +7,7 @@ import { ProfileService } from './core/profile.service';
 import { SettingsService } from './core/settings.service';
 import { Onboarding } from './pages/onboarding/onboarding';
 import { Paywall } from './pages/plan/paywall';
+import { FEEDBACK_MAILTO } from './version';
 
 @Component({
   selector: 'app-root',
@@ -17,6 +18,8 @@ import { Paywall } from './pages/plan/paywall';
 export class App {
   // Instantiate settings at bootstrap so the saved appearance is applied app-wide (and kept in sync).
   protected readonly settings = inject(SettingsService);
+  /** Footer "Share feedback" — pre-filled mailto with the version context. */
+  protected readonly feedbackHref = FEEDBACK_MAILTO;
   // Header auth affordance: "Sign in" (-> /login) until a real account exists, then Settings/Sign out.
   protected readonly auth = inject(AuthService);
   // Identity chip text: profile name when set, else the account email.

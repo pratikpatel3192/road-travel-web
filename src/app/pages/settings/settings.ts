@@ -5,6 +5,7 @@ import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { EntitlementService } from '../../core/entitlement.service';
 import { SettingsService, type ThemeMode } from '../../core/settings.service';
+import { FEEDBACK_MAILTO } from '../../version';
 import { PlaceField } from '../plan/place-field';
 import { ProfileSettings } from './profile-settings';
 
@@ -158,6 +159,7 @@ const APPLE_SUBSCRIPTIONS_URL = 'https://account.apple.com/account/manage';
 
       <section class="card links">
         <h2>About</h2>
+        <a [href]="feedbackHref">Share feedback</a>
         <a routerLink="/privacy">Privacy Policy</a>
         <a routerLink="/terms">Terms of Use</a>
         <a routerLink="/support">Support</a>
@@ -438,6 +440,8 @@ const APPLE_SUBSCRIPTIONS_URL = 'https://account.apple.com/account/manage';
 export class Settings {
   readonly auth = inject(AuthService);
   readonly settings = inject(SettingsService);
+  /** "Share feedback" — pre-filled mailto with the version context. */
+  readonly feedbackHref = FEEDBACK_MAILTO;
   private readonly api = inject(ApiService);
   private readonly entitlement = inject(EntitlementService);
 
