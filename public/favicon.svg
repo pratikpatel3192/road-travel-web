@@ -1,24 +1,36 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Road Travel">
   <rect width="64" height="64" rx="14" fill="#c67139"/>
-  <path d="M 12.80,52.48 C 19.20,26.88 43.52,38.40 51.20,13.44" fill="none" stroke="#b2622d" stroke-width="9.60" stroke-linecap="round"/>
-  <path d="M 12.80,52.48 C 19.20,26.88 43.52,38.40 51.20,13.44" fill="none" stroke="#f5ead8" stroke-width="6.40" stroke-linecap="round"/>
-  <path d="M 12.80,52.48 C 19.20,26.88 43.52,38.40 51.20,13.44" fill="none" stroke="#c67139" stroke-width="1.09" stroke-linecap="round"
-        stroke-dasharray="2.6 2.2"/>
-  <circle cx="41.92" cy="44.80" r="9.63" fill="#b2622d"/>
-  <circle cx="41.92" cy="44.80" r="8.45" fill="#f9f4ed"/>
-  <circle cx="41.92" cy="44.80" r="3.29" fill="#f6a06b"/>
-  <line x1="46.40" y1="44.80" x2="48.34" y2="44.80" stroke="#f6a06b" stroke-width="1.10" stroke-linecap="round"/><line x1="45.09" y1="47.97" x2="46.46" y2="49.34" stroke="#f6a06b" stroke-width="1.10" stroke-linecap="round"/><line x1="41.92" y1="49.28" x2="41.92" y2="51.22" stroke="#f6a06b" stroke-width="1.10" stroke-linecap="round"/><line x1="38.75" y1="47.97" x2="37.38" y2="49.34" stroke="#f6a06b" stroke-width="1.10" stroke-linecap="round"/><line x1="37.44" y1="44.80" x2="35.50" y2="44.80" stroke="#f6a06b" stroke-width="1.10" stroke-linecap="round"/><line x1="38.75" y1="41.63" x2="37.38" y2="40.26" stroke="#f6a06b" stroke-width="1.10" stroke-linecap="round"/><line x1="41.92" y1="40.32" x2="41.92" y2="38.38" stroke="#f6a06b" stroke-width="1.10" stroke-linecap="round"/><line x1="45.09" y1="41.63" x2="46.46" y2="40.26" stroke="#f6a06b" stroke-width="1.10" stroke-linecap="round"/>
-  <circle cx="19.20" cy="20.48" r="9.63" fill="#b2622d"/>
-  <circle cx="19.20" cy="20.48" r="8.45" fill="#f9f4ed"/>
-  <ellipse cx="19.20" cy="19.64" rx="5.91" ry="3.55" fill="#c0b6a5"/>
-  <circle cx="17.00" cy="17.95" r="2.70" fill="#c0b6a5"/>
-  <circle cx="21.23" cy="17.44" r="3.04" fill="#c0b6a5"/>
-  <g stroke="#b2622d" stroke-width="1.61" stroke-linecap="round">
-    <line x1="16.16" y1="23.52" x2="15.31" y2="26.39"/>
-    <line x1="19.37" y1="24.03" x2="18.52" y2="26.90"/>
-    <line x1="22.58" y1="23.52" x2="21.73" y2="26.39"/>
+  <path d="M 9.60,55.68 C 20.48,42.24 38.40,26.88 48.64,12.80" fill="none" stroke="#b2622d" stroke-width="8.32" stroke-linecap="round"/>
+  <path d="M 9.60,55.68 C 20.48,42.24 38.40,26.88 48.64,12.80" fill="none" stroke="#f5ead8" stroke-width="5.50" stroke-linecap="round"/>
+  <path d="M 9.60,55.68 C 20.48,42.24 38.40,26.88 48.64,12.80" fill="none" stroke="#c67139" stroke-width="0.96" stroke-linecap="round" stroke-dasharray="2.4 2.0"/>
+  <circle cx="9.60" cy="55.68" r="3.52" fill="#ccdbb2"/>
+
+  <circle cx="13.06" cy="51.59" r="7.72" fill="#b2622d"/>
+  <circle cx="13.06" cy="51.59" r="6.66" fill="#f9f4ed"/>
+  <circle cx="13.06" cy="51.59" r="2.40" fill="#f6a06b"/>
+  <line x1="16.39" y1="51.59" x2="17.79" y2="51.59" stroke="#f6a06b" stroke-width="0.80" stroke-linecap="round"/><line x1="15.41" y1="53.95" x2="16.40" y2="54.94" stroke="#f6a06b" stroke-width="0.80" stroke-linecap="round"/><line x1="13.06" y1="54.92" x2="13.06" y2="56.32" stroke="#f6a06b" stroke-width="0.80" stroke-linecap="round"/><line x1="10.71" y1="53.95" x2="9.72" y2="54.94" stroke="#f6a06b" stroke-width="0.80" stroke-linecap="round"/><line x1="9.73" y1="51.59" x2="8.33" y2="51.59" stroke="#f6a06b" stroke-width="0.80" stroke-linecap="round"/><line x1="10.71" y1="49.24" x2="9.72" y2="48.25" stroke="#f6a06b" stroke-width="0.80" stroke-linecap="round"/><line x1="13.06" y1="48.27" x2="13.06" y2="46.87" stroke="#f6a06b" stroke-width="0.80" stroke-linecap="round"/><line x1="15.41" y1="49.24" x2="16.40" y2="48.25" stroke="#f6a06b" stroke-width="0.80" stroke-linecap="round"/>
+
+  <circle cx="27.65" cy="36.23" r="7.72" fill="#b2622d"/>
+  <circle cx="27.65" cy="36.23" r="6.66" fill="#f9f4ed"/>
+  <ellipse cx="27.65" cy="35.29" rx="4.13" ry="2.26" fill="#c0b6a5"/>
+  <circle cx="26.05" cy="34.10" r="1.86" fill="#c0b6a5"/>
+  <circle cx="29.11" cy="33.70" r="2.06" fill="#c0b6a5"/>
+  <g stroke="#b2622d" stroke-width="1.13" stroke-linecap="round">
+    <line x1="25.45" y1="38.22" x2="24.79" y2="40.35"/>
+    <line x1="27.85" y1="38.49" x2="27.18" y2="40.62"/>
+    <line x1="30.05" y1="38.22" x2="29.38" y2="40.35"/>
   </g>
-  <circle cx="12.80" cy="52.48" r="3.97" fill="#ccdbb2"/>
-  <circle cx="51.20" cy="13.44" r="5.12" fill="#f5ead8"/>
-  <circle cx="51.20" cy="13.44" r="2.24" fill="#c67139"/>
+
+  <circle cx="41.69" cy="21.38" r="7.72" fill="#b2622d"/>
+  <circle cx="41.69" cy="21.38" r="6.66" fill="#f9f4ed"/>
+  <g stroke="#82796a" stroke-width="1.00" stroke-linecap="round" fill="none">
+    <path d="M 38.36,19.78 h 5.19"/>
+    <path d="M 38.36,21.44 h 6.26"/>
+    <path d="M 38.36,23.17 h 3.86"/>
+  </g>
+
+  <circle cx="50.05" cy="9.11" r="5.89" fill="#f5ead8"/>
+  <path d="M 45.69,12.41 L 54.41,12.41 L 50.05,18.42 Z" fill="#f5ead8"/>
+  <circle cx="50.05" cy="9.11" r="4.24" fill="#c67139"/>
+  <circle cx="50.05" cy="9.11" r="2.00" fill="#f9f4ed"/>
 </svg>
