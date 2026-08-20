@@ -74,6 +74,7 @@ describe('ADR-0038 routing: landing page at /, planner at /plan', () => {
       'privacy',
       'terms',
       'support',
+      'unsubscribe',
     ];
     for (const route of routes) {
       if (route.path === '**') continue;
