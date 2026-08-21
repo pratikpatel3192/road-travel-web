@@ -57,6 +57,15 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/respond/respond').then((m) => m.Respond),
     canActivate: [realAccountGuard],
   },
+  // The unsubscribe link in marketing email. PUBLIC on purpose — no guard of any kind: the
+  // recipient may be signed out, may have deleted their account, or may never have had one, and a
+  // login wall in front of "stop emailing me" is both hostile and non-compliant. The signed token
+  // in the link is the authorization (core verifies it); the page only ever confirms an explicit
+  // button press, never acts on load.
+  {
+    path: 'unsubscribe',
+    loadComponent: () => import('./pages/unsubscribe/unsubscribe').then((m) => m.Unsubscribe),
+  },
   { path: 'privacy', component: Privacy },
   { path: 'terms', component: Terms },
   { path: 'support', component: Support },
