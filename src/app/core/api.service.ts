@@ -133,6 +133,11 @@ export class ApiService {
   }
 
   /** Claim the one-trial-ever grant directly (used by the iOS StoreKit flow; web goes via checkout). */
+  /**
+   * @deprecated ADR-0044 — the trial is granted server-side by `GET /v1/me`. Nothing calls this;
+   * it is kept only so the vendored SDK surface stays stable. The endpoint itself is now an
+   * idempotent alias for the same grant, so calling it cannot create a second trial.
+   */
   async claimTrial(platform = 'web'): Promise<TrialClaimResponse> {
     const { data, error, response } = await claimTrialV1MeTrialClaimPost({
       ...this.options(),

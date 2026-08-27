@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
@@ -15,7 +16,7 @@ const APPLE_SUBSCRIPTIONS_URL = 'https://account.apple.com/account/manage';
 /** The Settings screen — account, profile, appearance, units, and Home/Work favorites (iOS parity). */
 @Component({
   selector: 'app-settings',
-  imports: [RouterLink, PlaceField, ProfileSettings],
+  imports: [DatePipe, RouterLink, PlaceField, ProfileSettings],
   template: `
     <div class="page">
       <header class="top">
@@ -130,6 +131,22 @@ const APPLE_SUBSCRIPTIONS_URL = 'https://account.apple.com/account/manage';
           />
         </div>
       </section>
+
+      <!--
+        ADR-0044: say when the server-granted trial ends. Pro from a 7-day grant looks identical to
+        Pro from a subscription, so without this the access simply disappears one day unannounced.
+        Shown above the Subscription card because during a trial there is no subscription to manage
+        and that card does not render at all.
+      -->
+      @if (trialEndsAt(); as endsAt) {
+        <section class="card">
+          <h2>Free trial</h2>
+          <p class="acct-note">
+            Your free trial ends {{ endsAt | date: 'mediumDate' }}. After that you'll need a
+            subscription to keep seeing weather along your route.
+          </p>
+        </section>
+      }
 
       @if (manageable(); as sub) {
         <section class="card">
@@ -446,6 +463,16 @@ export class Settings {
   private readonly entitlement = inject(EntitlementService);
 
   readonly appleSubscriptionsUrl = APPLE_SUBSCRIPTIONS_URL;
+
+  /**
+   * The server trial's end date, or null when there isn't a live one (ADR-0044). Reads `active`
+   * rather than merely checking `ends_at`, so a spent trial's stale timestamp can't keep the banner
+   * on screen after the paywall has started appearing.
+   */
+  readonly trialEndsAt = computed(() => {
+    const trial = this.entitlement.trial();
+    return trial?.active && trial.ends_at ? trial.ends_at : null;
+  });
   readonly appleModal = signal(false);
   readonly portalLoading = signal(false);
   readonly manageError = signal<string | null>(null);
