@@ -1,0 +1,32 @@
+/*
+ * Base TypeScript config for the vendored SDK.
+ *
+ * This file was missing, and its absence broke every clean install of road-travel-web:
+ * `tsconfig.build.json` extends it, the package's `prepare` script runs `tsc -p
+ * tsconfig.build.json`, and npm runs `prepare` for a `file:` dependency — so `npm ci` aborted
+ * before Angular's own dependencies were ever installed. It is not gitignored and has no git
+ * history; it was simply never committed.
+ *
+ * Settings mirror what the generated client needs: modern ES modules, bundler resolution (the
+ * generated code imports without file extensions), and strict mode so a regenerated SDK cannot
+ * quietly introduce `any`. `noEmit` is true here and flipped by tsconfig.build.json, which owns
+ * the actual emit to dist/.
+ */
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    // DOM.Iterable is required, not optional: the generated client iterates
+    // URLSearchParams.entries(), which does not exist without it.
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true
+  },
+  "include": ["src"]
+}
