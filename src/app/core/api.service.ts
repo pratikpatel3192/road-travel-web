@@ -85,7 +85,14 @@ export class ApiService {
   private readonly device = inject(DeviceService);
 
   private options() {
-    const headers: Record<string, string> = { 'X-Device-Id': this.device.id };
+    // X-Platform is declared, never inferred. The server used to guess it from whether
+    // X-Device-Id was present — "ios" if it was, "web" if not — and since this client sends a
+    // device id on every call while the iOS app sent none, every signup was recorded as the
+    // opposite platform.
+    const headers: Record<string, string> = {
+      'X-Device-Id': this.device.id,
+      'X-Platform': 'web',
+    };
     const token = this.auth.token;
     if (token) headers['Authorization'] = `Bearer ${token}`;
     // throwOnError stays off so we can map 401/402 to our own errors.
