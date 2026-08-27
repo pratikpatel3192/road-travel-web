@@ -173,10 +173,17 @@ import { PaywallService } from '../../core/paywall.service';
         color: inherit;
         cursor: pointer;
       }
+      /* "Best value" emphasis, NOT selection. This used to be var(--accent), the same colour
+         selection uses, so the default plan looked permanently selected: picking Monthly left
+         Annual still ringed in accent and both read as chosen. Worse, nothing is selected on
+         open, so Annual looked picked while Subscribe sat disabled. The badge already says
+         "Best value"; the border only needs to lift it off the other card. */
       .plan.hero {
-        border-color: var(--accent);
+        border-color: var(--border-strong);
       }
+      /* Accent now means exactly one thing: this is the plan you have selected. */
       .plan.sel {
+        border-color: var(--accent);
         outline: 2px solid var(--accent);
         outline-offset: 1px;
       }
@@ -310,6 +317,22 @@ export class Paywall {
       counted = true;
       // The server's coarse reason code, exactly what iOS passes as `trigger`.
       this.analytics.capture('paywall_viewed', { trigger: payload.reason });
+    });
+
+    // Pre-select a plan, matching iOS (`PaywallView` sets `selected = packages.first` in its
+    // `.task`). Web started with nothing selected while the default plan was styled as though it
+    // were, so Subscribe sat disabled with no visible reason. Prefer the server's default plan,
+    // fall back to the first. Only ever sets a selection when there is none, so it cannot stomp
+    // the user's choice on an unrelated re-render.
+    effect(() => {
+      const payload = this.pw.payload();
+      if (!payload) {
+        this.selected.set(null);
+        return;
+      }
+      if (this.selected() !== null) return;
+      const plan = payload.plans.find((x) => x.is_default) ?? payload.plans[0];
+      if (plan) this.selected.set(plan.product_id);
     });
   }
 
