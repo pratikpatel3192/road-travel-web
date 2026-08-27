@@ -8,11 +8,11 @@ import { EntitlementService } from '../../core/entitlement.service';
 import { PaywallService } from '../../core/paywall.service';
 
 /**
- * The store-trial paywall modal (ADR-0025). Rendered app-wide; appears when a 402
+ * The subscribe paywall modal (ADR-0044). Rendered app-wide; appears when a 402
  * (`subscription_required`) hands a `PaywallResponse` to PaywallService. It renders the server
  * payload verbatim — plans (annual-default first, monthly second) and the reason message — and
- * starts **Stripe Checkout** (card up front). The **server** decides the 7-day trial (one-ever, per
- * account AND device), so the trial is only advertised when `/v1/me.trial_eligible` says so, and
+ * starts **Stripe Checkout** for a plain subscription with NO trial. The 7-day trial now belongs to
+ * our database and is granted at signup, so anyone seeing this modal has already spent theirs, and
  * `is_pro` only flips via the signed Stripe webhook. Checkout needs a real account, so an anonymous
  * user is offered passwordless sign-in inline first.
  */
@@ -53,9 +53,6 @@ import { PaywallService } from '../../core/paywall.service';
                 }
                 <span class="period">{{ plan.period === 'annual' ? 'Annual' : 'Monthly' }}</span>
                 <span class="price">{{ plan.price }}</span>
-                @if ((plan.trial_days ?? 0) > 0 && trialOffered()) {
-                  <span class="trial">{{ plan.trial_days }}-day free trial</span>
-                }
               </button>
             }
           </div>
@@ -201,11 +198,6 @@ import { PaywallService } from '../../core/paywall.service';
       .price {
         font-size: 18px;
       }
-      .trial {
-        color: var(--accent);
-        font-size: 13px;
-        font-weight: 600;
-      }
       .cta {
         width: 100%;
         background: var(--accent);
@@ -291,13 +283,15 @@ export class Paywall {
   readonly isError = signal(false);
   readonly email = signal('');
 
-  /** The server grants a trial only when this account+device hasn't used one — label honestly. */
-  readonly trialOffered = computed(() => this.entitlement.trialEligible());
+  /**
+   * ADR-0044: there is no trial to offer here. The server grants one at signup and it is spent by
+   * the time this modal appears — that expiry is what produced the 402. `trial_days` is 0 on every
+   * plan for the same reason, so the CTA is unconditionally "Subscribe".
+   */
 
   readonly ctaLabel = computed(() => {
     const plan = this.pw.payload()?.plans.find((x) => x.product_id === this.selected());
-    const days = plan?.trial_days ?? 0;
-    return days > 0 && this.trialOffered() ? `Start ${days}-day free trial` : 'Subscribe';
+    return 'Subscribe';
   });
 
   constructor() {
@@ -334,9 +328,10 @@ export class Paywall {
     this.busy.set(true);
     this.setStatus('');
     try {
-      // ADR-0025: the SERVER decides the trial (one-ever, bound to account + device) and returns a
-      // Stripe Checkout URL. Card is collected up front; `is_pro` only flips via the signed webhook
-      // once Stripe confirms. We leave the SPA here, so no need to clear `busy`.
+      // ADR-0044: a plain subscription, no trial. The session carries no `trial_period_days` —
+      // the server trial is spent by now, and a store-side one would be a second, overlapping
+      // trial. `is_pro` only flips via the signed webhook once Stripe confirms. We leave the SPA
+      // here, so no need to clear `busy`.
       const session = await this.api.createCheckoutSession(plan.period);
       window.location.href = session.url;
     } catch (e) {
