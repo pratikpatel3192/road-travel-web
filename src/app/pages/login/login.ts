@@ -30,7 +30,14 @@ import { AuthService, type OAuthProvider } from '../../core/auth.service';
           <p class="note">You're signed in{{ auth.email() ? ' as ' + auth.email() : '' }}.</p>
           <a routerLink="/plan" class="go">Open the planner</a>
         } @else {
-          <p class="note">Sign in to sync your trips and keep Pro across devices — or just
+          <!--
+            ADR-0044: the trial is ours and starts at signup — no card, no store. Say so here,
+            because this is the only screen between a visitor and the trial beginning. The copy
+            promises exactly what the server does: 7 days of full access, then a subscription.
+          -->
+          <p class="trial-pitch">Sign up and get <strong>7 days free</strong> — full access, no card
+            required.</p>
+          <p class="note">Already have an account? Signing in works the same way — or just
             <a routerLink="/plan">keep using the planner</a>.</p>
           <div class="methods">
             <button class="oauth" (click)="oauth('apple')">Continue with Apple</button>
@@ -137,6 +144,14 @@ import { AuthService, type OAuthProvider } from '../../core/auth.service';
         opacity: 0.6;
         cursor: default;
       }
+      .trial-pitch {
+        margin: 0 0 10px;
+        font-size: 15px;
+        line-height: 1.5;
+        color: var(--text);
+      }
+      .trial-pitch strong { color: var(--accent); }
+
       .note {
         color: var(--muted);
       }

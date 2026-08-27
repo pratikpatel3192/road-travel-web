@@ -90,7 +90,7 @@
       color: var(--muted);
       max-width: 480px;
       line-height: 1.65;
-      margin-bottom: 3rem;
+      margin-bottom: 1.75rem;
     }
 
     .links {
@@ -98,6 +98,24 @@
       gap: 1rem;
       flex-wrap: wrap;
       justify-content: center;
+    }
+
+    .cta {
+      display: inline-block;
+      background: var(--accent);
+      color: #0d0f12;
+      font-size: 1.05rem;
+      font-weight: 600;
+      text-decoration: none;
+      padding: 0.9rem 1.6rem;
+      border-radius: var(--radius);
+      transition: filter 0.15s ease;
+    }
+    .cta:hover { filter: brightness(1.08); }
+    .cta-note {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin: 0.85rem 0 3rem;
     }
 
     .link-card {
@@ -160,9 +178,18 @@
   <h1>Every road tells<br>a <span>story.</span></h1>
 
   <p class="subtitle">
-    Planning your next drive? Road Travel helps you discover routes,
-    map adventures, and keep every journey memorable.
+    See the weather along your whole route, timed to the hour you'll actually be there —
+    so you can leave at the right time and drive around the storm instead of into it.
   </p>
+
+  <!--
+    ADR-0044: the trial is granted by our server at signup, not by a store, so it genuinely costs
+    the visitor nothing to start. Say the terms plainly here — 7 days, full access, no card — and
+    say what happens after, because a trial that quietly becomes a paywall is how people feel
+    tricked.
+  -->
+  <a class="cta" href="/app">Start your 7-day free trial</a>
+  <p class="cta-note">Full access for 7 days. No card required. Subscribe after that to keep going.</p>
 
   <div class="links">
     <a class="link-card" href="/privacy.html">
