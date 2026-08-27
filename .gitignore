@@ -8,6 +8,9 @@
 
 # Node
 /node_modules
+# The vendored SDK is a `file:` dependency, so npm installs ITS deps here too. The root
+# rule is anchored with a leading slash and does not reach this one.
+vendor/sdk/node_modules/
 npm-debug.log
 yarn-error.log
 
