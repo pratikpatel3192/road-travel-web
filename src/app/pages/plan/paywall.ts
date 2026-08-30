@@ -51,7 +51,12 @@ import { PaywallService } from '../../core/paywall.service';
                 @if (plan.is_default) {
                   <span class="badge">Best value</span>
                 }
-                <span class="period">{{ plan.period === 'annual' ? 'Annual' : 'Monthly' }}</span>
+                <span class="period-row">
+                  <span class="period">{{ plan.period === 'annual' ? 'Annual' : 'Monthly' }}</span>
+                  @if (plan.period === 'annual' && savingsPercent(); as saved) {
+                    <span class="save">Save {{ saved }}%</span>
+                  }
+                </span>
                 <span class="price">{{ plan.price }}</span>
               </button>
             }
@@ -187,6 +192,22 @@ import { PaywallService } from '../../core/paywall.service';
         outline: 2px solid var(--accent);
         outline-offset: 1px;
       }
+      /* The plan button is a grid, so a bare span would stretch the full column width. */
+      .period-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .save {
+        flex: 0 0 auto;
+        background: var(--accent);
+        color: var(--accent-contrast);
+        font-size: 11px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 999px;
+        vertical-align: middle;
+      }
       .badge {
         position: absolute;
         top: -10px;
@@ -295,6 +316,28 @@ export class Paywall {
    * the time this modal appears — that expiry is what produced the 402. `trial_days` is 0 on every
    * plan for the same reason, so the CTA is unconditionally "Subscribe".
    */
+
+  /**
+   * Percent saved by the annual plan against twelve monthly renewals, from the server's numeric
+   * `price_amount` — never a parsed display string, which would break the moment a currency
+   * formats differently.
+   *
+   * Mirrors iOS `PlanSavings.percentSaved`, including its silences: null when either plan is
+   * missing, a price is non-positive, or annual is not actually cheaper. A wrong discount claim is
+   * a consumer-protection problem, so saying nothing beats guessing.
+   */
+  readonly savingsPercent = computed<number | null>(() => {
+    const plans = this.pw.payload()?.plans ?? [];
+    const annual = plans.find((p) => p.period === 'annual')?.price_amount;
+    const monthly = plans.find((p) => p.period === 'monthly')?.price_amount;
+    if (!annual || !monthly || annual <= 0 || monthly <= 0) return null;
+
+    const yearOfMonthly = monthly * 12;
+    if (annual >= yearOfMonthly) return null;
+
+    const percent = Math.round(((yearOfMonthly - annual) / yearOfMonthly) * 100);
+    return percent > 0 && percent < 100 ? percent : null;
+  });
 
   readonly ctaLabel = computed(() => {
     const plan = this.pw.payload()?.plans.find((x) => x.product_id === this.selected());
