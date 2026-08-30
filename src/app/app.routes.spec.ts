@@ -65,6 +65,7 @@ describe('ADR-0038 routing: landing page at /, planner at /plan', () => {
       'plan',
       'app',
       'auth-callback',
+      'checkout-return',
       'login',
       'settings',
       'saved',
