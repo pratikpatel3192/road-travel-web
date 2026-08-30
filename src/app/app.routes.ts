@@ -27,6 +27,14 @@ export const routes: Routes = [
   // (the `#tokens` fragment variant, which Supabase reads without a URL rewrite). Until ADR-0038
   // this path resolved only by accident, via the '**' catch-all being deleted below.
   { path: 'auth-callback', redirectTo: 'plan', pathMatch: 'full' },
+  // Stripe Checkout's return target for an iOS buyer (core picks it from X-Platform). Its job is to
+  // hop back into the app via the custom scheme — see the component for why a plain Universal Link
+  // does not survive Checkout's server-side redirect.
+  {
+    path: 'checkout-return',
+    loadComponent: () =>
+      import('./pages/checkout-return/checkout-return').then((m) => m.CheckoutReturn),
+  },
   { path: 'login', loadComponent: () => import('./pages/login/login').then((m) => m.Login) },
   // ADR-0025 §1: saved trips + Settings are LOGIN-ONLY (real account; the anonymous session doesn't count).
   {

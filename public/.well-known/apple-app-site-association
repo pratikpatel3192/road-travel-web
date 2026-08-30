@@ -2,11 +2,17 @@
   "applinks": {
     "details": [
       {
-        "appIDs": ["424DV494GD.com.weatherroute.app"],
+        "appIDs": [
+          "424DV494GD.com.weatherroute.app"
+        ],
         "components": [
           {
             "/": "/auth-callback",
             "comment": "Supabase magic-link / auth callback opens the iOS app"
+          },
+          {
+            "/": "/checkout-return",
+            "comment": "Stripe Checkout return for iOS; the page also bounces to the roadtravel:// scheme"
           }
         ]
       }
