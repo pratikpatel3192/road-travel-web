@@ -55,6 +55,7 @@ import {
   respondV1SocialFriendsFriendshipIdRespondPost,
   createCheckoutSessionV1BillingCheckoutSessionPost,
   createPortalSessionV1BillingPortalSessionPost,
+  getPlansV1BillingPlansGet,
   getMeV1MeGet,
   getProfileV1MeProfileGet,
   getSurveyQuestionsV1SurveyQuestionsGet,
@@ -125,6 +126,20 @@ export class ApiService {
     });
     if (error || !data) this.raise(response, error);
     return data as CheckoutSessionResponse;
+  }
+
+  /**
+   * The paywall offer, fetched deliberately rather than by tripping a 402.
+   *
+   * The paywall component renders from a `PaywallResponse`, and until now the only way to obtain
+   * one was to attempt a gated action and be refused — so a signed-in user whose trial had expired
+   * could not subscribe from Settings at all. iOS never had that problem: RevenueCat hands it the
+   * offering. This is the offer only; `GET /v1/me` remains the sole authority on entitlement.
+   */
+  async getPlans(): Promise<PaywallResponse> {
+    const { data, error, response } = await getPlansV1BillingPlansGet(this.options());
+    if (error || !data) this.raise(response, error);
+    return data as PaywallResponse;
   }
 
   /**

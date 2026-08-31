@@ -271,6 +271,32 @@ export type BriefingResponse = {
 };
 
 /**
+ * CampaignSummary
+ */
+export type CampaignSummary = {
+    /**
+     * Campaign
+     */
+    campaign: string;
+    /**
+     * Drafts
+     */
+    drafts: number;
+    /**
+     * Sent
+     */
+    sent: number;
+    /**
+     * Failed
+     */
+    failed: number;
+    /**
+     * Replies
+     */
+    replies: number;
+};
+
+/**
  * ChatDriveModel
  *
  * The compact drive card attached to a message (sender's drive; absent if since deleted).
@@ -434,6 +460,48 @@ export type ConsentsRequest = {
      * Consents
      */
     consents: Array<ConsentInput>;
+};
+
+/**
+ * Contact
+ *
+ * One person, across every campaign — the answer to "have we written to them, and what
+ * happened". Assembled from campaign_sends, outreach_replies and email_suppressions together,
+ * because any one of those alone gives a misleading picture.
+ */
+export type Contact = {
+    /**
+     * Email
+     */
+    email: string;
+    /**
+     * Campaigns
+     */
+    campaigns?: Array<string>;
+    /**
+     * Sends
+     */
+    sends?: number;
+    /**
+     * Failed
+     */
+    failed?: number;
+    /**
+     * Last Sent At
+     */
+    last_sent_at?: string | null;
+    /**
+     * Replied
+     */
+    replied?: boolean;
+    /**
+     * Suppressed
+     */
+    suppressed?: boolean;
+    /**
+     * Suppression Reason
+     */
+    suppression_reason?: string | null;
 };
 
 /**
@@ -631,6 +699,70 @@ export type DepartureWindowModel = {
 };
 
 /**
+ * DraftIn
+ */
+export type DraftIn = {
+    /**
+     * Email
+     */
+    email: string;
+    /**
+     * Subject
+     */
+    subject: string;
+    /**
+     * Body Html
+     */
+    body_html: string;
+    /**
+     * Body Text
+     */
+    body_text?: string | null;
+    /**
+     * Reason
+     */
+    reason?: string | null;
+    /**
+     * Source File
+     */
+    source_file?: string | null;
+};
+
+/**
+ * DraftOut
+ */
+export type DraftOut = {
+    /**
+     * Email
+     */
+    email: string;
+    /**
+     * Subject
+     */
+    subject: string;
+    /**
+     * Body Html
+     */
+    body_html: string;
+    /**
+     * Body Text
+     */
+    body_text: string;
+    /**
+     * Reason
+     */
+    reason?: string | null;
+    /**
+     * Source File
+     */
+    source_file?: string | null;
+    /**
+     * Updated At
+     */
+    updated_at?: string | null;
+};
+
+/**
  * DriveModel
  *
  * A recorded drive with its server-computed stats and simplified polyline.
@@ -738,6 +870,32 @@ export type DrivesResponse = {
      * Drives
      */
     drives: Array<DriveModel>;
+};
+
+/**
+ * EmailPreferencesResponse
+ *
+ * GET /v1/email/preferences and the two POSTs all answer with this.
+ */
+export type EmailPreferencesResponse = {
+    /**
+     * Email Masked
+     *
+     * The recipient address, masked (`b•••@example.com`) — never in full.
+     */
+    email_masked: string;
+    /**
+     * List Key
+     *
+     * Which list the link is for. `marketing` today.
+     */
+    list_key: string;
+    /**
+     * Subscribed
+     *
+     * False once suppressed — no further marketing goes to this address.
+     */
+    subscribed: boolean;
 };
 
 /**
@@ -1116,6 +1274,66 @@ export type HazardModel = {
 };
 
 /**
+ * HistoryResponse
+ */
+export type HistoryResponse = {
+    /**
+     * Campaign
+     */
+    campaign: string;
+    /**
+     * Rows
+     */
+    rows?: Array<HistoryRow>;
+    /**
+     * Replies
+     */
+    replies?: Array<ReplyOut>;
+};
+
+/**
+ * HistoryRow
+ */
+export type HistoryRow = {
+    /**
+     * Email
+     */
+    email: string;
+    /**
+     * Subject
+     */
+    subject: string;
+    /**
+     * Status
+     */
+    status: string;
+    /**
+     * Message Id
+     */
+    message_id?: string | null;
+    /**
+     * Error
+     */
+    error?: string | null;
+    /**
+     * Operator
+     */
+    operator?: string | null;
+    /**
+     * Sent At
+     */
+    sent_at?: string | null;
+    /**
+     * Suppressed
+     */
+    suppressed?: boolean;
+    /**
+     * Replied
+     */
+    replied?: boolean;
+};
+
+/**
  * LocationSessionModel
  */
 export type LocationSessionModel = {
@@ -1146,7 +1364,10 @@ export type LocationSessionModel = {
 /**
  * MeResponse
  *
- * Entitlement + funnel snapshot the clients poll to drive gating (GET /v1/me, ADR-0025).
+ * Entitlement + funnel snapshot the clients poll to drive gating (GET /v1/me, ADR-0044).
+ *
+ * Reading this endpoint also CREATES the server trial on first sight for a signed-in
+ * account — see the route docstring for why a GET writes.
  */
 export type MeResponse = {
     /**
@@ -1252,6 +1473,60 @@ export type MessagesResponse = {
 };
 
 /**
+ * MintLinksRequest
+ *
+ * POST /v1/email/links — operator-only. Mint one unsubscribe URL per address.
+ *
+ * Takes raw addresses because the recipients that need this most have no account and no opt-in
+ * row: creator and press outreach. The batch is capped so one call can't be turned into a bulk
+ * token generator.
+ */
+export type MintLinksRequest = {
+    /**
+     * Emails
+     */
+    emails: Array<string>;
+    /**
+     * List Key
+     */
+    list_key?: string;
+};
+
+/**
+ * MintLinksResponse
+ */
+export type MintLinksResponse = {
+    /**
+     * Links
+     *
+     * Addresses that may be mailed, with links.
+     */
+    links: Array<MintedLink>;
+    /**
+     * Suppressed
+     *
+     * Addresses DROPPED because they opted out. Named, not counted: the caller has to know who to remove from the send, and a silent drop reads as 'everyone got a link'.
+     */
+    suppressed: Array<string>;
+};
+
+/**
+ * MintedLink
+ */
+export type MintedLink = {
+    /**
+     * Email
+     */
+    email: string;
+    /**
+     * Unsubscribe Url
+     *
+     * Specific to this recipient — never reuse one for another person.
+     */
+    unsubscribe_url: string;
+};
+
+/**
  * MySessionResponse
  *
  * The caller's live session, if any — lets the client restore the sharing indicator.
@@ -1301,6 +1576,59 @@ export type OnboardingRequest = {
      * Must include granted tos + privacy; may include marketing.
      */
     consents: Array<ConsentInput>;
+};
+
+/**
+ * OverviewResponse
+ */
+export type OverviewResponse = {
+    totals: OverviewTotals;
+    /**
+     * Campaigns
+     */
+    campaigns?: Array<CampaignSummary>;
+    /**
+     * Contacts
+     */
+    contacts?: Array<Contact>;
+};
+
+/**
+ * OverviewTotals
+ */
+export type OverviewTotals = {
+    /**
+     * Campaigns
+     */
+    campaigns?: number;
+    /**
+     * Drafts
+     */
+    drafts?: number;
+    /**
+     * People Reached
+     */
+    people_reached?: number;
+    /**
+     * Sends
+     */
+    sends?: number;
+    /**
+     * Failed
+     */
+    failed?: number;
+    /**
+     * Replies
+     */
+    replies?: number;
+    /**
+     * Suppressed
+     */
+    suppressed?: number;
+    /**
+     * Reply Rate
+     */
+    reply_rate?: number;
 };
 
 /**
@@ -1515,7 +1843,7 @@ export type PlanOption = {
     /**
      * Trial Days
      *
-     * Free-trial length; 0 = no trial.
+     * Store-offered free-trial length. Always 0 since ADR-0044: the trial is granted by our server before anyone reaches a store, so by the time this plan is shown it is spent.
      */
     trial_days?: number;
     /**
@@ -1631,6 +1959,78 @@ export type PortalSessionResponse = {
 };
 
 /**
+ * PreviewResponse
+ */
+export type PreviewResponse = {
+    /**
+     * Campaign
+     */
+    campaign: string;
+    /**
+     * Sender
+     */
+    sender: string;
+    /**
+     * Fatal
+     */
+    fatal?: Array<string>;
+    /**
+     * Blocking
+     */
+    blocking?: Array<string>;
+    /**
+     * Rows
+     */
+    rows?: Array<PreviewRow>;
+};
+
+/**
+ * PreviewRow
+ */
+export type PreviewRow = {
+    /**
+     * Email
+     */
+    email: string;
+    /**
+     * Subject
+     */
+    subject: string;
+    /**
+     * State
+     */
+    state: string;
+    /**
+     * Detail
+     */
+    detail?: string | null;
+    /**
+     * Reason
+     */
+    reason?: string | null;
+    /**
+     * Text Source
+     */
+    text_source?: string;
+    /**
+     * Html Bytes
+     */
+    html_bytes: number;
+    /**
+     * Text Bytes
+     */
+    text_bytes: number;
+    /**
+     * Clipped
+     */
+    clipped?: boolean;
+    /**
+     * Text Head
+     */
+    text_head?: string;
+};
+
+/**
  * ProfileResponse
  *
  * GET /v1/me/profile — everything the onboarding form + Settings need.
@@ -1724,6 +2124,62 @@ export type ProfileUpdate = {
      * Recorded as a marketing consent event + mirrored to the profile.
      */
     marketing_opt_in?: boolean | null;
+};
+
+/**
+ * ReplyIn
+ */
+export type ReplyIn = {
+    /**
+     * Email
+     */
+    email: string;
+    /**
+     * Campaign
+     */
+    campaign?: string | null;
+    /**
+     * Kind
+     */
+    kind?: string;
+    /**
+     * Note
+     */
+    note?: string | null;
+};
+
+/**
+ * ReplyOut
+ */
+export type ReplyOut = {
+    /**
+     * Email
+     */
+    email: string;
+    /**
+     * Campaign
+     */
+    campaign?: string | null;
+    /**
+     * Kind
+     */
+    kind: string;
+    /**
+     * Note
+     */
+    note?: string | null;
+    /**
+     * Occurred At
+     */
+    occurred_at?: string | null;
+    /**
+     * Recorded By
+     */
+    recorded_by?: string | null;
+    /**
+     * Suppressed
+     */
+    suppressed?: boolean;
 };
 
 /**
@@ -1981,6 +2437,76 @@ export type SendMessageRequest = {
 };
 
 /**
+ * SendRequest
+ *
+ * Shared by preview and send, so the review step cannot be given different inputs.
+ */
+export type SendRequest = {
+    /**
+     * Reason
+     */
+    reason?: string | null;
+    /**
+     * Opted In
+     */
+    opted_in?: boolean;
+    /**
+     * Email From
+     */
+    email_from?: string | null;
+    /**
+     * List Key
+     */
+    list_key?: string;
+    /**
+     * Max Messages
+     */
+    max_messages?: number;
+    /**
+     * Force
+     */
+    force?: boolean;
+};
+
+/**
+ * SendResponse
+ */
+export type SendResponse = {
+    /**
+     * Campaign
+     */
+    campaign: string;
+    /**
+     * Sent
+     */
+    sent?: Array<{
+        [key: string]: string | null;
+    }>;
+    /**
+     * Suppressed
+     */
+    suppressed?: Array<{
+        [key: string]: string | null;
+    }>;
+    /**
+     * Already Sent
+     */
+    already_sent?: Array<{
+        [key: string]: string | null;
+    }>;
+    /**
+     * Failed
+     */
+    failed?: Array<{
+        [key: string]: string | null;
+    }>;
+    /**
+     * Not Attempted
+     */
+    not_attempted?: Array<string>;
+};
+
+/**
  * SessionCreateRequest
  */
 export type SessionCreateRequest = {
@@ -2127,6 +2653,42 @@ export type SubscriptionModel = {
 };
 
 /**
+ * SuppressIn
+ */
+export type SuppressIn = {
+    /**
+     * Email
+     */
+    email: string;
+    /**
+     * Reason
+     */
+    reason?: string;
+};
+
+/**
+ * SuppressionOut
+ */
+export type SuppressionOut = {
+    /**
+     * Email
+     */
+    email: string;
+    /**
+     * Reason
+     */
+    reason?: string | null;
+    /**
+     * Source
+     */
+    source?: string | null;
+    /**
+     * Created At
+     */
+    created_at?: string | null;
+};
+
+/**
  * SurveyOptionModel
  */
 export type SurveyOptionModel = {
@@ -2213,7 +2775,10 @@ export type TrialClaimResponse = {
 /**
  * TrialModel
  *
- * The store's 7-day free-trial state (ADR-0025).
+ * OUR server-granted trial (ADR-0044), not a store trial phase. ``active`` means the account's
+ * ``trial_grants`` row is unexpired and no real subscription outranks it; ``ends_at`` is that
+ * row's ``expires_at``. Apple and Stripe carry no introductory offer, so a store trial phase
+ * no longer exists to report.
  */
 export type TrialModel = {
     /**
@@ -2842,6 +3407,10 @@ export type GetMeV1MeGetData = {
          * X-Device-Id
          */
         'x-device-id'?: string | null;
+        /**
+         * X-Platform
+         */
+        'x-platform'?: string | null;
     };
     path?: never;
     query?: never;
@@ -3096,13 +3665,29 @@ export type RecordConsentsV1MeConsentsPostResponses = {
 
 export type RecordConsentsV1MeConsentsPostResponse = RecordConsentsV1MeConsentsPostResponses[keyof RecordConsentsV1MeConsentsPostResponses];
 
+export type GetPlansV1BillingPlansGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/billing/plans';
+};
+
+export type GetPlansV1BillingPlansGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: PaywallResponse;
+};
+
+export type GetPlansV1BillingPlansGetResponse = GetPlansV1BillingPlansGetResponses[keyof GetPlansV1BillingPlansGetResponses];
+
 export type CreateCheckoutSessionV1BillingCheckoutSessionPostData = {
     body: CheckoutSessionRequest;
     headers?: {
         /**
-         * X-Device-Id
+         * X-Platform
          */
-        'x-device-id'?: string | null;
+        'x-platform'?: string | null;
     };
     path?: never;
     query?: never;
@@ -3828,3 +4413,518 @@ export type GetConfigV1ConfigGetResponses = {
 };
 
 export type GetConfigV1ConfigGetResponse = GetConfigV1ConfigGetResponses[keyof GetConfigV1ConfigGetResponses];
+
+export type ReadPreferencesV1EmailPreferencesGetData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Token
+         *
+         * The signed token from the email's unsubscribe link.
+         */
+        token: string;
+    };
+    url: '/v1/email/preferences';
+};
+
+export type ReadPreferencesV1EmailPreferencesGetErrors = {
+    /**
+     * invalid_token — malformed, unsigned, or wrongly signed link.
+     */
+    400: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ReadPreferencesV1EmailPreferencesGetError = ReadPreferencesV1EmailPreferencesGetErrors[keyof ReadPreferencesV1EmailPreferencesGetErrors];
+
+export type ReadPreferencesV1EmailPreferencesGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: EmailPreferencesResponse;
+};
+
+export type ReadPreferencesV1EmailPreferencesGetResponse = ReadPreferencesV1EmailPreferencesGetResponses[keyof ReadPreferencesV1EmailPreferencesGetResponses];
+
+export type UnsubscribeV1EmailUnsubscribePostData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Token
+         *
+         * The signed token from the email's unsubscribe link.
+         */
+        token: string;
+        /**
+         * Source
+         *
+         * Which surface asked: the page's button, or a mailbox provider's one-click.
+         */
+        source?: string;
+    };
+    url: '/v1/email/unsubscribe';
+};
+
+export type UnsubscribeV1EmailUnsubscribePostErrors = {
+    /**
+     * invalid_token — malformed, unsigned, or wrongly signed link.
+     */
+    400: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UnsubscribeV1EmailUnsubscribePostError = UnsubscribeV1EmailUnsubscribePostErrors[keyof UnsubscribeV1EmailUnsubscribePostErrors];
+
+export type UnsubscribeV1EmailUnsubscribePostResponses = {
+    /**
+     * Successful Response
+     */
+    200: EmailPreferencesResponse;
+};
+
+export type UnsubscribeV1EmailUnsubscribePostResponse = UnsubscribeV1EmailUnsubscribePostResponses[keyof UnsubscribeV1EmailUnsubscribePostResponses];
+
+export type ResubscribeV1EmailResubscribePostData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Token
+         *
+         * The signed token from the email's unsubscribe link.
+         */
+        token: string;
+    };
+    url: '/v1/email/resubscribe';
+};
+
+export type ResubscribeV1EmailResubscribePostErrors = {
+    /**
+     * invalid_token — malformed, unsigned, or wrongly signed link.
+     */
+    400: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ResubscribeV1EmailResubscribePostError = ResubscribeV1EmailResubscribePostErrors[keyof ResubscribeV1EmailResubscribePostErrors];
+
+export type ResubscribeV1EmailResubscribePostResponses = {
+    /**
+     * Successful Response
+     */
+    200: EmailPreferencesResponse;
+};
+
+export type ResubscribeV1EmailResubscribePostResponse = ResubscribeV1EmailResubscribePostResponses[keyof ResubscribeV1EmailResubscribePostResponses];
+
+export type MintLinksV1EmailLinksPostData = {
+    body: MintLinksRequest;
+    headers?: {
+        /**
+         * Authorization
+         *
+         * Operator shared secret (`Bearer <key>` or the bare value).
+         */
+        authorization?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/email/links';
+};
+
+export type MintLinksV1EmailLinksPostErrors = {
+    /**
+     * unauthorized — missing/incorrect operator key.
+     */
+    401: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+    /**
+     * email_links_unavailable — no signing key configured in this env.
+     */
+    503: unknown;
+};
+
+export type MintLinksV1EmailLinksPostError = MintLinksV1EmailLinksPostErrors[keyof MintLinksV1EmailLinksPostErrors];
+
+export type MintLinksV1EmailLinksPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: MintLinksResponse;
+};
+
+export type MintLinksV1EmailLinksPostResponse = MintLinksV1EmailLinksPostResponses[keyof MintLinksV1EmailLinksPostResponses];
+
+export type ListCampaignsV1OpsCampaignsGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/ops/campaigns';
+};
+
+export type ListCampaignsV1OpsCampaignsGetResponses = {
+    /**
+     * Response List Campaigns V1 Ops Campaigns Get
+     *
+     * Successful Response
+     */
+    200: Array<CampaignSummary>;
+};
+
+export type ListCampaignsV1OpsCampaignsGetResponse = ListCampaignsV1OpsCampaignsGetResponses[keyof ListCampaignsV1OpsCampaignsGetResponses];
+
+export type ListDraftsV1OpsCampaignsCampaignDraftsGetData = {
+    body?: never;
+    path: {
+        /**
+         * Campaign
+         */
+        campaign: string;
+    };
+    query?: never;
+    url: '/v1/ops/campaigns/{campaign}/drafts';
+};
+
+export type ListDraftsV1OpsCampaignsCampaignDraftsGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListDraftsV1OpsCampaignsCampaignDraftsGetError = ListDraftsV1OpsCampaignsCampaignDraftsGetErrors[keyof ListDraftsV1OpsCampaignsCampaignDraftsGetErrors];
+
+export type ListDraftsV1OpsCampaignsCampaignDraftsGetResponses = {
+    /**
+     * Response List Drafts V1 Ops Campaigns  Campaign  Drafts Get
+     *
+     * Successful Response
+     */
+    200: Array<DraftOut>;
+};
+
+export type ListDraftsV1OpsCampaignsCampaignDraftsGetResponse = ListDraftsV1OpsCampaignsCampaignDraftsGetResponses[keyof ListDraftsV1OpsCampaignsCampaignDraftsGetResponses];
+
+export type UpsertDraftV1OpsCampaignsCampaignDraftsPutData = {
+    body: DraftIn;
+    path: {
+        /**
+         * Campaign
+         */
+        campaign: string;
+    };
+    query?: never;
+    url: '/v1/ops/campaigns/{campaign}/drafts';
+};
+
+export type UpsertDraftV1OpsCampaignsCampaignDraftsPutErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpsertDraftV1OpsCampaignsCampaignDraftsPutError = UpsertDraftV1OpsCampaignsCampaignDraftsPutErrors[keyof UpsertDraftV1OpsCampaignsCampaignDraftsPutErrors];
+
+export type UpsertDraftV1OpsCampaignsCampaignDraftsPutResponses = {
+    /**
+     * Successful Response
+     */
+    200: DraftOut;
+};
+
+export type UpsertDraftV1OpsCampaignsCampaignDraftsPutResponse = UpsertDraftV1OpsCampaignsCampaignDraftsPutResponses[keyof UpsertDraftV1OpsCampaignsCampaignDraftsPutResponses];
+
+export type DeleteDraftV1OpsCampaignsCampaignDraftsEmailDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * Campaign
+         */
+        campaign: string;
+        /**
+         * Email
+         */
+        email: string;
+    };
+    query?: never;
+    url: '/v1/ops/campaigns/{campaign}/drafts/{email}';
+};
+
+export type DeleteDraftV1OpsCampaignsCampaignDraftsEmailDeleteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteDraftV1OpsCampaignsCampaignDraftsEmailDeleteError = DeleteDraftV1OpsCampaignsCampaignDraftsEmailDeleteErrors[keyof DeleteDraftV1OpsCampaignsCampaignDraftsEmailDeleteErrors];
+
+export type DeleteDraftV1OpsCampaignsCampaignDraftsEmailDeleteResponses = {
+    /**
+     * Response Delete Draft V1 Ops Campaigns  Campaign  Drafts  Email  Delete
+     *
+     * Successful Response
+     */
+    200: {
+        [key: string]: boolean;
+    };
+};
+
+export type DeleteDraftV1OpsCampaignsCampaignDraftsEmailDeleteResponse = DeleteDraftV1OpsCampaignsCampaignDraftsEmailDeleteResponses[keyof DeleteDraftV1OpsCampaignsCampaignDraftsEmailDeleteResponses];
+
+export type GetDraftV1OpsCampaignsCampaignDraftsEmailGetData = {
+    body?: never;
+    path: {
+        /**
+         * Campaign
+         */
+        campaign: string;
+        /**
+         * Email
+         */
+        email: string;
+    };
+    query?: never;
+    url: '/v1/ops/campaigns/{campaign}/drafts/{email}';
+};
+
+export type GetDraftV1OpsCampaignsCampaignDraftsEmailGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetDraftV1OpsCampaignsCampaignDraftsEmailGetError = GetDraftV1OpsCampaignsCampaignDraftsEmailGetErrors[keyof GetDraftV1OpsCampaignsCampaignDraftsEmailGetErrors];
+
+export type GetDraftV1OpsCampaignsCampaignDraftsEmailGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: DraftOut;
+};
+
+export type GetDraftV1OpsCampaignsCampaignDraftsEmailGetResponse = GetDraftV1OpsCampaignsCampaignDraftsEmailGetResponses[keyof GetDraftV1OpsCampaignsCampaignDraftsEmailGetResponses];
+
+export type PreviewV1OpsCampaignsCampaignPreviewPostData = {
+    body: SendRequest;
+    path: {
+        /**
+         * Campaign
+         */
+        campaign: string;
+    };
+    query?: never;
+    url: '/v1/ops/campaigns/{campaign}/preview';
+};
+
+export type PreviewV1OpsCampaignsCampaignPreviewPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PreviewV1OpsCampaignsCampaignPreviewPostError = PreviewV1OpsCampaignsCampaignPreviewPostErrors[keyof PreviewV1OpsCampaignsCampaignPreviewPostErrors];
+
+export type PreviewV1OpsCampaignsCampaignPreviewPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: PreviewResponse;
+};
+
+export type PreviewV1OpsCampaignsCampaignPreviewPostResponse = PreviewV1OpsCampaignsCampaignPreviewPostResponses[keyof PreviewV1OpsCampaignsCampaignPreviewPostResponses];
+
+export type SendV1OpsCampaignsCampaignSendPostData = {
+    body: SendRequest;
+    path: {
+        /**
+         * Campaign
+         */
+        campaign: string;
+    };
+    query?: never;
+    url: '/v1/ops/campaigns/{campaign}/send';
+};
+
+export type SendV1OpsCampaignsCampaignSendPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SendV1OpsCampaignsCampaignSendPostError = SendV1OpsCampaignsCampaignSendPostErrors[keyof SendV1OpsCampaignsCampaignSendPostErrors];
+
+export type SendV1OpsCampaignsCampaignSendPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: SendResponse;
+};
+
+export type SendV1OpsCampaignsCampaignSendPostResponse = SendV1OpsCampaignsCampaignSendPostResponses[keyof SendV1OpsCampaignsCampaignSendPostResponses];
+
+export type HistoryV1OpsCampaignsCampaignHistoryGetData = {
+    body?: never;
+    path: {
+        /**
+         * Campaign
+         */
+        campaign: string;
+    };
+    query?: never;
+    url: '/v1/ops/campaigns/{campaign}/history';
+};
+
+export type HistoryV1OpsCampaignsCampaignHistoryGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type HistoryV1OpsCampaignsCampaignHistoryGetError = HistoryV1OpsCampaignsCampaignHistoryGetErrors[keyof HistoryV1OpsCampaignsCampaignHistoryGetErrors];
+
+export type HistoryV1OpsCampaignsCampaignHistoryGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: HistoryResponse;
+};
+
+export type HistoryV1OpsCampaignsCampaignHistoryGetResponse = HistoryV1OpsCampaignsCampaignHistoryGetResponses[keyof HistoryV1OpsCampaignsCampaignHistoryGetResponses];
+
+export type RecordReplyV1OpsRepliesPostData = {
+    body: ReplyIn;
+    path?: never;
+    query?: never;
+    url: '/v1/ops/replies';
+};
+
+export type RecordReplyV1OpsRepliesPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RecordReplyV1OpsRepliesPostError = RecordReplyV1OpsRepliesPostErrors[keyof RecordReplyV1OpsRepliesPostErrors];
+
+export type RecordReplyV1OpsRepliesPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: ReplyOut;
+};
+
+export type RecordReplyV1OpsRepliesPostResponse = RecordReplyV1OpsRepliesPostResponses[keyof RecordReplyV1OpsRepliesPostResponses];
+
+export type OverviewV1OpsOverviewGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/ops/overview';
+};
+
+export type OverviewV1OpsOverviewGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: OverviewResponse;
+};
+
+export type OverviewV1OpsOverviewGetResponse = OverviewV1OpsOverviewGetResponses[keyof OverviewV1OpsOverviewGetResponses];
+
+export type SuppressionsV1OpsSuppressionsGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/ops/suppressions';
+};
+
+export type SuppressionsV1OpsSuppressionsGetResponses = {
+    /**
+     * Response Suppressions V1 Ops Suppressions Get
+     *
+     * Successful Response
+     */
+    200: Array<SuppressionOut>;
+};
+
+export type SuppressionsV1OpsSuppressionsGetResponse = SuppressionsV1OpsSuppressionsGetResponses[keyof SuppressionsV1OpsSuppressionsGetResponses];
+
+export type SuppressV1OpsSuppressionsPostData = {
+    body: SuppressIn;
+    path?: never;
+    query?: never;
+    url: '/v1/ops/suppressions';
+};
+
+export type SuppressV1OpsSuppressionsPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SuppressV1OpsSuppressionsPostError = SuppressV1OpsSuppressionsPostErrors[keyof SuppressV1OpsSuppressionsPostErrors];
+
+export type SuppressV1OpsSuppressionsPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: SuppressionOut;
+};
+
+export type SuppressV1OpsSuppressionsPostResponse = SuppressV1OpsSuppressionsPostResponses[keyof SuppressV1OpsSuppressionsPostResponses];
+
+export type UnsuppressV1OpsSuppressionsEmailDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * Email
+         */
+        email: string;
+    };
+    query?: never;
+    url: '/v1/ops/suppressions/{email}';
+};
+
+export type UnsuppressV1OpsSuppressionsEmailDeleteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UnsuppressV1OpsSuppressionsEmailDeleteError = UnsuppressV1OpsSuppressionsEmailDeleteErrors[keyof UnsuppressV1OpsSuppressionsEmailDeleteErrors];
+
+export type UnsuppressV1OpsSuppressionsEmailDeleteResponses = {
+    /**
+     * Response Unsuppress V1 Ops Suppressions  Email  Delete
+     *
+     * Successful Response
+     */
+    200: {
+        [key: string]: boolean;
+    };
+};
+
+export type UnsuppressV1OpsSuppressionsEmailDeleteResponse = UnsuppressV1OpsSuppressionsEmailDeleteResponses[keyof UnsuppressV1OpsSuppressionsEmailDeleteResponses];

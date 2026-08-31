@@ -94,6 +94,17 @@ export const createBriefingV1BriefingsPost = (options) => (options.client ?? cli
 });
 /**
  * Current user's entitlement + funnel snapshot (drives client gating/paywall)
+ *
+ * Entitlement + funnel snapshot, and the place the server trial is born (ADR-0044).
+ *
+ * A GET that writes a row is deliberate. Signup happens in Supabase Auth and core has no signup
+ * hook, so there is no other moment we reliably observe a new account — and both clients call
+ * ``/v1/me`` on launch and immediately after login. ``ensure_trial`` is idempotent and skips
+ * anyone with a live subscription, so repeating it on every poll creates at most one row and
+ * never one for a paying customer.
+ *
+ * Anonymous sessions never get a grant: the trial belongs to an account, not a device that has
+ * not signed up yet.
  */
 export const getMeV1MeGet = (options) => (options?.client ?? client).get({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -101,7 +112,18 @@ export const getMeV1MeGet = (options) => (options?.client ?? client).get({
     ...options
 });
 /**
- * Claim the one-free-trial-ever grant (account + device) before the store purchase
+ * DEPRECATED (ADR-0044): the trial is granted by GET /v1/me; this is now a no-op alias
+ *
+ * Kept so the generated SDKs and any shipped client keep compiling. Nothing requires it.
+ *
+ * It now delegates to the same idempotent ``ensure_trial`` that ``GET /v1/me`` uses, so an old
+ * client calling it cannot create a second trial or move an existing expiry.
+ *
+ * ``granted`` keeps its original meaning — did THIS call create the grant — so a shipped client
+ * that branches on it behaves as it always did: the first call grants, the second reports
+ * ``already_used``.
+ *
+ * @deprecated
  */
 export const claimTrialV1MeTrialClaimPost = (options) => (options.client ?? client).post({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -200,7 +222,31 @@ export const recordConsentsV1MeConsentsPost = (options) => (options.client ?? cl
     }
 });
 /**
- * Create a Stripe Checkout Session (card up front; server decides the 7-day trial)
+ * The paywall offer, without having to trip a 402
+ *
+ * The same payload a 402 carries, fetchable on purpose.
+ *
+ * iOS can open its paywall whenever it likes because RevenueCat hands it the offering. The web
+ * client had no such route: its paywall renders only from a 402 body, so a signed-in user whose
+ * trial had expired could not subscribe from Settings at all — the sole way in was to attempt a
+ * gated action and be refused. That is a poor path to ask someone to walk when they have already
+ * decided to pay, and it got worse once the US external link made web checkout the one we prefer.
+ *
+ * Prices are public — they are on the marketing site — so this needs no auth and deliberately
+ * carries no per-account state. It is the offer, not an entitlement decision; ``GET /v1/me``
+ * remains the only thing that says whether a given account is Pro.
+ */
+export const getPlansV1BillingPlansGet = (options) => (options?.client ?? client).get({ url: '/v1/billing/plans', ...options });
+/**
+ * Create a Stripe Checkout Session (plain subscription; no trial — ADR-0044)
+ *
+ * Start a Stripe subscription. Never a trial.
+ *
+ * The claim/release dance this used to perform is gone with the store trial (ADR-0044): the
+ * server granted the trial at signup and it is spent by the time anyone reaches checkout, so
+ * there is nothing to claim and nothing to give back if the session fails to create.
+ *
+ * ``trial_days`` stays on the response for SDK compatibility and is always 0.
  */
 export const createCheckoutSessionV1BillingCheckoutSessionPost = (options) => (options.client ?? client).post({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -463,4 +509,179 @@ export const reportMessageV1ConversationsConversationIdMessagesMessageIdReportPo
  * Force-upgrade verdict + feature flags for this platform/version
  */
 export const getConfigV1ConfigGet = (options) => (options.client ?? client).get({ url: '/v1/config', ...options });
+/**
+ * Read the email preferences behind an unsubscribe link (no state change)
+ */
+export const readPreferencesV1EmailPreferencesGet = (options) => (options.client ?? client).get({ url: '/v1/email/preferences', ...options });
+/**
+ * Unsubscribe this address (idempotent; also the RFC 8058 one-click endpoint)
+ *
+ * Suppresses the address in `public.email_suppressions`, which every marketing send consults — the profile's marketing flag alone would not cover recipients without an account. Safe to call repeatedly: the second call reports the same result as the first. Mailbox providers may POST this URL directly per RFC 8058 (`List-Unsubscribe-Post: List-Unsubscribe=One-Click`); the token is read from the query string, so the form-encoded body they send is ignored.
+ */
+export const unsubscribeV1EmailUnsubscribePost = (options) => (options.client ?? client).post({ url: '/v1/email/unsubscribe', ...options });
+/**
+ * Undo an unsubscribe from the same link (the 'that was a mistake' path)
+ *
+ * Lifts the suppression and re-grants marketing consent when the address has an account. Requires the same signed token, so it can only re-subscribe an address that already receives our mail — it is not a sign-up surface.
+ */
+export const resubscribeV1EmailResubscribePost = (options) => (options.client ?? client).post({ url: '/v1/email/resubscribe', ...options });
+/**
+ * Mint unsubscribe links for a recipient list (OPERATOR ONLY)
+ *
+ * Server-side twin of `scripts/marketing_list.py cold`, for the machine assembling a campaign: it needs links, not the production signing key and not a database URL. Both stay here.
+ *
+ * **Not public.** A token minted for an arbitrary address is one POST away from opting that address out, so an open version of this endpoint would be a mass-unsubscribe button. Authorized by the operator shared secret in the `Authorization` header, compared in constant time, refusing everyone outside `local` when no key is configured.
+ *
+ * Suppressed addresses come back in `suppressed` with **no link** — handing one back would invite a send to someone who already asked us to stop. Each URL belongs to exactly one recipient; they are not interchangeable, and they should not be logged.
+ */
+export const mintLinksV1EmailLinksPost = (options) => (options.client ?? client).post({
+    url: '/v1/email/links',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
+ * Every campaign, newest first
+ */
+export const listCampaignsV1OpsCampaignsGet = (options) => (options?.client ?? client).get({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/ops/campaigns',
+    ...options
+});
+/**
+ * Drafts in a campaign
+ */
+export const listDraftsV1OpsCampaignsCampaignDraftsGet = (options) => (options.client ?? client).get({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/ops/campaigns/{campaign}/drafts',
+    ...options
+});
+/**
+ * Create or replace one recipient's draft
+ *
+ * Refuses a draft that already carries an unsubscribe link or an unsubstituted placeholder, at the point it is saved rather than at send time — a bad draft should never reach the table it will later be sent from.
+ */
+export const upsertDraftV1OpsCampaignsCampaignDraftsPut = (options) => (options.client ?? client).put({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/ops/campaigns/{campaign}/drafts',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
+ * Remove a draft
+ */
+export const deleteDraftV1OpsCampaignsCampaignDraftsEmailDelete = (options) => (options.client ?? client).delete({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/ops/campaigns/{campaign}/drafts/{email}',
+    ...options
+});
+/**
+ * One draft, body included
+ *
+ * So a saved draft can be read back and corrected. Without this the only way to fix a typo is to retype the whole body, which is how drafts drift from what was reviewed.
+ */
+export const getDraftV1OpsCampaignsCampaignDraftsEmailGet = (options) => (options.client ?? client).get({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/ops/campaigns/{campaign}/drafts/{email}',
+    ...options
+});
+/**
+ * What a send would do, changing nothing
+ *
+ * The review step. Starts from the same plan the send uses, so this is not an approximation of what follows — it is the same decision.
+ */
+export const previewV1OpsCampaignsCampaignPreviewPost = (options) => (options.client ?? client).post({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/ops/campaigns/{campaign}/preview',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
+ * Actually mail people
+ *
+ * Refuses on any fatal draft problem or missing configuration, with the same checks the preview reports — so nothing can be sent that the review step would have flagged.
+ */
+export const sendV1OpsCampaignsCampaignSendPost = (options) => (options.client ?? client).post({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/ops/campaigns/{campaign}/send',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
+ * Who was reached, who opted out, who answered
+ */
+export const historyV1OpsCampaignsCampaignHistoryGet = (options) => (options.client ?? client).get({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/ops/campaigns/{campaign}/history',
+    ...options
+});
+/**
+ * Record a reply, bounce or complaint
+ *
+ * A bounce or complaint recorded here is ALSO written to the suppression list. This table is the record; that one is the enforcement, and only the latter stops the next send.
+ */
+export const recordReplyV1OpsRepliesPost = (options) => (options.client ?? client).post({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/ops/replies',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
+ * Everything at a glance: totals, campaigns, and every person reached
+ *
+ * Assembled from campaign_sends, outreach_replies and email_suppressions together. Any one of them alone is misleading: sends without suppressions hides who must not be written to again, and replies without sends hides who never answered.
+ */
+export const overviewV1OpsOverviewGet = (options) => (options?.client ?? client).get({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/ops/overview',
+    ...options
+});
+/**
+ * The do-not-send list
+ *
+ * The AUTHORITY on who must not be mailed. Replies recorded as bounces or complaints are a record of why someone stopped; this is the thing that actually stops a send, and it also holds everyone who used the unsubscribe link in an email.
+ */
+export const suppressionsV1OpsSuppressionsGet = (options) => (options?.client ?? client).get({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/ops/suppressions',
+    ...options
+});
+/**
+ * Add an address to the do-not-send list
+ *
+ * For a removal that arrives out of band — a reply asking to stop, a hard bounce, a complaint the provider forwarded. Idempotent: recording the same opt-out twice keeps the original timestamp, because that is when they asked.
+ */
+export const suppressV1OpsSuppressionsPost = (options) => (options.client ?? client).post({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/ops/suppressions',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
+ * Lift a suppression
+ *
+ * Only for someone who asked to be added back. Removing an opt-out that was not withdrawn is the one action here with no honest justification.
+ */
+export const unsuppressV1OpsSuppressionsEmailDelete = (options) => (options.client ?? client).delete({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/ops/suppressions/{email}',
+    ...options
+});
 //# sourceMappingURL=sdk.gen.js.map
