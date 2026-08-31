@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { EntitlementService } from '../../core/entitlement.service';
+import { PaywallService } from '../../core/paywall.service';
 import { SettingsService, type ThemeMode } from '../../core/settings.service';
 import { FEEDBACK_MAILTO } from '../../version';
 import { PlaceField } from '../plan/place-field';
@@ -145,6 +146,32 @@ const APPLE_SUBSCRIPTIONS_URL = 'https://account.apple.com/account/manage';
             Your free trial ends {{ endsAt | date: 'mediumDate' }}. After that you'll need a
             subscription to keep seeing weather along your route.
           </p>
+        </section>
+      }
+
+      <!--
+        Non-subscribers get the upsell here, mirroring the iOS goProCard. Without it web Settings
+        rendered nothing at all for a signed-in user whose trial had expired: the Free trial card
+        needs a live trial and the Subscription card needs a subscription, so someone who had
+        neither had no way to subscribe except by attempting a gated action and being refused.
+      -->
+      @if (showGoPro()) {
+        <section class="card">
+          <h2>Road Travel Pro</h2>
+          <p class="acct-note">
+            Unlimited routes, future departures, AI briefings and unlimited saved trips.
+          </p>
+          <button
+            type="button"
+            class="acct-btn gopro"
+            [disabled]="plansLoading()"
+            (click)="goPro()"
+          >
+            {{ plansLoading() ? 'Opening…' : 'Go Pro' }}
+          </button>
+          @if (goProError()) {
+            <p class="manage-error" role="alert">{{ goProError() }}</p>
+          }
         </section>
       }
 
@@ -354,6 +381,9 @@ const APPLE_SUBSCRIPTIONS_URL = 'https://account.apple.com/account/manage';
         font-size: 14px;
         color: var(--text);
       }
+      .gopro {
+        margin-top: 12px;
+      }
       .manage-error {
         margin: 8px 0 0;
         font-size: 13px;
@@ -461,6 +491,7 @@ export class Settings {
   readonly feedbackHref = FEEDBACK_MAILTO;
   private readonly api = inject(ApiService);
   private readonly entitlement = inject(EntitlementService);
+  private readonly paywall = inject(PaywallService);
 
   readonly appleSubscriptionsUrl = APPLE_SUBSCRIPTIONS_URL;
 
@@ -477,6 +508,32 @@ export class Settings {
   readonly portalLoading = signal(false);
   readonly manageError = signal<string | null>(null);
   /** The manage entry shows only for a routable subscription (apple/stripe — never promo/dev). */
+  readonly plansLoading = signal(false);
+  readonly goProError = signal<string | null>(null);
+
+  /**
+   * The upsell shows only to a signed-in, non-Pro account. Not to guests (they get the sign-in
+   * wall at the value action, ADR-0025), and not to anyone already Pro — including someone mid
+   * trial, who is Pro and would be baffled to be sold it again.
+   */
+  readonly showGoPro = computed(
+    () => this.entitlement.signedIn() && !this.entitlement.isPro(),
+  );
+
+  /** Fetch the offer and open the paywall — the same component a 402 raises. */
+  async goPro(): Promise<void> {
+    if (this.plansLoading()) return;
+    this.plansLoading.set(true);
+    this.goProError.set(null);
+    try {
+      this.paywall.show(await this.api.getPlans());
+    } catch {
+      this.goProError.set("Couldn't load plans. Please try again.");
+    } finally {
+      this.plansLoading.set(false);
+    }
+  }
+
   readonly manageable = computed(() => {
     const sub = this.entitlement.subscription();
     return sub && (sub.management === 'apple' || sub.management === 'stripe') ? sub : null;
