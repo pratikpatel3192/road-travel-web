@@ -389,3 +389,75 @@ button { font-family: inherit; }
 
 a { color: var(--link); text-decoration: none; transition: color 150ms ease-out; }
 a:hover { color: var(--link-hover); text-decoration: underline; text-underline-offset: 3px; }
+
+/* ------------------------------------------------------------------------------------------------
+   Touch targets.
+
+   Audited at 375px across /plan, /settings and the landing page: the layout holds up (no horizontal
+   scroll, nothing clipped), but almost every control is 30-41px tall — under the 44x44 minimum both
+   Apple and WCAG 2.5.5 ask for. Individually each is a near-miss; together they are why the site
+   feels fiddly on a phone rather than broken.
+
+   Scoped to `pointer: coarse` so a mouse-driven desktop keeps its tighter, denser layout — this is
+   about fingers, not screen width, and a narrow desktop window should not get chunky controls.
+
+   Two techniques, chosen per control:
+
+   - Text controls grow to a real 44px. They sit in normal flow, so a few extra pixels of height
+     costs nothing but comfort.
+   - Icon-only controls keep their visual size and gain an INVISIBLE hit area via ::after. Growing
+     a 32px round swap button to 44px would visibly bloat the form and shove the map chips around;
+     the finger target is what needs to be bigger, not the drawing.
+------------------------------------------------------------------------------------------------ */
+@media (pointer: coarse) {
+  /* Text buttons, links-as-buttons and selects: grow for real. */
+  button,
+  select,
+  [role='button'],
+  .nav-link,
+  .acct-btn,
+  .add {
+    min-height: 44px;
+  }
+
+  /* Link lists (Settings > About, footers): 24px rows are the worst offenders on the page. */
+  .links a,
+  .card a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  /* Icon-only and pill controls: keep the drawing, widen the reach.
+     `inset` is negative so the hit area overhangs the visible edge symmetrically. */
+  .swap,
+  .icon,
+  .back,
+  .map-chip,
+  .leaflet-control-zoom-in,
+  .leaflet-control-zoom-out {
+    position: relative;
+    /* Undo the generic `button { min-height: 44px }` above. Left in place it grew these to 44px
+       TALL while they stayed 30-32px WIDE, turning round icon buttons into pills — the exact
+       visual damage the ::after approach exists to avoid. Caught by measuring, not by reading. */
+    min-height: 0;
+  }
+  .swap::after,
+  .icon::after,
+  .back::after,
+  .map-chip::after,
+  .leaflet-control-zoom-in::after,
+  .leaflet-control-zoom-out::after {
+    content: '';
+    position: absolute;
+    /* Half the shortfall on each side, rounded up: 32px -> 44px needs 6px per edge. */
+    inset: -6px;
+    /* Purely a target: never paints, never intercepts hover styling of siblings. */
+    background: transparent;
+  }
+  /* Leaflet's zoom buttons are 30px, so the shared -6px only reaches 42. Their own inset. */
+  .leaflet-control-zoom-in::after,
+  .leaflet-control-zoom-out::after {
+    inset: -7px;
+  }
+}
