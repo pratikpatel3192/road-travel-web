@@ -85,6 +85,45 @@
 
 .nav-id:hover { border-color: var(--border-strong); text-decoration: none; }
 
+/*
+  The header is a single non-wrapping flex row. Signed OUT that is two items and fits anywhere;
+  signed IN it is six — the App Store CTA, the identity chip, My trips, Driving, Settings, Sign out
+  — which is far wider than a phone. Because nothing wrapped, the header set the document width and
+  the WHOLE PAGE scrolled sideways: content shifted left, the map chips and the identity chip ran
+  off the right edge. Reported from a real phone on 2026-08-31; missed in my own audit because I
+  tested signed out, where the row is short enough to fit.
+
+  Wrapping is the fix rather than a hamburger: no JS, no menu state, no focus trap, and every
+  destination stays visible instead of being hidden behind an affordance people have to discover.
+  The header grows to two rows on a phone, which is the honest cost.
+*/
+@media (max-width: 720px) {
+  .site-header {
+    flex-wrap: wrap;
+    /* 24px each side is a lot of width to spend when the viewport is 375. */
+    padding: 10px 14px;
+    gap: 8px;
+  }
+  .site-nav {
+    /* Own row, full width: `margin-left: auto` would otherwise keep trying to right-align a row
+       that no longer has spare room. */
+    margin-left: 0;
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+  }
+  /* App destinations first; the store CTA is marketing and can take the end of the row. */
+  .nav-store { order: 99; }
+
+  /*
+    Signed in, the store CTA is the widest item in the nav and the least useful: this person already
+    has an account and is deliberately using the web app. Dropping it here is what gets the header
+    from three rows to two on a phone. It stays for SIGNED-OUT mobile visitors, who are exactly the
+    audience it is for, and the marketing landing page keeps its own App Store links regardless.
+  */
+  .site-header.is-signed-in .nav-store { display: none; }
+}
+
 @media (max-width: 520px) {
   .nav-id { max-width: 120px; }
 }
