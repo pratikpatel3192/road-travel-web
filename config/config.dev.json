@@ -2,7 +2,6 @@
   "apiBaseUrl": "https://api-dev.localhost.com:8000",
   "supabaseUrl": "https://ingmghocxkqicbwnpnrf.supabase.co",
   "supabaseAnonKey": "",
-  "mapboxToken": "",
   "revenueCatWebApiKey": "",
   "revenueCatOfferingId": ""
 }

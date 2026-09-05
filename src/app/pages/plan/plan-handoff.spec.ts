@@ -21,7 +21,7 @@ const DENVER: GeoResult = { name: 'Denver, CO', latitude: 39.7392, longitude: -1
  * to an error page or a blank planner. Absent params, nothing about today's behaviour may change.
  *
  * The component class is exercised directly (via `TestBed.runInInjectionContext` + `ngOnInit`) rather
- * than rendered: `Plan`'s template pulls in `RouteMap`, and therefore `mapbox-gl`, which does not run
+ * than rendered: `Plan`'s template pulls in `RouteMap`, and therefore Leaflet, which does not run
  * in jsdom.
  */
 describe('Plan — landing-page ?from=&to= handoff', () => {

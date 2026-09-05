@@ -8,7 +8,7 @@ import { NotFound } from './pages/not-found/not-found';
  * guard, and the catch-all is a real NotFound instead of a redirect to the planner.
  *
  * These assert the route *config* shape rather than resolving the lazy component — invoking
- * `loadComponent` would pull `Plan` (and `mapbox-gl`) into jsdom. The build + the static import
+ * `loadComponent` would pull `Plan` (and Leaflet) into jsdom. The build + the static import
  * string guarantee it resolves to `Plan`.
  */
 describe('ADR-0038 routing: landing page at /, planner at /plan', () => {
