@@ -2,7 +2,6 @@
   "apiBaseUrl": "https://api.roadtravel.info",
   "supabaseUrl": "",
   "supabaseAnonKey": "",
-  "mapboxToken": "",
   "revenueCatWebApiKey": "",
   "revenueCatOfferingId": ""
 }
