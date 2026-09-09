@@ -70,6 +70,7 @@ import { AuthService } from './auth.service';
 import { ConfigService } from './config';
 import { DeviceService } from './device.service';
 import { AccountRequiredError, ApiError, PaywallError } from './errors';
+import { ReferralService } from './referral.service';
 
 /**
  * Thin wrapper over the generated `@road-travel/sdk` (contracts). Injects the per-env base URL and
@@ -84,6 +85,7 @@ export class ApiService {
   private readonly config = inject(ConfigService);
   private readonly auth = inject(AuthService);
   private readonly device = inject(DeviceService);
+  private readonly referral = inject(ReferralService);
 
   private options() {
     // X-Platform is declared, never inferred. The server used to guess it from whether
@@ -216,8 +218,20 @@ export class ApiService {
   }
 
   /** The caller's entitlement + usage snapshot — drives gating and the paywall (F-002). */
+  /**
+   * The entitlement + funnel snapshot, and — since ADR-0045 — where a referral is attributed.
+   *
+   * `X-Referrer` rides only this call, because `/v1/me` is the only endpoint that reads it. It is
+   * sent EVERY time rather than once: the server's first-touch-wins rule makes repetition a no-op,
+   * and that is cheaper and more reliable than tracking on the client whether we already sent it —
+   * which would need its own persisted flag, and would lose the attribution if the one call
+   * carrying it happened to fail.
+   */
   async getMe(): Promise<MeResponse> {
-    const { data, error, response } = await getMeV1MeGet({ ...this.options() });
+    const options = this.options();
+    const ref = this.referral.slug;
+    if (ref) options.headers['X-Referrer'] = ref;
+    const { data, error, response } = await getMeV1MeGet(options);
     if (error || !data) this.raise(response, error);
     return data as MeResponse;
   }

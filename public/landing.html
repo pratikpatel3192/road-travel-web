@@ -22,6 +22,37 @@
 <meta name="theme-color" content="#f5ead8" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#2e2b25" media="(prefers-color-scheme: dark)" />
 
+<!-- ADR-0045 referral capture. This page is where a creator link lands (roadtravel.info/?ref=…),
+     and it is static HTML served by nginx outside Angular (ADR-0038), so it cannot use
+     ReferralService — these few lines are the duplicate, in the same spirit as the duplicated brand
+     CSS that ADR-0038 accepted. Both writers use the same `rt_ref` key and the same
+     only-if-absent rule, so whichever the visitor meets first wins.
+
+     In <head> and synchronous on purpose: the hero form navigates to /plan on submit, and a
+     visitor who clicks fast must not outrun the capture. It touches no DOM, so running before the
+     body exists is free.
+
+     localStorage, not sessionStorage — the gap between clicking a creator link and signing up is
+     frequently days, and magic-link auth bounces the user out to email and back. -->
+<script>
+  (function () {
+    try {
+      var ref = new URLSearchParams(location.search).get('ref');
+      // Mirrors normalize_referrer and the users_referred_by_format_check constraint. Anything
+      // else is dropped here rather than stored and rejected later.
+      if (!ref || !/^[a-z0-9][a-z0-9-]{0,31}$/.test(ref)) return;
+      // Only if absent: first touch wins, matching the server, so a return visit under a different
+      // creator's link cannot overwrite the original attribution.
+      if (localStorage.getItem('rt_ref') !== null) return;
+      localStorage.setItem('rt_ref', ref);
+      // Read by the analytics block at the end of <body>, which cannot run until /config.json has
+      // been fetched. "Holds a referral" is true on every later visit; "was referred just now" is
+      // the countable event, so only THIS branch sets the flag.
+      window.__rtRefCaptured = true;
+    } catch (e) { /* private mode / storage blocked — never break the landing page for this */ }
+  })();
+</script>
+
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -727,6 +758,15 @@
             autocapture: false,
             disable_session_recording: true
           });
+          // ADR-0045. Registered as a super property, not left to ride in $current_url: this page
+          // keeps its query string but the Angular app strips it (place names), so the slug would
+          // otherwise vanish the moment someone clicks through to /plan. PostHog persists super
+          // properties in localStorage on this origin, which the app shares — so registering here
+          // carries the creator across the whole session, landing page and app alike.
+          var ref = null;
+          try { ref = localStorage.getItem('rt_ref'); } catch (e) { /* storage blocked */ }
+          if (ref) window.posthog.register({ referral_slug: ref });
+          if (window.__rtRefCaptured) window.posthog.capture('referral_captured');
         };
         document.head.appendChild(script);
       })
