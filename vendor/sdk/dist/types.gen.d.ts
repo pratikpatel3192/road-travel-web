@@ -1174,6 +1174,111 @@ export type FriendshipModel = {
     expires_at?: string | null;
 };
 /**
+ * GuidanceRouteModel
+ */
+export type GuidanceRouteModel = {
+    /**
+     * Steps
+     */
+    steps: Array<GuidanceStepModel>;
+    /**
+     * Polyline
+     *
+     * [[latitude, longitude], …] for the route.
+     */
+    polyline: Array<Array<number>>;
+    /**
+     * Distance Meters
+     */
+    distance_meters: number;
+    /**
+     * Duration Seconds
+     */
+    duration_seconds: number;
+};
+/**
+ * GuidanceRouteRequest
+ */
+export type GuidanceRouteRequest = {
+    origin: PlaceModel;
+    destination: PlaceModel;
+    /**
+     * Waypoints
+     */
+    waypoints?: Array<PlaceModel>;
+    vehicle?: VehicleProfileModel | null;
+    /**
+     * Alternatives
+     *
+     * Also return alternative routes for the client to score. The weather-aware reroute needs more than one candidate to switch to a clearer one; without this it can only ever confirm the route it already has.
+     */
+    alternatives?: boolean;
+};
+/**
+ * GuidanceRouteResponse
+ *
+ * The primary route, plus alternatives when asked for.
+ *
+ * ``routes[0]`` is always the primary. The flattened fields below mirror it so a client that does
+ * not ask for alternatives — or one built before they existed — keeps working unchanged.
+ * Duplication here is cheaper than a breaking change to a shipped contract.
+ */
+export type GuidanceRouteResponse = {
+    /**
+     * Routes
+     */
+    routes?: Array<GuidanceRouteModel>;
+    /**
+     * Steps
+     */
+    steps: Array<GuidanceStepModel>;
+    /**
+     * Polyline
+     *
+     * [[latitude, longitude], …] for the route.
+     */
+    polyline: Array<Array<number>>;
+    /**
+     * Distance Meters
+     */
+    distance_meters: number;
+    /**
+     * Duration Seconds
+     */
+    duration_seconds: number;
+};
+/**
+ * GuidanceStepModel
+ */
+export type GuidanceStepModel = {
+    /**
+     * Instruction
+     *
+     * Spoken/displayed text, localized by the provider.
+     */
+    instruction: string;
+    /**
+     * Kind
+     *
+     * Maneuver in a closed vocabulary shared by every client: depart, straight, slightLeft, slightRight, turnLeft, turnRight, sharpLeft, sharpRight, uTurn, merge, roundabout, offRamp, onRamp, fork, arrive. Normalized server-side so each client maps ONE vocabulary and a non-English route still yields the right arrow.
+     */
+    kind: string;
+    /**
+     * Polyline
+     *
+     * [[latitude, longitude], …] for this step. The maneuver is at the LAST point.
+     */
+    polyline: Array<Array<number>>;
+    /**
+     * Distance Meters
+     */
+    distance_meters: number;
+    /**
+     * Duration Seconds
+     */
+    duration_seconds: number;
+};
+/**
  * HTTPValidationError
  */
 export type HttpValidationError = {
@@ -1887,29 +1992,35 @@ export type PortalSessionResponse = {
     url: string;
 };
 /**
- * PreviewResponse
+ * PreviewRequest
+ *
+ * Which address to send the sample to, and which variant to render.
  */
-export type PreviewResponse = {
+export type PreviewRequest = {
     /**
-     * Campaign
+     * To
+     *
+     * Where to send the samples.
      */
-    campaign: string;
+    to: string;
     /**
-     * Sender
+     * Name
+     *
+     * Personalisation slot.
      */
-    sender: string;
+    name?: string | null;
     /**
-     * Fatal
+     * Tows
+     *
+     * Render the RV/towing variant of email 4 instead of the general one.
      */
-    fatal?: Array<string>;
+    tows?: boolean;
     /**
-     * Blocking
+     * Trips Planned
+     *
+     * Usage line on the conversion email.
      */
-    blocking?: Array<string>;
-    /**
-     * Rows
-     */
-    rows?: Array<PreviewRow>;
+    trips_planned?: number | null;
 };
 /**
  * PreviewRow
@@ -2182,6 +2293,48 @@ export type RouteSampleModel = {
      * Planned stop duration at this sample (stop-marked samples only).
      */
     dwell_seconds?: number;
+};
+/**
+ * RunRequest
+ *
+ * Whether to actually send. Dry by default — see the endpoint docstring.
+ */
+export type RunRequest = {
+    /**
+     * Dry Run
+     *
+     * Report who WOULD be mailed without sending. Defaults to true on purpose.
+     */
+    dry_run?: boolean;
+};
+/**
+ * RunResponse
+ */
+export type RunResponse = {
+    /**
+     * Considered
+     *
+     * Trials expiring in the next 24-48h, minus payers.
+     */
+    considered: number;
+    /**
+     * Sent
+     *
+     * Masked addresses actually mailed.
+     */
+    sent: Array<string>;
+    /**
+     * Skipped
+     *
+     * Masked address + why, for everyone else.
+     */
+    skipped: Array<{
+        [key: string]: unknown;
+    }>;
+    /**
+     * Dry Run
+     */
+    dry_run: boolean;
 };
 /**
  * SaveDriveRequest
@@ -2867,6 +3020,28 @@ export type VehicleModel = {
     created_at: string;
 };
 /**
+ * VehicleProfileModel
+ *
+ * Large-vehicle constraints for RV / towing routing.
+ *
+ * Mapbox avoids restrictions it knows about, and coverage varies by region — so this changes the
+ * route it suggests, and is NEVER a clearance guarantee. Any UI built on it has to say so.
+ */
+export type VehicleProfileModel = {
+    /**
+     * Max Height Meters
+     */
+    max_height_meters?: number | null;
+    /**
+     * Max Width Meters
+     */
+    max_width_meters?: number | null;
+    /**
+     * Max Weight Tons
+     */
+    max_weight_tons?: number | null;
+};
+/**
  * VehicleTypeModel
  */
 export type VehicleTypeModel = {
@@ -3053,6 +3228,48 @@ export type WorstStretchModel = {
      * End Distance Meters
      */
     end_distance_meters: number;
+};
+/**
+ * PreviewResponse
+ */
+export type RoadTravelCoreApiOpsLifecyclePreviewResponse = {
+    /**
+     * Sent
+     *
+     * Keys of the messages actually handed to the sender.
+     */
+    sent: Array<string>;
+    /**
+     * Skipped
+     *
+     * Keys that were not sent, and why.
+     */
+    skipped: Array<string>;
+};
+/**
+ * PreviewResponse
+ */
+export type RoadTravelCoreSchemasOpsCampaignsPreviewResponse = {
+    /**
+     * Campaign
+     */
+    campaign: string;
+    /**
+     * Sender
+     */
+    sender: string;
+    /**
+     * Fatal
+     */
+    fatal?: Array<string>;
+    /**
+     * Blocking
+     */
+    blocking?: Array<string>;
+    /**
+     * Rows
+     */
+    rows?: Array<PreviewRow>;
 };
 export type HealthHealthGetData = {
     body?: never;
@@ -3245,6 +3462,26 @@ export type CreateBriefingV1BriefingsPostResponses = {
     200: BriefingResponse;
 };
 export type CreateBriefingV1BriefingsPostResponse = CreateBriefingV1BriefingsPostResponses[keyof CreateBriefingV1BriefingsPostResponses];
+export type GuidanceRouteV1GuidanceRoutePostData = {
+    body: GuidanceRouteRequest;
+    path?: never;
+    query?: never;
+    url: '/v1/guidance/route';
+};
+export type GuidanceRouteV1GuidanceRoutePostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+export type GuidanceRouteV1GuidanceRoutePostError = GuidanceRouteV1GuidanceRoutePostErrors[keyof GuidanceRouteV1GuidanceRoutePostErrors];
+export type GuidanceRouteV1GuidanceRoutePostResponses = {
+    /**
+     * Successful Response
+     */
+    200: GuidanceRouteResponse;
+};
+export type GuidanceRouteV1GuidanceRoutePostResponse = GuidanceRouteV1GuidanceRoutePostResponses[keyof GuidanceRouteV1GuidanceRoutePostResponses];
 export type GetMeV1MeGetData = {
     body?: never;
     headers?: {
@@ -3256,6 +3493,10 @@ export type GetMeV1MeGetData = {
          * X-Platform
          */
         'x-platform'?: string | null;
+        /**
+         * X-Referrer
+         */
+        'x-referrer'?: string | null;
     };
     path?: never;
     query?: never;
@@ -4221,6 +4462,46 @@ export type MintLinksV1EmailLinksPostResponses = {
     200: MintLinksResponse;
 };
 export type MintLinksV1EmailLinksPostResponse = MintLinksV1EmailLinksPostResponses[keyof MintLinksV1EmailLinksPostResponses];
+export type PreviewSequenceV1OpsLifecyclePreviewPostData = {
+    body: PreviewRequest;
+    path?: never;
+    query?: never;
+    url: '/v1/ops/lifecycle/preview';
+};
+export type PreviewSequenceV1OpsLifecyclePreviewPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+export type PreviewSequenceV1OpsLifecyclePreviewPostError = PreviewSequenceV1OpsLifecyclePreviewPostErrors[keyof PreviewSequenceV1OpsLifecyclePreviewPostErrors];
+export type PreviewSequenceV1OpsLifecyclePreviewPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: RoadTravelCoreApiOpsLifecyclePreviewResponse;
+};
+export type PreviewSequenceV1OpsLifecyclePreviewPostResponse = PreviewSequenceV1OpsLifecyclePreviewPostResponses[keyof PreviewSequenceV1OpsLifecyclePreviewPostResponses];
+export type RunConversionEmailsV1OpsLifecycleRunConversionPostData = {
+    body: RunRequest;
+    path?: never;
+    query?: never;
+    url: '/v1/ops/lifecycle/run-conversion';
+};
+export type RunConversionEmailsV1OpsLifecycleRunConversionPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+export type RunConversionEmailsV1OpsLifecycleRunConversionPostError = RunConversionEmailsV1OpsLifecycleRunConversionPostErrors[keyof RunConversionEmailsV1OpsLifecycleRunConversionPostErrors];
+export type RunConversionEmailsV1OpsLifecycleRunConversionPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: RunResponse;
+};
+export type RunConversionEmailsV1OpsLifecycleRunConversionPostResponse = RunConversionEmailsV1OpsLifecycleRunConversionPostResponses[keyof RunConversionEmailsV1OpsLifecycleRunConversionPostResponses];
 export type ListCampaignsV1OpsCampaignsGetData = {
     body?: never;
     path?: never;
@@ -4372,7 +4653,7 @@ export type PreviewV1OpsCampaignsCampaignPreviewPostResponses = {
     /**
      * Successful Response
      */
-    200: PreviewResponse;
+    200: RoadTravelCoreSchemasOpsCampaignsPreviewResponse;
 };
 export type PreviewV1OpsCampaignsCampaignPreviewPostResponse = PreviewV1OpsCampaignsCampaignPreviewPostResponses[keyof PreviewV1OpsCampaignsCampaignPreviewPostResponses];
 export type SendV1OpsCampaignsCampaignSendPostData = {
