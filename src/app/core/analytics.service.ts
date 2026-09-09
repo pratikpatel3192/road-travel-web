@@ -20,7 +20,13 @@ import { ConfigService } from './config';
  * different projects — or, with no key, at none: the service stays inert and the app is unaffected.
  */
 
-/** The cross-platform taxonomy. Keep in lockstep with iOS `AnalyticsEvent.name`. */
+/**
+ * The cross-platform taxonomy. Keep in lockstep with iOS `AnalyticsEvent.name`.
+ *
+ * `referral_captured` (ADR-0045) is **web-only**, like `purchase_restored` is iOS-only: the
+ * referral path exists only on the web, because Apple passes no install referrer and there is no
+ * iOS equivalent of the Play Install Referrer. There is nothing for the iOS taxonomy to mirror.
+ */
 export type AnalyticsEventName =
   | 'app_launched'
   | 'trip_planned'
@@ -28,7 +34,8 @@ export type AnalyticsEventName =
   | 'route_blocked_free_cap'
   | 'paywall_viewed'
   | 'purchase_completed'
-  | 'purchase_restored';
+  | 'purchase_restored'
+  | 'referral_captured';
 
 /** Event properties. Mirrors the iOS `[String: String]` shape — coarse values, never PII. */
 export type AnalyticsProperties = Record<string, string | number | boolean>;
@@ -36,6 +43,7 @@ export type AnalyticsProperties = Record<string, string | number | boolean>;
 type PostHogLike = {
   init: (key: string, options: Record<string, unknown>) => void;
   capture: (event: string, properties?: Record<string, unknown>) => void;
+  register: (properties: Record<string, unknown>) => void;
 };
 
 @Injectable({ providedIn: 'root' })
@@ -47,6 +55,8 @@ export class AnalyticsService {
   private started = false;
   /** Events raised before the lazily-imported SDK lands; flushed in order once it does. */
   private readonly pending: { name: string; properties?: AnalyticsProperties }[] = [];
+  /** Super properties, held until the SDK lands so they apply to the queued events too. */
+  private readonly superProperties: AnalyticsProperties = {};
 
   /** Whether events are actually being sent (false when no key is configured). */
   get enabled(): boolean {
@@ -92,6 +102,10 @@ export class AnalyticsService {
         sanitize_properties: (properties: Record<string, unknown>) => sanitize(properties),
       });
       this.posthog = posthog;
+      // Register BEFORE the flush, so events raised during startup — `app_launched` and
+      // `referral_captured` both are — carry the super properties too. Registering after would
+      // attribute the whole first burst to nobody.
+      if (Object.keys(this.superProperties).length) posthog.register(this.superProperties);
       for (const queued of this.pending.splice(0)) {
         posthog.capture(queued.name, queued.properties);
       }
@@ -105,6 +119,31 @@ export class AnalyticsService {
   /** Emit a taxonomy event. A no-op when analytics are not configured. */
   capture(name: AnalyticsEventName, properties?: AnalyticsProperties): void {
     this.send(name, properties);
+  }
+
+  /**
+   * ADR-0045: attach the referring creator to EVERY subsequent event, including the ones PostHog
+   * raises itself (`$pageleave`).
+   *
+   * A super property rather than a property on one event, because the question a creator payout
+   * conversation actually asks is not "how many people clicked" but "how does this creator's
+   * traffic convert" — which needs the slug on `paywall_viewed` and `purchase_completed`, not on
+   * the capture event. The database remains authoritative for who gets paid; this is the funnel
+   * around that number.
+   *
+   * Safe to call before {@link init}: the value is held and registered when the SDK lands.
+   *
+   * NOT PII, and not an `identify()`. It is a marketing label for the link the visitor arrived on,
+   * carries nothing about the person, and creates no link to the Supabase account — so ADR-0037's
+   * `Linked = false` privacy posture and its no-consent-banner story are both unaffected.
+   */
+  attachReferral(slug: string | null): void {
+    if (!slug) return;
+    // Deliberately NOT named `*referrer*`: `sanitize()` below splits any property whose KEY matches
+    // /url|referrer|pathname/i on `?` or `#`. A slug contains neither so it would survive today,
+    // but the name would be sitting inside a trap. `referral_slug` mirrors `public.users.referred_by`.
+    this.superProperties['referral_slug'] = slug;
+    this.posthog?.register({ referral_slug: slug });
   }
 
   /** `$pageview` for one Angular navigation. The query string is dropped (it carries place names). */

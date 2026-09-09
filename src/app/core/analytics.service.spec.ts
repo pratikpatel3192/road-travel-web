@@ -6,6 +6,7 @@ import { AnalyticsService } from './analytics.service';
 import { ConfigService } from './config';
 
 const captured: { name: string; properties?: Record<string, unknown> }[] = [];
+const registered: Record<string, unknown>[] = [];
 let initArgs: { key: string; options: Record<string, unknown> } | null = null;
 
 vi.mock('posthog-js', () => ({
@@ -15,6 +16,9 @@ vi.mock('posthog-js', () => ({
     },
     capture: (name: string, properties?: Record<string, unknown>) => {
       captured.push({ name, properties });
+    },
+    register: (properties: Record<string, unknown>) => {
+      registered.push(properties);
     },
   },
 }));
@@ -47,6 +51,7 @@ describe('AnalyticsService', () => {
 
   beforeEach(() => {
     captured.length = 0;
+    registered.length = 0;
     initArgs = null;
   });
 
@@ -102,6 +107,64 @@ describe('AnalyticsService', () => {
     expect(pageviews.map((p) => p.properties?.['$pathname'])).toEqual(['/plan', '/settings']);
     // The endpoints the user typed must not reach the analytics vendor.
     expect(JSON.stringify(pageviews)).not.toContain('Chicago');
+  });
+
+  // --- ADR-0045 referral attribution -------------------------------------------------------------
+  it('registers the creator slug BEFORE flushing queued events, so the startup burst is attributed', async () => {
+    const analytics = make(configWith({ posthogKey: 'phc_test' }));
+    analytics.init();
+    // Exactly the bootstrap order in app.config.ts: attach, then the first events, all of it
+    // before the lazily-imported SDK has landed.
+    analytics.attachReferral('jess-miles-from-missouri');
+    analytics.capture('app_launched');
+    analytics.capture('referral_captured');
+    expect(captured).toEqual([]);
+
+    await new Promise((r) => setTimeout(r, 0));
+
+    // Registering after the flush would have attributed the whole first burst to nobody.
+    expect(registered).toEqual([{ referral_slug: 'jess-miles-from-missouri' }]);
+    expect(captured.map((c) => c.name)).toEqual(['app_launched', 'referral_captured']);
+  });
+
+  it('registers immediately when the SDK has already landed', async () => {
+    const analytics = make(configWith({ posthogKey: 'phc_test' }));
+    analytics.init();
+    await new Promise((r) => setTimeout(r, 0));
+    analytics.attachReferral('creator-a');
+    expect(registered).toEqual([{ referral_slug: 'creator-a' }]);
+  });
+
+  it('registers nothing when there is no referral', async () => {
+    const analytics = make(configWith({ posthogKey: 'phc_test' }));
+    analytics.init();
+    analytics.attachReferral(null);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(registered).toEqual([]);
+  });
+
+  it('the slug survives sanitize() — the property name deliberately avoids the URL heuristic', async () => {
+    const analytics = make(configWith({ posthogKey: 'phc_test' }));
+    analytics.init();
+    await new Promise((r) => setTimeout(r, 0));
+    const sanitize = initArgs!.options['sanitize_properties'] as (
+      p: Record<string, unknown>,
+    ) => Record<string, unknown>;
+
+    // `sanitize` splits any property whose KEY matches /url|referrer|pathname/i. A property named
+    // `referrer_slug` would sit inside that trap; `referral_slug` does not match it at all.
+    expect(sanitize({ referral_slug: 'jess-miles-from-missouri' })['referral_slug']).toBe(
+      'jess-miles-from-missouri',
+    );
+  });
+
+  it('stays inert for attachReferral when no project key is configured', async () => {
+    const analytics = make(configWith());
+    analytics.init();
+    analytics.attachReferral('creator-a');
+    await new Promise((r) => setTimeout(r, 0));
+    expect(registered).toEqual([]);
+    expect(captured).toEqual([]);
   });
 
   it('strips the query string from PostHog’s automatic URL properties', async () => {
