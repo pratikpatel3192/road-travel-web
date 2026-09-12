@@ -1220,6 +1220,193 @@ export type FriendshipModel = {
 };
 
 /**
+ * GuidanceRouteModel
+ */
+export type GuidanceRouteModel = {
+    /**
+     * Name
+     *
+     * The road this route is mostly on ("I-35") — how a driver tells alternatives apart.
+     */
+    name?: string;
+    /**
+     * Steps
+     */
+    steps: Array<GuidanceStepModel>;
+    /**
+     * Polyline
+     *
+     * [[latitude, longitude], …] for the route.
+     */
+    polyline: Array<Array<number>>;
+    /**
+     * Distance Meters
+     */
+    distance_meters: number;
+    /**
+     * Duration Seconds
+     */
+    duration_seconds: number;
+};
+
+/**
+ * GuidanceRouteRequest
+ */
+export type GuidanceRouteRequest = {
+    origin: PlaceModel;
+    destination: PlaceModel;
+    /**
+     * Waypoints
+     */
+    waypoints?: Array<PlaceModel>;
+    vehicle?: VehicleProfileModel | null;
+    /**
+     * Avoid Tolls
+     *
+     * Route around toll roads. The clients have had an Avoid-tolls setting all along; before this it reached MapKit and not the server, so turning it on changed nothing once routing moved server-side.
+     */
+    avoid_tolls?: boolean;
+    /**
+     * Alternatives
+     *
+     * Also return alternative routes for the client to score. The weather-aware reroute needs more than one candidate to switch to a clearer one; without this it can only ever confirm the route it already has.
+     */
+    alternatives?: boolean;
+    /**
+     * Origin Bearing
+     *
+     * The driver's heading in degrees, when routing from a moving car. Keeps the new route from starting on the opposite carriageway, which opens it with a needless U-turn.
+     */
+    origin_bearing?: number | null;
+    /**
+     * Origin Radius Meters
+     *
+     * Only snap the origin to roads this close — for routing from a live GPS fix. Without it, a driver on toll lanes with tolls excluded is snapped to the frontage road beside them, and every reroute starts somewhere they are not.
+     */
+    origin_radius_meters?: number | null;
+    /**
+     * Units
+     *
+     * Units for spoken announcements. Must match what the driver reads on screen, or the voice says 400 metres under a banner reading 0.2 mi.
+     */
+    units?: 'imperial' | 'metric';
+};
+
+/**
+ * GuidanceRouteResponse
+ *
+ * The primary route, plus alternatives when asked for.
+ *
+ * ``routes[0]`` is always the primary. The flattened fields below mirror it so a client that does
+ * not ask for alternatives — or one built before they existed — keeps working unchanged.
+ * Duplication here is cheaper than a breaking change to a shipped contract.
+ */
+export type GuidanceRouteResponse = {
+    /**
+     * Avoided Tolls
+     *
+     * Whether the returned route actually avoids tolls. False when `avoid_tolls` was asked for but no toll-free route exists — the route is still returned, because stranding a driver over a preference is worse than routing them onto a toll and saying so.
+     */
+    avoided_tolls?: boolean;
+    /**
+     * Routes
+     */
+    routes?: Array<GuidanceRouteModel>;
+    /**
+     * Name
+     *
+     * Mirrors routes[0].name.
+     */
+    name?: string;
+    /**
+     * Steps
+     */
+    steps: Array<GuidanceStepModel>;
+    /**
+     * Polyline
+     *
+     * [[latitude, longitude], …] for the route.
+     */
+    polyline: Array<Array<number>>;
+    /**
+     * Distance Meters
+     */
+    distance_meters: number;
+    /**
+     * Duration Seconds
+     */
+    duration_seconds: number;
+};
+
+/**
+ * GuidanceStepModel
+ */
+export type GuidanceStepModel = {
+    /**
+     * Instruction
+     *
+     * Spoken/displayed text, localized by the provider.
+     */
+    instruction: string;
+    /**
+     * Kind
+     *
+     * What the maneuver IS: depart, straight, turn, merge, roundabout, offRamp, onRamp, fork, uTurn, arrive. Normalized server-side so each client maps one vocabulary and a non-English route still yields the right arrow.
+     */
+    kind: string;
+    /**
+     * Direction
+     *
+     * Which WAY it goes: none, straight, slightLeft, left, sharpLeft, slightRight, right, sharpRight. Kept separate from `kind` because Mapbox models it that way — flattening the two dropped the direction from ramps and forks entirely.
+     */
+    direction?: string;
+    /**
+     * Polyline
+     *
+     * [[latitude, longitude], …] for the road leading TO this step's maneuver. The maneuver is at the LAST point, so a client counts down along this line to the turn.
+     */
+    polyline: Array<Array<number>>;
+    /**
+     * Distance Meters
+     */
+    distance_meters: number;
+    /**
+     * Duration Seconds
+     */
+    duration_seconds: number;
+    /**
+     * Voice
+     *
+     * Provider-phrased announcements for this maneuver, farthest first. Empty means the client times its own announcements from `instruction`.
+     */
+    voice?: Array<VoiceInstructionModel>;
+    /**
+     * Secondary Text
+     *
+     * Sign text under the maneuver ("toward Waco").
+     */
+    secondary_text?: string | null;
+    /**
+     * Exit Number
+     *
+     * Which exit to take — roundabouts and rotaries only.
+     */
+    exit_number?: number | null;
+    /**
+     * Lanes
+     *
+     * Lane guidance, left to right. Empty unless lanes matter for this maneuver.
+     */
+    lanes?: Array<LaneModel>;
+    /**
+     * Lanes From Meters
+     *
+     * Start showing `lanes` this many metres out, along the road.
+     */
+    lanes_from_meters?: number | null;
+};
+
+/**
  * HTTPValidationError
  */
 export type HttpValidationError = {
@@ -1331,6 +1518,30 @@ export type HistoryRow = {
      * Replied
      */
     replied?: boolean;
+};
+
+/**
+ * LaneModel
+ */
+export type LaneModel = {
+    /**
+     * Directions
+     *
+     * The lane's painted arrows: straight, slightLeft, left, sharpLeft, slightRight, right, sharpRight, uTurn. Empty when the provider names one outside this set — the lane still occupies its position.
+     */
+    directions?: Array<string>;
+    /**
+     * Valid
+     *
+     * This lane can be used for the maneuver.
+     */
+    valid: boolean;
+    /**
+     * Preferred
+     *
+     * Of `directions`, the one that completes the maneuver.
+     */
+    preferred?: string | null;
 };
 
 /**
@@ -1959,29 +2170,35 @@ export type PortalSessionResponse = {
 };
 
 /**
- * PreviewResponse
+ * PreviewRequest
+ *
+ * Which address to send the sample to, and which variant to render.
  */
-export type PreviewResponse = {
+export type PreviewRequest = {
     /**
-     * Campaign
+     * To
+     *
+     * Where to send the samples.
      */
-    campaign: string;
+    to: string;
     /**
-     * Sender
+     * Name
+     *
+     * Personalisation slot.
      */
-    sender: string;
+    name?: string | null;
     /**
-     * Fatal
+     * Tows
+     *
+     * Render the RV/towing variant of email 4 instead of the general one.
      */
-    fatal?: Array<string>;
+    tows?: boolean;
     /**
-     * Blocking
+     * Trips Planned
+     *
+     * Usage line on the conversion email.
      */
-    blocking?: Array<string>;
-    /**
-     * Rows
-     */
-    rows?: Array<PreviewRow>;
+    trips_planned?: number | null;
 };
 
 /**
@@ -2262,6 +2479,50 @@ export type RouteSampleModel = {
      * Planned stop duration at this sample (stop-marked samples only).
      */
     dwell_seconds?: number;
+};
+
+/**
+ * RunRequest
+ *
+ * Whether to actually send. Dry by default — see the endpoint docstring.
+ */
+export type RunRequest = {
+    /**
+     * Dry Run
+     *
+     * Report who WOULD be mailed without sending. Defaults to true on purpose.
+     */
+    dry_run?: boolean;
+};
+
+/**
+ * RunResponse
+ */
+export type RunResponse = {
+    /**
+     * Considered
+     *
+     * Trials expiring in the next 24-48h, minus payers.
+     */
+    considered: number;
+    /**
+     * Sent
+     *
+     * Masked addresses actually mailed.
+     */
+    sent: Array<string>;
+    /**
+     * Skipped
+     *
+     * Masked address + why, for everyone else.
+     */
+    skipped: Array<{
+        [key: string]: unknown;
+    }>;
+    /**
+     * Dry Run
+     */
+    dry_run: boolean;
 };
 
 /**
@@ -2974,6 +3235,29 @@ export type VehicleModel = {
 };
 
 /**
+ * VehicleProfileModel
+ *
+ * Large-vehicle constraints for RV / towing routing.
+ *
+ * Mapbox avoids restrictions it knows about, and coverage varies by region — so this changes the
+ * route it suggests, and is NEVER a clearance guarantee. Any UI built on it has to say so.
+ */
+export type VehicleProfileModel = {
+    /**
+     * Max Height Meters
+     */
+    max_height_meters?: number | null;
+    /**
+     * Max Width Meters
+     */
+    max_width_meters?: number | null;
+    /**
+     * Max Weight Tons
+     */
+    max_weight_tons?: number | null;
+};
+
+/**
  * VehicleTypeModel
  */
 export type VehicleTypeModel = {
@@ -3033,6 +3317,22 @@ export type VehiclesResponse = {
      * Vehicles
      */
     vehicles: Array<VehicleModel>;
+};
+
+/**
+ * VoiceInstructionModel
+ */
+export type VoiceInstructionModel = {
+    /**
+     * Distance Meters
+     *
+     * Speak when this many metres remain to the maneuver, measured ALONG the road — not straight-line, which fires early wherever the road bends.
+     */
+    distance_meters: number;
+    /**
+     * Text
+     */
+    text: string;
 };
 
 /**
@@ -3166,6 +3466,50 @@ export type WorstStretchModel = {
      * End Distance Meters
      */
     end_distance_meters: number;
+};
+
+/**
+ * PreviewResponse
+ */
+export type RoadTravelCoreApiOpsLifecyclePreviewResponse = {
+    /**
+     * Sent
+     *
+     * Keys of the messages actually handed to the sender.
+     */
+    sent: Array<string>;
+    /**
+     * Skipped
+     *
+     * Keys that were not sent, and why.
+     */
+    skipped: Array<string>;
+};
+
+/**
+ * PreviewResponse
+ */
+export type RoadTravelCoreSchemasOpsCampaignsPreviewResponse = {
+    /**
+     * Campaign
+     */
+    campaign: string;
+    /**
+     * Sender
+     */
+    sender: string;
+    /**
+     * Fatal
+     */
+    fatal?: Array<string>;
+    /**
+     * Blocking
+     */
+    blocking?: Array<string>;
+    /**
+     * Rows
+     */
+    rows?: Array<PreviewRow>;
 };
 
 export type HealthHealthGetData = {
@@ -3400,6 +3744,31 @@ export type CreateBriefingV1BriefingsPostResponses = {
 
 export type CreateBriefingV1BriefingsPostResponse = CreateBriefingV1BriefingsPostResponses[keyof CreateBriefingV1BriefingsPostResponses];
 
+export type GuidanceRouteV1GuidanceRoutePostData = {
+    body: GuidanceRouteRequest;
+    path?: never;
+    query?: never;
+    url: '/v1/guidance/route';
+};
+
+export type GuidanceRouteV1GuidanceRoutePostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GuidanceRouteV1GuidanceRoutePostError = GuidanceRouteV1GuidanceRoutePostErrors[keyof GuidanceRouteV1GuidanceRoutePostErrors];
+
+export type GuidanceRouteV1GuidanceRoutePostResponses = {
+    /**
+     * Successful Response
+     */
+    200: GuidanceRouteResponse;
+};
+
+export type GuidanceRouteV1GuidanceRoutePostResponse = GuidanceRouteV1GuidanceRoutePostResponses[keyof GuidanceRouteV1GuidanceRoutePostResponses];
+
 export type GetMeV1MeGetData = {
     body?: never;
     headers?: {
@@ -3411,6 +3780,10 @@ export type GetMeV1MeGetData = {
          * X-Platform
          */
         'x-platform'?: string | null;
+        /**
+         * X-Referrer
+         */
+        'x-referrer'?: string | null;
     };
     path?: never;
     query?: never;
@@ -4569,6 +4942,56 @@ export type MintLinksV1EmailLinksPostResponses = {
 
 export type MintLinksV1EmailLinksPostResponse = MintLinksV1EmailLinksPostResponses[keyof MintLinksV1EmailLinksPostResponses];
 
+export type PreviewSequenceV1OpsLifecyclePreviewPostData = {
+    body: PreviewRequest;
+    path?: never;
+    query?: never;
+    url: '/v1/ops/lifecycle/preview';
+};
+
+export type PreviewSequenceV1OpsLifecyclePreviewPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PreviewSequenceV1OpsLifecyclePreviewPostError = PreviewSequenceV1OpsLifecyclePreviewPostErrors[keyof PreviewSequenceV1OpsLifecyclePreviewPostErrors];
+
+export type PreviewSequenceV1OpsLifecyclePreviewPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: RoadTravelCoreApiOpsLifecyclePreviewResponse;
+};
+
+export type PreviewSequenceV1OpsLifecyclePreviewPostResponse = PreviewSequenceV1OpsLifecyclePreviewPostResponses[keyof PreviewSequenceV1OpsLifecyclePreviewPostResponses];
+
+export type RunConversionEmailsV1OpsLifecycleRunConversionPostData = {
+    body: RunRequest;
+    path?: never;
+    query?: never;
+    url: '/v1/ops/lifecycle/run-conversion';
+};
+
+export type RunConversionEmailsV1OpsLifecycleRunConversionPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RunConversionEmailsV1OpsLifecycleRunConversionPostError = RunConversionEmailsV1OpsLifecycleRunConversionPostErrors[keyof RunConversionEmailsV1OpsLifecycleRunConversionPostErrors];
+
+export type RunConversionEmailsV1OpsLifecycleRunConversionPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: RunResponse;
+};
+
+export type RunConversionEmailsV1OpsLifecycleRunConversionPostResponse = RunConversionEmailsV1OpsLifecycleRunConversionPostResponses[keyof RunConversionEmailsV1OpsLifecycleRunConversionPostResponses];
+
 export type ListCampaignsV1OpsCampaignsGetData = {
     body?: never;
     path?: never;
@@ -4746,7 +5169,7 @@ export type PreviewV1OpsCampaignsCampaignPreviewPostResponses = {
     /**
      * Successful Response
      */
-    200: PreviewResponse;
+    200: RoadTravelCoreSchemasOpsCampaignsPreviewResponse;
 };
 
 export type PreviewV1OpsCampaignsCampaignPreviewPostResponse = PreviewV1OpsCampaignsCampaignPreviewPostResponses[keyof PreviewV1OpsCampaignsCampaignPreviewPostResponses];

@@ -93,6 +93,22 @@ export const createBriefingV1BriefingsPost = (options) => (options.client ?? cli
     }
 });
 /**
+ * Turn-by-turn maneuvers for a route
+ *
+ * Returns the route polyline plus per-step maneuvers in a closed vocabulary shared by every client. Clients drive their own guidance loop from this — the server states what the turns are, never when to speak them.
+ *
+ * Available to every signed-in account. It was Pro-only, which left free users on each platform's own routing and its own maneuver guesswork; correct directions are not a premium tier.
+ */
+export const guidanceRouteV1GuidanceRoutePost = (options) => (options.client ?? client).post({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/guidance/route',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
  * Current user's entitlement + funnel snapshot (drives client gating/paywall)
  *
  * Entitlement + funnel snapshot, and the place the server trial is born (ADR-0044).
@@ -105,6 +121,15 @@ export const createBriefingV1BriefingsPost = (options) => (options.client ?? cli
  *
  * Anonymous sessions never get a grant: the trial belongs to an account, not a device that has
  * not signed up yet.
+ *
+ * ADR-0045 adds a SECOND idempotent write to that same justified exception, so the next reader
+ * knows it was reasoned about rather than crept in: ``X-Referrer`` records the creator who sent
+ * this account. It belongs here for the same reason the trial does — there is no signup hook, and
+ * this is the one call both clients make on launch and immediately after login. It is
+ * first-touch-wins and therefore a no-op on every call after the first, exactly like the trial.
+ *
+ * ``X-Referrer`` follows the ``X-Platform`` precedent: **the client declares it, the server never
+ * infers it.** Nothing is derived from the ``Referer`` header or the source IP.
  */
 export const getMeV1MeGet = (options) => (options?.client ?? client).get({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -536,6 +561,34 @@ export const resubscribeV1EmailResubscribePost = (options) => (options.client ??
  */
 export const mintLinksV1EmailLinksPost = (options) => (options.client ?? client).post({
     url: '/v1/email/links',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
+ * Send the full new-signup sequence to one address (operator only)
+ */
+export const previewSequenceV1OpsLifecyclePreviewPost = (options) => (options.client ?? client).post({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/ops/lifecycle/preview',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
+ * Send the day-6 'your trial ends tomorrow' email (operator only; dry by default)
+ *
+ * Finds every server trial expiring in the next 24-48 hours, excluding anyone who has already subscribed, and sends the conversion email with that account's real trip count. Idempotent: each send is recorded in `public.campaign_sends` under `lifecycle:conversion`, so a re-run skips anyone already mailed. Consent and suppression are both enforced.
+ *
+ * `dry_run` defaults to **true**: the default behaviour of an endpoint that sends marketing to real users should be to send nothing. Pass `false` deliberately.
+ */
+export const runConversionEmailsV1OpsLifecycleRunConversionPost = (options) => (options.client ?? client).post({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/ops/lifecycle/run-conversion',
     ...options,
     headers: {
         'Content-Type': 'application/json',
