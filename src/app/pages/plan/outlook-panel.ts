@@ -40,7 +40,9 @@ import { IconComponent } from '../../ui/icon';
 
       @if (outlook().better_window; as window) {
         <p class="window">
-          <app-icon name="calendar" [size]="14" />
+          <!-- Not the calendar: that is the disclaimer's glyph a few lines up, and two identical
+               icons on one panel read as two instances of the same kind of statement. -->
+          <app-icon name="arrow-right" [size]="14" />
           <span>{{ window.note }}</span>
         </p>
       }
