@@ -23,7 +23,9 @@ import { SEVERITY_COLOR, type Severity, formatDistance } from '../plan/severity'
           <div class="row">
             <button class="open" (click)="openRecent(t)">
               <span class="badge" [style.background]="color(t.worstSeverity)"></span>
-              <span class="names">{{ short(t.origin.name) }} → {{ short(t.destination.name) }}</span>
+              <span class="names"
+                >{{ short(t.origin.name) }} → {{ short(t.destination.name) }}</span
+              >
               @if (t.waypoints?.length; as n) {
                 <span class="sub">{{ n }} {{ n === 1 ? 'stop' : 'stops' }}</span>
               }
@@ -42,7 +44,9 @@ import { SEVERITY_COLOR, type Severity, formatDistance } from '../plan/severity'
           <div class="row">
             <button class="open" (click)="open(t)">
               <span class="badge" [style.background]="color(t.worst_severity)"></span>
-              <span class="names">{{ short(t.origin_name) }} → {{ short(t.destination_name) }}</span>
+              <span class="names"
+                >{{ short(t.origin_name) }} → {{ short(t.destination_name) }}</span
+              >
               @if (t.waypoints?.length; as n) {
                 <span class="sub">{{ n }} {{ n === 1 ? 'stop' : 'stops' }}</span>
               }
@@ -50,6 +54,13 @@ import { SEVERITY_COLOR, type Severity, formatDistance } from '../plan/severity'
                 <span class="sub">{{ dist(t.distance_meters) }}</span>
               }
             </button>
+            <a
+              class="plan-days"
+              [routerLink]="['/saved', t.id]"
+              title="Plan this trip day by day"
+              aria-label="Plan this trip day by day"
+              >Days</a
+            >
             <button class="del" (click)="remove(t.id)" aria-label="Delete saved trip">✕</button>
           </div>
         }
@@ -135,6 +146,20 @@ import { SEVERITY_COLOR, type Severity, formatDistance } from '../plan/severity'
       .sub {
         color: var(--muted);
         font-size: 13px;
+      }
+      /* The way into the itinerary. On the saved row rather than a screen of its own because a
+         month-long trip IS a saved trip — this is the same object, looked at by day. */
+      .plan-days {
+        padding: 5px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .plan-days:hover {
+        text-decoration: none;
       }
       .del {
         flex: 0 0 auto;

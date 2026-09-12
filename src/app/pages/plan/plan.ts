@@ -14,6 +14,7 @@ import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { EntitlementService } from '../../core/entitlement.service';
 import { AccountRequiredError, PaywallError } from '../../core/errors';
+import { FORECAST_HORIZON_DAYS, isoDay, tierFor } from '../../core/forecast-horizon';
 import { GeocodeService } from '../../core/geocode.service';
 import { PaywallService } from '../../core/paywall.service';
 import { SettingsService } from '../../core/settings.service';
@@ -47,164 +48,201 @@ import {
  */
 @Component({
   selector: 'app-plan',
-  imports: [FormsModule, RouterLink, PlaceField, StopList, RouteMap, Timeline, BriefingCard, AheadBanner, ExplorePanel, OutlookPanel, IconComponent],
+  imports: [
+    FormsModule,
+    RouterLink,
+    PlaceField,
+    StopList,
+    RouteMap,
+    Timeline,
+    BriefingCard,
+    AheadBanner,
+    ExplorePanel,
+    OutlookPanel,
+    IconComponent,
+  ],
   template: `
     <div class="shell">
       <section class="panel">
-      <header class="top">
-        <h1>Plan a drive</h1>
-        <div class="actions">
-          @if (plan()) {
-            <button
-              class="icon"
-              [class.on]="isCurrentSaved()"
-              (click)="saveTrip()"
-              [attr.aria-label]="isCurrentSaved() ? 'Remove from saved' : 'Save trip'"
-              title="Save trip"
-            >
-              <app-icon name="star" [size]="16" />
-            </button>
-          }
-          @if (!auth.configured() || auth.hasRealAccount()) {
-            <!-- ADR-0025 §1: My Trips is LOGIN-ONLY — hidden from guests (the route is walled by
+        <header class="top">
+          <h1>Plan a drive</h1>
+          <div class="actions">
+            @if (plan()) {
+              <button
+                class="icon"
+                [class.on]="isCurrentSaved()"
+                (click)="saveTrip()"
+                [attr.aria-label]="isCurrentSaved() ? 'Remove from saved' : 'Save trip'"
+                title="Save trip"
+              >
+                <app-icon name="star" [size]="16" />
+              </button>
+            }
+            @if (!auth.configured() || auth.hasRealAccount()) {
+              <!-- ADR-0025 §1: My Trips is LOGIN-ONLY — hidden from guests (the route is walled by
                  realAccountGuard). ADR-0029 removed Recents; Saved is the server's list. -->
-            <a class="icon" routerLink="/saved" aria-label="My trips" title="My trips"><app-icon name="bookmark" [size]="16" /></a>
-          }
-        </div>
-      </header>
-
-      <div class="inputs card">
-        <app-place-field
-          kind="origin"
-          placeholder="Origin"
-          [place]="origin()"
-          [near]="destination()"
-          (placeChange)="origin.set($event)"
-        />
-        <div class="divider">
-          <button class="swap" type="button" (click)="swap()" aria-label="Swap origin and destination"><app-icon name="arrow-up-down" [size]="14" /></button>
-        </div>
-        <!-- F-006: up to 3 ordered stops between origin and destination; every edit re-plans. -->
-        <app-stop-list [stops]="stops()" [near]="stopBias()" (stopsChange)="onStopsChange($event)" />
-        <app-place-field
-          kind="destination"
-          placeholder="Destination"
-          [place]="destination()"
-          [near]="origin()"
-          (placeChange)="destination.set($event)"
-        />
-      </div>
-
-      @if (settings.home() || settings.work()) {
-        <div class="favs">
-          <span class="favs-label">Go to</span>
-          @if (settings.home(); as h) {
-            <button class="chip" (click)="useFavorite(h)" title="Set destination to Home"><app-icon name="house" [size]="13" /> Home</button>
-          }
-          @if (settings.work(); as w) {
-            <button class="chip" (click)="useFavorite(w)" title="Set destination to Work"><app-icon name="briefcase" [size]="13" /> Work</button>
-          }
-        </div>
-      }
-
-      <div class="controls card">
-        <label class="ctl">
-          <span>Departure</span>
-          <input type="datetime-local" [(ngModel)]="departureAt" name="departureAt" />
-        </label>
-        <label class="ctl">
-          <span>Units</span>
-          <select [ngModel]="settings.units()" (ngModelChange)="settings.setUnits($event)" name="units">
-            <option value="imperial">mi / °F</option>
-            <option value="metric">km / °C</option>
-          </select>
-        </label>
-        <button class="go" (click)="submit()" [disabled]="loading() || !canSubmit()">
-          {{ loading() ? 'Planning…' : 'Get briefing' }}
-        </button>
-      </div>
-
-      @if (error()) {
-        <p class="error" role="alert">{{ error() }}</p>
-      }
-
-      @if (outlook(); as o) {
-        <!-- A date past the forecast. Its own surface, never the forecast timeline. -->
-        <h3 class="section">Typical conditions</h3>
-        <app-outlook-panel [outlook]="o" [units]="settings.units()" />
-      }
-      @if (plan(); as p) {
-        <app-ahead-banner [plan]="p" [units]="settings.units()" />
-        <!-- F-006 trip summary: driving time + total dwell + arrival, all SERVER values
-             (arrival_at already includes dwell; duration_seconds stays driving-only). -->
-        <div class="summary card">
-          <span class="sum-drive">{{ summaryLabel(p) }}</span>
-          <span class="sum-arrive">arrive <strong>{{ arriveLabel(p) }}</strong></span>
-        </div>
-        <div class="scrubber card">
-          <div class="scrub-head">
-            <span>Departure</span>
-            <strong>{{ shiftedLabel() }}</strong>
-            @if (replanning()) {
-              <span class="rescan">re-checking…</span>
+              <a class="icon" routerLink="/saved" aria-label="My trips" title="My trips"
+                ><app-icon name="bookmark" [size]="16"
+              /></a>
             }
           </div>
-          <input
-            type="range"
-            min="0"
-            max="180"
-            step="5"
-            [value]="departureOffset()"
-            (input)="onScrub($event)"
-            [style.background]="scrubGradient()"
-            aria-label="Shift departure time"
+        </header>
+
+        <div class="inputs card">
+          <app-place-field
+            kind="origin"
+            placeholder="Origin"
+            [place]="origin()"
+            [near]="destination()"
+            (placeChange)="origin.set($event)"
           />
-          <div class="scrub-ticks"><span>now</span><span>+3h</span></div>
+          <div class="divider">
+            <button
+              class="swap"
+              type="button"
+              (click)="swap()"
+              aria-label="Swap origin and destination"
+            >
+              <app-icon name="arrow-up-down" [size]="14" />
+            </button>
+          </div>
+          <!-- F-006: up to 3 ordered stops between origin and destination; every edit re-plans. -->
+          <app-stop-list
+            [stops]="stops()"
+            [near]="stopBias()"
+            (stopsChange)="onStopsChange($event)"
+          />
+          <app-place-field
+            kind="destination"
+            placeholder="Destination"
+            [place]="destination()"
+            [near]="origin()"
+            (placeChange)="destination.set($event)"
+          />
         </div>
-        <h3 class="section">Along the way</h3>
-        @if (hasBeyondForecast()) {
-          <!-- A grey stretch on the map and an empty cell in the timeline read as a glitch. This
-               reads as an answer: there is no forecast yet, and there will be. -->
-          <p class="beyond-note">
-            Part of this trip is past the 10-day forecast. We'll have it closer to the day.
-          </p>
+
+        @if (settings.home() || settings.work()) {
+          <div class="favs">
+            <span class="favs-label">Go to</span>
+            @if (settings.home(); as h) {
+              <button class="chip" (click)="useFavorite(h)" title="Set destination to Home">
+                <app-icon name="house" [size]="13" /> Home
+              </button>
+            }
+            @if (settings.work(); as w) {
+              <button class="chip" (click)="useFavorite(w)" title="Set destination to Work">
+                <app-icon name="briefcase" [size]="13" /> Work
+              </button>
+            }
+          </div>
         }
-        <app-timeline
-          [plan]="p"
-          [units]="settings.units()"
-          [selected]="selected()"
-          (selectedChange)="selected.set($event)"
-        />
-        <!-- F-005 Trip Explorer: a Pro surface on the PLANNED trip (gating is the server's 402 →
-             the existing paywall modal — never client-decided). -->
-        @if (!exploreOpen()) {
-          <button class="explore-open card" type="button" (click)="exploreOpen.set(true)">
-            <span class="explore-label"><app-icon name="compass" [size]="15" /> Explore along the way</span>
-            <span class="explore-sub">stops · food · fuel · scenic</span>
+
+        <div class="controls card">
+          <label class="ctl">
+            <span>Departure</span>
+            <input type="datetime-local" [(ngModel)]="departureAt" name="departureAt" />
+          </label>
+          <label class="ctl">
+            <span>Units</span>
+            <select
+              [ngModel]="settings.units()"
+              (ngModelChange)="settings.setUnits($event)"
+              name="units"
+            >
+              <option value="imperial">mi / °F</option>
+              <option value="metric">km / °C</option>
+            </select>
+          </label>
+          <button class="go" (click)="submit()" [disabled]="loading() || !canSubmit()">
+            {{ loading() ? 'Planning…' : 'Get briefing' }}
           </button>
-        } @else if (plannedContext(); as ctx) {
-          <app-explore-panel
-            [origin]="ctx.origin"
-            [destination]="ctx.destination"
-            [departureAt]="exploreDepartureAt()"
-            [waypoints]="exploreWaypoints()"
+        </div>
+
+        @if (error()) {
+          <p class="error" role="alert">{{ error() }}</p>
+        }
+
+        @if (outlook(); as o) {
+          <!-- A date past the forecast. Its own surface, never the forecast timeline. -->
+          <h3 class="section">Typical conditions</h3>
+          <app-outlook-panel [outlook]="o" [units]="settings.units()" />
+        }
+        @if (plan(); as p) {
+          <app-ahead-banner [plan]="p" [units]="settings.units()" />
+          <!-- F-006 trip summary: driving time + total dwell + arrival, all SERVER values
+             (arrival_at already includes dwell; duration_seconds stays driving-only). -->
+          <div class="summary card">
+            <span class="sum-drive">{{ summaryLabel(p) }}</span>
+            <span class="sum-arrive"
+              >arrive <strong>{{ arriveLabel(p) }}</strong></span
+            >
+          </div>
+          <div class="scrubber card">
+            <div class="scrub-head">
+              <span>Departure</span>
+              <strong>{{ shiftedLabel() }}</strong>
+              @if (replanning()) {
+                <span class="rescan">re-checking…</span>
+              }
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="180"
+              step="5"
+              [value]="departureOffset()"
+              (input)="onScrub($event)"
+              [style.background]="scrubGradient()"
+              aria-label="Shift departure time"
+            />
+            <div class="scrub-ticks"><span>now</span><span>+3h</span></div>
+          </div>
+          <h3 class="section">Along the way</h3>
+          @if (hasBeyondForecast()) {
+            <!-- A grey stretch on the map and an empty cell in the timeline read as a glitch. This
+               reads as an answer: there is no forecast yet, and there will be. -->
+            <p class="beyond-note">
+              Part of this trip is past the 10-day forecast. We'll have it closer to the day.
+            </p>
+          }
+          <app-timeline
+            [plan]="p"
             [units]="settings.units()"
-            [highlighted]="exploreSelected()"
-            (close)="closeExplore()"
-            (cardsChange)="onExploreCards($event)"
-            (highlightChange)="onExploreHighlight($event)"
-            (addStop)="onExploreAddStop($event)"
+            [selected]="selected()"
+            (selectedChange)="selected.set($event)"
+          />
+          <!-- F-005 Trip Explorer: a Pro surface on the PLANNED trip (gating is the server's 402 →
+             the existing paywall modal — never client-decided). -->
+          @if (!exploreOpen()) {
+            <button class="explore-open card" type="button" (click)="exploreOpen.set(true)">
+              <span class="explore-label"
+                ><app-icon name="compass" [size]="15" /> Explore along the way</span
+              >
+              <span class="explore-sub">stops · food · fuel · scenic</span>
+            </button>
+          } @else if (plannedContext(); as ctx) {
+            <app-explore-panel
+              [origin]="ctx.origin"
+              [destination]="ctx.destination"
+              [departureAt]="exploreDepartureAt()"
+              [waypoints]="exploreWaypoints()"
+              [units]="settings.units()"
+              [highlighted]="exploreSelected()"
+              (close)="closeExplore()"
+              (cardsChange)="onExploreCards($event)"
+              (highlightChange)="onExploreHighlight($event)"
+              (addStop)="onExploreAddStop($event)"
+            />
+          }
+        }
+        @if (briefing(); as b) {
+          <!-- F-001 v2 US-13: a tapped claim sentence selects its sample on the timeline + map. -->
+          <app-briefing-card
+            [briefing]="b"
+            [units]="settings.units()"
+            (claimSelect)="selected.set($event)"
           />
         }
-      }
-      @if (briefing(); as b) {
-        <!-- F-001 v2 US-13: a tapped claim sentence selects its sample on the timeline + map. -->
-        <app-briefing-card
-          [briefing]="b"
-          [units]="settings.units()"
-          (claimSelect)="selected.set($event)"
-        />
-      }
       </section>
 
       <!-- ADR-0026: the dominant map pane fills the remaining viewport. Always mounted — idle it
@@ -350,7 +388,9 @@ import {
         border-radius: var(--radius-pill);
         cursor: pointer;
         white-space: nowrap;
-        transition: background 150ms ease-out, border-color 150ms ease-out;
+        transition:
+          background 150ms ease-out,
+          border-color 150ms ease-out;
       }
       .chip:hover {
         background: var(--accent-100);
@@ -665,7 +705,10 @@ export class Plan implements OnInit {
     const o = this.origin();
     const d = this.destination();
     if (o && d) {
-      return { latitude: (o.latitude + d.latitude) / 2, longitude: (o.longitude + d.longitude) / 2 };
+      return {
+        latitude: (o.latitude + d.latitude) / 2,
+        longitude: (o.longitude + d.longitude) / 2,
+      };
     }
     return o ?? d ?? null;
   });
@@ -1003,31 +1046,20 @@ export class Plan implements OnInit {
   }
 
   /**
-   * Where the forecast stops and history begins. Mirrors the server's FORECAST_HORIZON_DAYS and
-   * iOS's ForecastHorizon; a 10 repeated in three places is a 10 that drifts.
+   * Where the forecast stops and history begins.
+   *
+   * Both now live in `core/forecast-horizon`, because the itinerary screen asks the same question
+   * of every leg of a month-long trip and the same date must not be a forecast on one screen and
+   * history on the other. Re-exported as statics so the existing call sites and specs are
+   * unchanged.
    *
    * The picker is open-ended again: Phase 0 capped it because a later date produced a trip whose
    * every point showed the last available forecast hour as that day's weather, and that is no
    * longer what happens.
    */
-  static readonly FORECAST_HORIZON_DAYS = 10;
-
-  /**
-   * Which KIND of answer a departure can have, compared by DAY rather than by instant: a trip
-   * leaving at 6pm on the tenth day is inside the window, and an hours-based comparison would call
-   * it outlook for a reason no traveller could understand.
-   */
-  static tierFor(departure: Date, now = new Date()): 'forecast' | 'outlook' {
-    const day = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
-    const last = new Date(now.getTime() + Plan.FORECAST_HORIZON_DAYS * 86_400_000);
-    return day(departure) <= day(last) ? 'forecast' : 'outlook';
-  }
-
-  /** The user's LOCAL calendar day — an instant would answer a late departure for the wrong day. */
-  static isoDay(date: Date): string {
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-  }
+  static readonly FORECAST_HORIZON_DAYS = FORECAST_HORIZON_DAYS;
+  static readonly tierFor = tierFor;
+  static readonly isoDay = isoDay;
 
   /** True when any sampled point is further out than the forecast reaches. */
   readonly hasBeyondForecast = computed(() =>

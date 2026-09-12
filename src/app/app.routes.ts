@@ -47,6 +47,14 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/saved/saved').then((m) => m.Saved),
     canActivate: [realAccountGuard],
   },
+  // A trip's itinerary — its dated travel days. Nested under `saved` on purpose: nginx allowlists
+  // by first path segment (see docker/nginx.conf.template), so a sibling top-level path would 404
+  // on a hard refresh until that regex was changed too.
+  {
+    path: 'saved/:tripId',
+    loadComponent: () => import('./pages/saved/itinerary').then((m) => m.Itinerary),
+    canActivate: [realAccountGuard],
+  },
   // F-007 P1: view-only drives/garage/stats (recording is iOS-only for 3.0.0).
   {
     path: 'driving',

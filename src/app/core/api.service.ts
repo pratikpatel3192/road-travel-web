@@ -33,6 +33,8 @@ import {
   type SharedDrivesResponse,
   type SurveyQuestionsResponse,
   type TrialClaimResponse,
+  type TripLegModel,
+  type TripLegsResponse,
   type VehiclesResponse,
   addStopPreviewV1TripsExploreAddStopPreviewPost,
   claimTrialV1MeTrialClaimPost,
@@ -61,7 +63,9 @@ import {
   getMeV1MeGet,
   getProfileV1MeProfileGet,
   getSurveyQuestionsV1SurveyQuestionsGet,
+  getTripLegsV1TripsTripIdLegsGet,
   planTripV1TripsPlanPost,
+  replaceTripLegsV1TripsTripIdLegsPut,
   tripOutlookV1TripsOutlookPost,
   recordConsentsV1MeConsentsPost,
   saveTripV1TripsPost,
@@ -266,6 +270,34 @@ export class ApiService {
     const { data, error, response } = await listTripsV1TripsGet(this.options());
     if (error || !data) this.raise(response, error);
     return data as SavedTripsResponse;
+  }
+
+  /** A trip's legs — its individually dated travel days — in order. */
+  async tripLegs(tripId: string): Promise<TripLegsResponse> {
+    const { data, error, response } = await getTripLegsV1TripsTripIdLegsGet({
+      ...this.options(),
+      path: { trip_id: tripId },
+    });
+    if (error || !data) this.raise(response, error);
+    return data as TripLegsResponse;
+  }
+
+  /**
+   * Replace a trip's legs wholesale.
+   *
+   * Whole-list rather than per-leg because reordering and re-dating are the common edits and both
+   * ARE whole-list operations — a sequence of per-leg patches can leave half an itinerary applied
+   * if one call fails. The server owns `id`, `upgrade_checked_at` and `upgrade_summary`: they are
+   * echoed back on write and ignored, and a leg sent back with its id keeps them.
+   */
+  async replaceTripLegs(tripId: string, legs: TripLegModel[]): Promise<TripLegsResponse> {
+    const { data, error, response } = await replaceTripLegsV1TripsTripIdLegsPut({
+      ...this.options(),
+      path: { trip_id: tripId },
+      body: { legs },
+    });
+    if (error || !data) this.raise(response, error);
+    return data as TripLegsResponse;
   }
 
   // --- F-007 P1: recorded drives + garage + stats (view-only on web; recording is iOS-only) ---

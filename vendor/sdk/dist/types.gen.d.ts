@@ -1490,6 +1490,64 @@ export type LaneModel = {
     preferred?: string | null;
 };
 /**
+ * LegUpgradeRunRequest
+ *
+ * Whether to actually write and send. Dry by default — see the endpoint description.
+ */
+export type LegUpgradeRunRequest = {
+    /**
+     * Dry Run
+     *
+     * Report what WOULD happen without marking any leg or sending any mail. Defaults to true on purpose.
+     */
+    dry_run?: boolean;
+    /**
+     * Limit
+     *
+     * Most legs to check in this run. Each one costs a route call and a forecast fetch, so this is a cost ceiling, not a page size — the rest are picked up by the next run.
+     */
+    limit?: number;
+};
+/**
+ * LegUpgradeRunResponse
+ */
+export type LegUpgradeRunResponse = {
+    /**
+     * Considered
+     *
+     * Unchecked dated legs inside the forecast window.
+     */
+    considered: number;
+    /**
+     * Notified
+     *
+     * Legs where the forecast was worth telling the driver about.
+     */
+    notified: Array<{
+        [key: string]: unknown;
+    }>;
+    /**
+     * Quiet
+     *
+     * Legs checked and found unremarkable — the healthy majority.
+     */
+    quiet: Array<{
+        [key: string]: unknown;
+    }>;
+    /**
+     * Deferred
+     *
+     * Legs left UNMARKED and due to be retried next run. A number that grows across runs means a provider is failing, not that the sweep is idle.
+     */
+    deferred: Array<{
+        [key: string]: unknown;
+    }>;
+    /**
+     * Dry Run
+     */
+    dry_run: boolean;
+};
+/**
  * LocationSessionModel
  */
 export type LocationSessionModel = {
@@ -3115,11 +3173,17 @@ export type TripLegModel = {
      */
     id?: string | null;
     /**
-     * Upgrade Notified At
+     * Upgrade Checked At
      *
-     * When the driver was told this leg crossed into a real forecast. Read-only.
+     * When this leg's crossing into the forecast window was checked. Read-only. Set even when nothing was worth saying, which is the common case — so this being non-null does NOT mean the driver was warned about anything.
      */
-    upgrade_notified_at?: string | null;
+    upgrade_checked_at?: string | null;
+    /**
+     * Upgrade Summary
+     *
+     * One line about what the real forecast turned out to be, on the legs where it was worth telling the driver. Null on a leg that has not been checked AND on one that was checked and found unremarkable — show it if it is there, show nothing if not. It describes a FORECAST: this field is only ever written once the leg is inside the forecast window.
+     */
+    upgrade_summary?: string | null;
 };
 /**
  * TripLegsResponse
@@ -4936,6 +5000,26 @@ export type RunConversionEmailsV1OpsLifecycleRunConversionPostResponses = {
     200: RunResponse;
 };
 export type RunConversionEmailsV1OpsLifecycleRunConversionPostResponse = RunConversionEmailsV1OpsLifecycleRunConversionPostResponses[keyof RunConversionEmailsV1OpsLifecycleRunConversionPostResponses];
+export type RunLegUpgradeSweepV1OpsLifecycleRunLegUpgradesPostData = {
+    body: LegUpgradeRunRequest;
+    path?: never;
+    query?: never;
+    url: '/v1/ops/lifecycle/run-leg-upgrades';
+};
+export type RunLegUpgradeSweepV1OpsLifecycleRunLegUpgradesPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+export type RunLegUpgradeSweepV1OpsLifecycleRunLegUpgradesPostError = RunLegUpgradeSweepV1OpsLifecycleRunLegUpgradesPostErrors[keyof RunLegUpgradeSweepV1OpsLifecycleRunLegUpgradesPostErrors];
+export type RunLegUpgradeSweepV1OpsLifecycleRunLegUpgradesPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: LegUpgradeRunResponse;
+};
+export type RunLegUpgradeSweepV1OpsLifecycleRunLegUpgradesPostResponse = RunLegUpgradeSweepV1OpsLifecycleRunLegUpgradesPostResponses[keyof RunLegUpgradeSweepV1OpsLifecycleRunLegUpgradesPostResponses];
 export type ListCampaignsV1OpsCampaignsGetData = {
     body?: never;
     path?: never;

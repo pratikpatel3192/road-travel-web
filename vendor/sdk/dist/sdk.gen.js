@@ -638,6 +638,26 @@ export const runConversionEmailsV1OpsLifecycleRunConversionPost = (options) => (
     }
 });
 /**
+ * Check legs that have come inside the forecast window (operator only; dry by default)
+ *
+ * Finds every dated trip leg inside the 10-day forecast window that has never been checked, plans it for real, and compares the forecast with the climate normals the driver had been shown.
+ *
+ * **It stays quiet unless the answer got materially worse.** A clear leg is never mentioned; a caution leg is mentioned only when history had not already said so; a severe leg is always mentioned. A leg that IS worth mentioning gets a one-line note stored on it (shown in the app) and one transactional email to its owner.
+ *
+ * Idempotent: `upgrade_checked_at` is claimed before the send and only from null, so overlapping runs cannot mail the same leg twice and a re-run skips everything already checked. Legs whose forecast could not be fetched are left unmarked and retried.
+ *
+ * `dry_run` defaults to **true**: the default behaviour of an endpoint that mails real users should be to send nothing.
+ */
+export const runLegUpgradeSweepV1OpsLifecycleRunLegUpgradesPost = (options) => (options.client ?? client).post({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/ops/lifecycle/run-leg-upgrades',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
  * Every campaign, newest first
  */
 export const listCampaignsV1OpsCampaignsGet = (options) => (options?.client ?? client).get({
