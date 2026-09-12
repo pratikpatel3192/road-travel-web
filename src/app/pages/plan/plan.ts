@@ -1,8 +1,14 @@
 import { Component, type OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import type { BriefingResponse, PlaceCardModel, PlanTripResponse } from '@road-travel/sdk';
+import type {
+  BriefingResponse,
+  OutlookResponse,
+  PlaceCardModel,
+  PlanTripResponse,
+} from '@road-travel/sdk';
 
+import { OutlookPanel } from './outlook-panel';
 import { AnalyticsService } from '../../core/analytics.service';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
@@ -41,7 +47,7 @@ import {
  */
 @Component({
   selector: 'app-plan',
-  imports: [FormsModule, RouterLink, PlaceField, StopList, RouteMap, Timeline, BriefingCard, AheadBanner, ExplorePanel, IconComponent],
+  imports: [FormsModule, RouterLink, PlaceField, StopList, RouteMap, Timeline, BriefingCard, AheadBanner, ExplorePanel, OutlookPanel, IconComponent],
   template: `
     <div class="shell">
       <section class="panel">
@@ -104,12 +110,7 @@ import {
       <div class="controls card">
         <label class="ctl">
           <span>Departure</span>
-          <input
-            type="datetime-local"
-            [(ngModel)]="departureAt"
-            name="departureAt"
-            [max]="latestPlannableDeparture()"
-          />
+          <input type="datetime-local" [(ngModel)]="departureAt" name="departureAt" />
         </label>
         <label class="ctl">
           <span>Units</span>
@@ -127,6 +128,11 @@ import {
         <p class="error" role="alert">{{ error() }}</p>
       }
 
+      @if (outlook(); as o) {
+        <!-- A date past the forecast. Its own surface, never the forecast timeline. -->
+        <h3 class="section">Typical conditions</h3>
+        <app-outlook-panel [outlook]="o" [units]="settings.units()" />
+      }
       @if (plan(); as p) {
         <app-ahead-banner [plan]="p" [units]="settings.units()" />
         <!-- F-006 trip summary: driving time + total dwell + arrival, all SERVER values
@@ -591,6 +597,8 @@ export class Plan implements OnInit {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly plan = signal<PlanTripResponse | null>(null);
+  /** Set instead of `plan` for a date past the horizon. Never both — they are different answers. */
+  readonly outlook = signal<OutlookResponse | null>(null);
   readonly briefing = signal<BriefingResponse | null>(null);
   /** Selected route-sample index, shared between the map and the timeline. */
   readonly selected = signal<number | null>(null);
@@ -995,15 +1003,30 @@ export class Plan implements OnInit {
   }
 
   /**
-   * The furthest departure worth offering. The forecast runs about ten days out; beyond it the app
-   * has nothing real to say, and the picker used to be open-ended — so a departure a month away
-   * produced a trip whose every point showed the last available forecast hour as that day's
-   * weather. Long-range planning gets its own answer (typical conditions), not a stretched forecast.
+   * Where the forecast stops and history begins. Mirrors the server's FORECAST_HORIZON_DAYS and
+   * iOS's ForecastHorizon; a 10 repeated in three places is a 10 that drifts.
+   *
+   * The picker is open-ended again: Phase 0 capped it because a later date produced a trip whose
+   * every point showed the last available forecast hour as that day's weather, and that is no
+   * longer what happens.
    */
   static readonly FORECAST_HORIZON_DAYS = 10;
 
-  latestPlannableDeparture(): string {
-    return this.toLocalInput(new Date(Date.now() + Plan.FORECAST_HORIZON_DAYS * 86_400_000));
+  /**
+   * Which KIND of answer a departure can have, compared by DAY rather than by instant: a trip
+   * leaving at 6pm on the tenth day is inside the window, and an hours-based comparison would call
+   * it outlook for a reason no traveller could understand.
+   */
+  static tierFor(departure: Date, now = new Date()): 'forecast' | 'outlook' {
+    const day = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+    const last = new Date(now.getTime() + Plan.FORECAST_HORIZON_DAYS * 86_400_000);
+    return day(departure) <= day(last) ? 'forecast' : 'outlook';
+  }
+
+  /** The user's LOCAL calendar day — an instant would answer a late departure for the wrong day. */
+  static isoDay(date: Date): string {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
   }
 
   /** True when any sampled point is further out than the forecast reaches. */
@@ -1029,6 +1052,7 @@ export class Plan implements OnInit {
     this.error.set(null);
     this.loading.set(true);
     this.plan.set(null);
+    this.outlook.set(null);
     this.briefing.set(null);
     this.selected.set(null);
     this.departureOffset.set(0);
@@ -1039,6 +1063,39 @@ export class Plan implements OnInit {
     const departureAt = base.toISOString();
     // F-006: the plan AND the briefing carry the same waypoints (the briefing narrates the stops).
     const waypoints = toWaypoints(this.stops());
+
+    // Past the forecast, the honest answer is a different one — and a different call, returning a
+    // different shape, so nothing here can render history as a forecast.
+    if (Plan.tierFor(base) === 'outlook') {
+      try {
+        const outlook = await this.api.tripOutlook({
+          origin: { name: origin.name, latitude: origin.latitude, longitude: origin.longitude },
+          destination: {
+            name: destination.name,
+            latitude: destination.latitude,
+            longitude: destination.longitude,
+          },
+          waypoints,
+          travel_date: Plan.isoDay(base),
+        });
+        this.outlook.set(outlook);
+        this.plannedContext.set({ origin, destination });
+      } catch (e) {
+        // Same three outcomes as a forecast plan: the auth wall, the paywall, or a real error.
+        // An outlook IS planning, so it sits behind the same gate.
+        if (e instanceof AccountRequiredError) {
+          this.router.navigate(['/login']);
+        } else if (e instanceof PaywallError) {
+          this.analytics.capture('route_blocked_free_cap', { trigger: e.payload.reason });
+          this.paywall.show(e.payload);
+        } else {
+          this.error.set(this.describe(e));
+        }
+      } finally {
+        this.loading.set(false);
+      }
+      return;
+    }
     // F-012 re-brief: the prior facts for this TRIP (endpoints), whatever plan version they were
     // generated for — so re-submitting with a moved departure still produces a labelled diff.
     const savedTripId = this.savedTripIdFor(origin, destination);

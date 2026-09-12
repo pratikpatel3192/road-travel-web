@@ -15,6 +15,8 @@ import {
   type ExploreRequest,
   type ExploreResponse,
   type MeResponse,
+  type OutlookRequest,
+  type OutlookResponse,
   type MeStatsResponse,
   type MessageModel,
   type MessagesResponse,
@@ -60,6 +62,7 @@ import {
   getProfileV1MeProfileGet,
   getSurveyQuestionsV1SurveyQuestionsGet,
   planTripV1TripsPlanPost,
+  tripOutlookV1TripsOutlookPost,
   recordConsentsV1MeConsentsPost,
   saveTripV1TripsPost,
   submitOnboardingV1MeOnboardingPost,
@@ -176,6 +179,21 @@ export class ApiService {
     const { data, error, response } = await planTripV1TripsPlanPost({ ...this.options(), body });
     if (error || !data) this.raise(response, error);
     return data as PlanTripResponse;
+  }
+
+  /**
+   * Typical conditions along a route for a date past the forecast horizon.
+   *
+   * A separate call returning a separate shape, not a flag on planTrip: an outlook is a different
+   * KIND of answer, and keeping the two apart is what stops one being rendered as the other.
+   */
+  async tripOutlook(body: OutlookRequest): Promise<OutlookResponse> {
+    const { data, error, response } = await tripOutlookV1TripsOutlookPost({
+      ...this.options(),
+      body,
+    });
+    if (error || !data) this.raise(response, error);
+    return data as OutlookResponse;
   }
 
   /**

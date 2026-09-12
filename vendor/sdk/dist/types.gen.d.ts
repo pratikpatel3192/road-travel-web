@@ -1725,6 +1725,103 @@ export type OnboardingRequest = {
     consents: Array<ConsentInput>;
 };
 /**
+ * OutlookPointModel
+ */
+export type OutlookPointModel = {
+    /**
+     * Index
+     */
+    index: number;
+    /**
+     * Latitude
+     */
+    latitude: number;
+    /**
+     * Longitude
+     */
+    longitude: number;
+    /**
+     * Distance From Start Meters
+     */
+    distance_from_start_meters: number;
+    /**
+     * Null where we hold no history for this place. The client must say so — never fill it in from a neighbouring cell hundreds of miles away.
+     */
+    typical?: TypicalConditionsModel | null;
+};
+/**
+ * OutlookRequest
+ */
+export type OutlookRequest = {
+    origin: PlaceModel;
+    destination: PlaceModel;
+    /**
+     * Waypoints
+     */
+    waypoints?: Array<WaypointModel>;
+    /**
+     * Travel Date
+     *
+     * The day this leg is driven. Required: an outlook is a statement about a time of year, so there is nothing to answer without one.
+     */
+    travel_date: string;
+};
+/**
+ * OutlookResponse
+ */
+export type OutlookResponse = {
+    /**
+     * Tier
+     *
+     * Always 'outlook'. A constant, so a response cannot be mistaken for a forecast even by code that only reads this field.
+     */
+    tier?: 'outlook';
+    /**
+     * Travel Date
+     */
+    travel_date: string;
+    /**
+     * Distance Meters
+     */
+    distance_meters: number;
+    /**
+     * Duration Seconds
+     */
+    duration_seconds: number;
+    /**
+     * Route Coordinates
+     */
+    route_coordinates: Array<CoordinateModel>;
+    /**
+     * Points
+     */
+    points: Array<OutlookPointModel>;
+    /**
+     * Baseline
+     *
+     * Climate baseline period, e.g. "1991-2020". Null when no data.
+     */
+    baseline?: string | null;
+    /**
+     * Source
+     *
+     * e.g. "ERA5".
+     */
+    source?: string | null;
+    /**
+     * Disclaimer
+     *
+     * Plain-language sentence the client must show wherever these values appear. Supplied by the server so no client can ship an outlook surface without one.
+     */
+    disclaimer: string;
+    /**
+     * Coverage
+     *
+     * How much of the route we hold history for. 'none' means the screen should say we have nothing for this route rather than render an empty timeline.
+     */
+    coverage: 'full' | 'partial' | 'none';
+};
+/**
  * OverviewResponse
  */
 export type OverviewResponse = {
@@ -2261,6 +2358,21 @@ export type ProfileUpdate = {
      * Recorded as a marketing consent event + mirrored to the profile.
      */
     marketing_opt_in?: boolean | null;
+};
+/**
+ * ReplaceTripLegsRequest
+ *
+ * The whole leg list, replacing what is stored.
+ *
+ * Replace rather than patch because reordering and re-dating are the common edits, and both are
+ * whole-list operations — sending them as a sequence of per-leg patches invites a half-applied
+ * itinerary if one call fails.
+ */
+export type ReplaceTripLegsRequest = {
+    /**
+     * Legs
+     */
+    legs?: Array<TripLegModel>;
 };
 /**
  * ReplyIn
@@ -2957,6 +3069,122 @@ export type TrialModel = {
     ends_at?: string | null;
 };
 /**
+ * TripLegModel
+ *
+ * One dated travel day of a trip.
+ *
+ * A trip used to be one origin → destination with a single departure. That is the right shape for
+ * "what is tomorrow's drive like" and the wrong one for people who plan in weeks — so a trip is a
+ * sequence of these, each with its own date and its own stops.
+ */
+export type TripLegModel = {
+    /**
+     * Ordinal
+     *
+     * Position in the trip, 0-based.
+     */
+    ordinal: number;
+    origin: PlaceModel;
+    destination: PlaceModel;
+    /**
+     * Waypoints
+     */
+    waypoints?: Array<WaypointModel>;
+    /**
+     * Travel Date
+     *
+     * The intended travel day. Null means UNDATED — a trip saved before legs existed, or one the user has not dated yet. Never guessed: a guessed date silently changes which weather the leg is matched against.
+     */
+    travel_date?: string | null;
+    /**
+     * Departure Time
+     *
+     * Optional time of day. Null means 'sometime that day', which is a real answer — inventing an hour would have the ETA maths treat a fiction as fact. Requires a date.
+     */
+    departure_time?: string | null;
+    /**
+     * Timezone
+     *
+     * IANA zone at the leg's origin. A long trip crosses zones, so 'the 3rd' is a different instant in Flagstaff than in Nashville.
+     */
+    timezone?: string | null;
+    /**
+     * Id
+     *
+     * Server-assigned; ignored on write.
+     */
+    id?: string | null;
+    /**
+     * Upgrade Notified At
+     *
+     * When the driver was told this leg crossed into a real forecast. Read-only.
+     */
+    upgrade_notified_at?: string | null;
+};
+/**
+ * TripLegsResponse
+ */
+export type TripLegsResponse = {
+    /**
+     * Legs
+     */
+    legs: Array<TripLegModel>;
+    /**
+     * Warnings
+     *
+     * Advisory only. Dates that run backwards are warned about, never rejected: a driver mid-edit has a half-ordered itinerary, and refusing the save would lose their work.
+     */
+    warnings?: Array<string>;
+};
+/**
+ * TypicalConditionsModel
+ *
+ * What a place is usually like in the 5-day period around a date.
+ *
+ * Probabilities are shares of days — "roughly one day in three is wet" is something a driver can
+ * plan around, where a mean precipitation depth is not.
+ */
+export type TypicalConditionsModel = {
+    /**
+     * Temp High C
+     */
+    temp_high_c: number;
+    /**
+     * Temp Low C
+     */
+    temp_low_c: number;
+    /**
+     * Wet Day Prob
+     */
+    wet_day_prob: number;
+    /**
+     * Snow Day Prob
+     */
+    snow_day_prob: number;
+    /**
+     * High Wind Prob
+     *
+     * Share of days with sustained wind over the towing-risk threshold.
+     */
+    high_wind_prob: number;
+    /**
+     * Extreme Heat Prob
+     */
+    extreme_heat_prob: number;
+    /**
+     * Wind Kph Mean
+     */
+    wind_kph_mean: number;
+    /**
+     * Cell Latitude
+     */
+    cell_latitude: number;
+    /**
+     * Cell Longitude
+     */
+    cell_longitude: number;
+};
+/**
  * UpdateDriveRequest
  *
  * Editable drive metadata. Stats/polyline are immutable.
@@ -3494,6 +3722,88 @@ export type DeleteTripV1TripsTripIdDeleteResponses = {
     204: void;
 };
 export type DeleteTripV1TripsTripIdDeleteResponse = DeleteTripV1TripsTripIdDeleteResponses[keyof DeleteTripV1TripsTripIdDeleteResponses];
+export type GetTripLegsV1TripsTripIdLegsGetData = {
+    body?: never;
+    path: {
+        /**
+         * Trip Id
+         */
+        trip_id: string;
+    };
+    query?: never;
+    url: '/v1/trips/{trip_id}/legs';
+};
+export type GetTripLegsV1TripsTripIdLegsGetErrors = {
+    /**
+     * No such trip for this account.
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+export type GetTripLegsV1TripsTripIdLegsGetError = GetTripLegsV1TripsTripIdLegsGetErrors[keyof GetTripLegsV1TripsTripIdLegsGetErrors];
+export type GetTripLegsV1TripsTripIdLegsGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: TripLegsResponse;
+};
+export type GetTripLegsV1TripsTripIdLegsGetResponse = GetTripLegsV1TripsTripIdLegsGetResponses[keyof GetTripLegsV1TripsTripIdLegsGetResponses];
+export type ReplaceTripLegsV1TripsTripIdLegsPutData = {
+    body: ReplaceTripLegsRequest;
+    path: {
+        /**
+         * Trip Id
+         */
+        trip_id: string;
+    };
+    query?: never;
+    url: '/v1/trips/{trip_id}/legs';
+};
+export type ReplaceTripLegsV1TripsTripIdLegsPutErrors = {
+    /**
+     * No such trip for this account.
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+export type ReplaceTripLegsV1TripsTripIdLegsPutError = ReplaceTripLegsV1TripsTripIdLegsPutErrors[keyof ReplaceTripLegsV1TripsTripIdLegsPutErrors];
+export type ReplaceTripLegsV1TripsTripIdLegsPutResponses = {
+    /**
+     * Successful Response
+     */
+    200: TripLegsResponse;
+};
+export type ReplaceTripLegsV1TripsTripIdLegsPutResponse = ReplaceTripLegsV1TripsTripIdLegsPutResponses[keyof ReplaceTripLegsV1TripsTripIdLegsPutResponses];
+export type TripOutlookV1TripsOutlookPostData = {
+    body: OutlookRequest;
+    path?: never;
+    query?: never;
+    url: '/v1/trips/outlook';
+};
+export type TripOutlookV1TripsOutlookPostErrors = {
+    /**
+     * Trial/subscription required.
+     */
+    402: PaywallResponse;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+export type TripOutlookV1TripsOutlookPostError = TripOutlookV1TripsOutlookPostErrors[keyof TripOutlookV1TripsOutlookPostErrors];
+export type TripOutlookV1TripsOutlookPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: OutlookResponse;
+};
+export type TripOutlookV1TripsOutlookPostResponse = TripOutlookV1TripsOutlookPostResponses[keyof TripOutlookV1TripsOutlookPostResponses];
 export type ExploreV1TripsExplorePostData = {
     body: ExploreRequest;
     path?: never;
