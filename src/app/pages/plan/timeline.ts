@@ -48,6 +48,10 @@ import { formatDwell } from './waypoints';
             <div class="mi">{{ mi(s.distance_from_start_meters) }} mi</div>
             <div class="eta">{{ time(s.eta) }}</div>
           }
+          @if (!s.weather && s.beyond_forecast) {
+            <!-- Past the forecast horizon. An empty cell reads as a glitch; this reads as an answer. -->
+            <div class="cond no-forecast">No forecast yet</div>
+          }
           @if (s.weather; as w) {
             <div class="cond-row">
               <span class="wx" [title]="w.condition_text"><app-icon [name]="icon(w.condition_symbol, w.condition_text)" [size]="17" /></span>
@@ -180,6 +184,11 @@ import { formatDwell } from './waypoints';
         font-size: 15px;
         font-weight: 700;
         color: var(--text);
+      }
+      .no-forecast {
+        color: var(--text-tertiary, #a19786);
+        font-style: italic;
+        font-weight: 500;
       }
       .cond {
         font-size: 12px;

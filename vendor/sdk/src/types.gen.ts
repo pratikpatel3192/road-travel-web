@@ -2458,9 +2458,15 @@ export type RouteSampleModel = {
      */
     eta: string;
     /**
-     * Null when the forecast fetch for this sample's cell failed.
+     * Null when there is no forecast for this sample — either the fetch failed, or the trip is further out than anyone forecasts. `beyond_forecast` says which.
      */
     weather?: WeatherSnapshotModel | null;
+    /**
+     * Beyond Forecast
+     *
+     * True when the forecast does not reach this sample's ETA. The client must say so rather than render anything weather-shaped: before this existed, the nearest available hour was attached instead, so a trip three weeks out showed ten-day-old weather as that day's forecast.
+     */
+    beyond_forecast?: boolean;
     /**
      * Leg Index
      *
@@ -2677,8 +2683,10 @@ export type SegmentModel = {
     coordinates: Array<CoordinateModel>;
     /**
      * Severity
+     *
+     * Null for a stretch no forecast reaches. Clients must draw it as unknown — never as clear, which would tell a driver the road is fine when nobody knows yet.
      */
-    severity: 'clear' | 'caution' | 'severe';
+    severity?: 'clear' | 'caution' | 'severe' | null;
 };
 
 /**

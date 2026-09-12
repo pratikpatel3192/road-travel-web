@@ -14,7 +14,7 @@ import * as L from 'leaflet';
 
 import { SettingsService } from '../../core/settings.service';
 import { IconComponent, LUCIDE } from '../../ui/icon';
-import { SEVERITY_COLOR, type Severity, weatherIcon } from './severity';
+import { SEVERITY_COLOR, UNKNOWN_COLOR, type Severity, weatherIcon } from './severity';
 
 // Free, keyless tile sources. Esri World Imagery gives satellite; its reference layers add roads +
 // labels for "hybrid".
@@ -254,10 +254,15 @@ export class RouteMap implements OnDestroy {
       }).addTo(layer);
     }
     plan.segments.forEach((seg, i) => {
-      const sev: Severity = SEVERITY_COLOR[seg.severity as Severity] ? (seg.severity as Severity) : 'clear';
+      // A null severity is a stretch no forecast reaches. It gets grey — deliberately NOT the
+      // sage of "clear", which tells the driver the road is fine when nobody knows yet. The old
+      // `?? 'clear'` fallback drew a whole far-future route green.
+      const known: Severity | null = SEVERITY_COLOR[seg.severity as Severity]
+        ? (seg.severity as Severity)
+        : null;
       L.polyline(segLatLngs[i], {
-        className: 'rt-sev-' + sev,
-        color: SEVERITY_COLOR[sev],
+        className: known ? 'rt-sev-' + known : 'rt-sev-unknown',
+        color: known ? SEVERITY_COLOR[known] : UNKNOWN_COLOR,
         weight: 6.5,
         opacity: 1,
         lineCap: 'round',
