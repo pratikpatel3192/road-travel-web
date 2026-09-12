@@ -104,7 +104,12 @@ import {
       <div class="controls card">
         <label class="ctl">
           <span>Departure</span>
-          <input type="datetime-local" [(ngModel)]="departureAt" name="departureAt" />
+          <input
+            type="datetime-local"
+            [(ngModel)]="departureAt"
+            name="departureAt"
+            [max]="latestPlannableDeparture()"
+          />
         </label>
         <label class="ctl">
           <span>Units</span>
@@ -151,6 +156,13 @@ import {
           <div class="scrub-ticks"><span>now</span><span>+3h</span></div>
         </div>
         <h3 class="section">Along the way</h3>
+        @if (hasBeyondForecast()) {
+          <!-- A grey stretch on the map and an empty cell in the timeline read as a glitch. This
+               reads as an answer: there is no forecast yet, and there will be. -->
+          <p class="beyond-note">
+            Part of this trip is past the 10-day forecast. We'll have it closer to the day.
+          </p>
+        }
         <app-timeline
           [plan]="p"
           [units]="settings.units()"
@@ -425,6 +437,15 @@ import {
       }
       app-ahead-banner,
       app-route-map,
+      .beyond-note {
+        margin: 0 0 10px;
+        padding: 8px 10px;
+        border-radius: 10px;
+        background: var(--well, #f9f4ed);
+        color: var(--text-secondary, #82796a);
+        font-size: 13px;
+        font-weight: 500;
+      }
       app-timeline,
       app-briefing-card,
       app-explore-panel {
@@ -972,6 +993,23 @@ export class Plan implements OnInit {
     // the endpoint swap itself, this applies on the next submit; it never re-plans by itself.
     this.stops.set([...this.stops()].reverse());
   }
+
+  /**
+   * The furthest departure worth offering. The forecast runs about ten days out; beyond it the app
+   * has nothing real to say, and the picker used to be open-ended — so a departure a month away
+   * produced a trip whose every point showed the last available forecast hour as that day's
+   * weather. Long-range planning gets its own answer (typical conditions), not a stretched forecast.
+   */
+  static readonly FORECAST_HORIZON_DAYS = 10;
+
+  latestPlannableDeparture(): string {
+    return this.toLocalInput(new Date(Date.now() + Plan.FORECAST_HORIZON_DAYS * 86_400_000));
+  }
+
+  /** True when any sampled point is further out than the forecast reaches. */
+  readonly hasBeyondForecast = computed(() =>
+    (this.plan()?.samples ?? []).some((s) => s.beyond_forecast === true),
+  );
 
   private defaultDeparture(): string {
     return this.toLocalInput(new Date(Date.now() + 3_600_000));

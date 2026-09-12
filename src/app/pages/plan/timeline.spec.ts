@@ -100,3 +100,33 @@ describe('Timeline stop cells (F-006)', () => {
     expect(selected).toBe(1);
   });
 });
+
+describe('Timeline — past the forecast horizon', () => {
+  it('says there is no forecast yet instead of leaving the cell blank', () => {
+    const beyond = plan();
+    beyond.samples = [
+      sample(0),
+      sample(1, { weather: null, beyond_forecast: true }),
+    ];
+    const fixture = TestBed.createComponent(Timeline);
+    fixture.componentRef.setInput('plan', beyond);
+    fixture.componentRef.setInput('units', 'imperial');
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('No forecast yet');
+  });
+
+  it('leaves a failed fetch blank rather than claiming the forecast does not exist', () => {
+    // Two different silences: "we could not get it" and "nobody has it yet". Only the second is
+    // something a driver can plan around, and only it earns the sentence.
+    const failed = plan();
+    failed.samples = [sample(0), sample(1, { weather: null, beyond_forecast: false })];
+    const fixture = TestBed.createComponent(Timeline);
+    fixture.componentRef.setInput('plan', failed);
+    fixture.componentRef.setInput('units', 'imperial');
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).textContent ?? '').not.toContain('No forecast yet');
+  });
+});

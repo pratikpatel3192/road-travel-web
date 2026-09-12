@@ -10,6 +10,10 @@ export const SEVERITY_COLOR: Record<Severity, string> = {
   severe: '#b2622d', // terracotta accent-600
 };
 
+/** A stretch or point the forecast does not reach. Grey, never the calm sage of "clear". */
+export const UNKNOWN_COLOR = '#a19786';
+export const UNKNOWN_LABEL = 'No forecast yet';
+
 export const SEVERITY_LABEL: Record<Severity, string> = {
   clear: 'Clear',
   caution: 'Caution',
