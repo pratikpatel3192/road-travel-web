@@ -18,7 +18,12 @@ export type DwellMinutes = 0 | 15 | 30 | 45 | 60;
 export const DWELL_PRESETS: readonly DwellMinutes[] = [0, 15, 30, 45, 60];
 
 /** Product cap — mirrors the server's `MAX_WAYPOINTS` (a 4th stop is a 422; ADR-0031). */
-export const MAX_STOPS = 3;
+/**
+ * Mirrors the server's MAX_WAYPOINTS. This is the Mapbox Directions ceiling — 25 coordinates per
+ * request, two of which are the origin and destination — not a product knob, so raising it past
+ * 23 means stitching several Directions calls together.
+ */
+export const MAX_STOPS = 23;
 
 /** One editable stop row: the place may still be empty (mid-typing) — only complete rows plan. */
 export interface StopDraft {
@@ -29,7 +34,10 @@ export interface StopDraft {
 }
 
 let stopSeq = 0;
-export function newStop(place: PlaceValue | null = null, dwellMinutes: DwellMinutes = 0): StopDraft {
+export function newStop(
+  place: PlaceValue | null = null,
+  dwellMinutes: DwellMinutes = 0,
+): StopDraft {
   return { id: ++stopSeq, place, dwellMinutes };
 }
 

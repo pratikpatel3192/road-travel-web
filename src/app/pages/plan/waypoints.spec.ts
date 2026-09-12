@@ -32,13 +32,28 @@ describe('F-006 plan/briefing request composition', () => {
     expect(body.destination).toEqual(LA);
     expect(body.departure_at).toBe(DEPART);
     expect(body.waypoints).toEqual([
-      { name: HARRIS.name, latitude: HARRIS.latitude, longitude: HARRIS.longitude, dwell_minutes: 45 },
-      { name: KETTLEMAN.name, latitude: KETTLEMAN.latitude, longitude: KETTLEMAN.longitude, dwell_minutes: 0 },
+      {
+        name: HARRIS.name,
+        latitude: HARRIS.latitude,
+        longitude: HARRIS.longitude,
+        dwell_minutes: 45,
+      },
+      {
+        name: KETTLEMAN.name,
+        latitude: KETTLEMAN.latitude,
+        longitude: KETTLEMAN.longitude,
+        dwell_minutes: 0,
+      },
     ]);
   });
 
   it('omits the waypoints key entirely with no stops (legacy A→B body unchanged)', () => {
-    const body = buildPlanRequest({ origin: SF, destination: LA, departureAt: DEPART, waypoints: [] });
+    const body = buildPlanRequest({
+      origin: SF,
+      destination: LA,
+      departureAt: DEPART,
+      waypoints: [],
+    });
     expect(body).toEqual({ origin: SF, destination: LA, departure_at: DEPART });
     expect('waypoints' in body).toBe(false);
   });
@@ -69,18 +84,33 @@ describe('F-006 stop drafts <-> waypoints', () => {
   it('drops incomplete rows (no place picked yet) from the planned waypoints', () => {
     const stops = [newStop(null, 15), newStop(HARRIS, 15), newStop(null)];
     expect(toWaypoints(stops)).toEqual([
-      { name: HARRIS.name, latitude: HARRIS.latitude, longitude: HARRIS.longitude, dwell_minutes: 15 },
+      {
+        name: HARRIS.name,
+        latitude: HARRIS.latitude,
+        longitude: HARRIS.longitude,
+        dwell_minutes: 15,
+      },
     ]);
   });
 
   it(`never plans more than the ${MAX_STOPS}-stop cap`, () => {
-    const stops = [newStop(HARRIS), newStop(KETTLEMAN), newStop(SF), newStop(LA)];
+    // Built FROM the cap rather than a literal, so raising it cannot leave this test asserting
+    // the old number — which is exactly what happened when it went 3 -> 23.
+    const places = [HARRIS, KETTLEMAN, SF, LA];
+    const stops = Array.from({ length: MAX_STOPS + 3 }, (_, i) =>
+      newStop(places[i % places.length]),
+    );
     expect(toWaypoints(stops)).toHaveLength(MAX_STOPS);
   });
 
   it('restores saved waypoints into editable rows with unique ids (US-4 re-open)', () => {
     const rows = fromWaypoints([
-      { name: HARRIS.name, latitude: HARRIS.latitude, longitude: HARRIS.longitude, dwell_minutes: 45 },
+      {
+        name: HARRIS.name,
+        latitude: HARRIS.latitude,
+        longitude: HARRIS.longitude,
+        dwell_minutes: 45,
+      },
       { name: KETTLEMAN.name, latitude: KETTLEMAN.latitude, longitude: KETTLEMAN.longitude },
     ]);
     expect(rows).toHaveLength(2);
