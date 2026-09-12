@@ -12,8 +12,6 @@ export interface AppConfig {
   apiBaseUrl: string;
   supabaseUrl: string;
   supabaseAnonKey: string;
-  /** Public Mapbox token (pk.…, URL-restricted) — only for rendering the map (ADR-0012). */
-  mapboxToken: string;
   /** RevenueCat Web Billing public API key (F-002). Absent → billing disabled, paywall read-only. */
   revenueCatWebApiKey: string;
   /** RevenueCat offering id whose packages back the paywall plans (optional; SDK default if blank). */
@@ -28,7 +26,6 @@ const DEFAULTS: AppConfig = {
   apiBaseUrl: '',
   supabaseUrl: '',
   supabaseAnonKey: '',
-  mapboxToken: '',
   revenueCatWebApiKey: '',
   revenueCatOfferingId: '',
   posthogKey: '',
