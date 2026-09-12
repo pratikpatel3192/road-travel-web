@@ -28,13 +28,13 @@ const leg = (over: Partial<TripLegModel> = {}): TripLegModel => ({
  * The page under test with its two collaborators stubbed. `replaceTripLegs` echoes what it was
  * given, which is what the server does apart from assigning ids.
  */
-function setup(legs: TripLegModel[], warnings: string[] = []) {
+function setup(legs: TripLegModel[], warnings: string[] = [], summary: string | null = null) {
   const calls: { legs: TripLegModel[] }[] = [];
   const api = {
-    tripLegs: async (): Promise<TripLegsResponse> => ({ legs, warnings }),
+    tripLegs: async (): Promise<TripLegsResponse> => ({ legs, warnings, summary }),
     replaceTripLegs: async (_id: string, sent: TripLegModel[]): Promise<TripLegsResponse> => {
       calls.push({ legs: sent });
-      return { legs: sent, warnings: [] };
+      return { legs: sent, warnings: [], summary };
     },
   };
   TestBed.configureTestingModule({
@@ -52,8 +52,12 @@ function setup(legs: TripLegModel[], warnings: string[] = []) {
   return { fixture, component: fixture.componentInstance, calls };
 }
 
-async function render(legs: TripLegModel[], warnings: string[] = []) {
-  const { fixture, component, calls } = setup(legs, warnings);
+async function render(
+  legs: TripLegModel[],
+  warnings: string[] = [],
+  summary: string | null = null,
+) {
+  const { fixture, component, calls } = setup(legs, warnings, summary);
   await component.ngOnInit();
   fixture.detectChanges();
   return {
@@ -215,5 +219,22 @@ describe('Itinerary — editing', () => {
       ['Leg 2 is dated before the leg above it. Check the order.'],
     );
     expect(text).toContain('Check the order');
+  });
+});
+
+describe('Itinerary — the trip summary', () => {
+  it("shows the server's paragraph verbatim", async () => {
+    // Verbatim because it says what it can honestly say about a trip that is mostly history — a
+    // client that rewrote it would be the client that got that wrong.
+    const summary =
+      '3 days of this trip have a real forecast; the other 2 show what those roads are usually ' +
+      'like at that time of year.';
+    const { text } = await render([leg({ travel_date: day(2) })], [], summary);
+    expect(text).toContain(summary);
+  });
+
+  it('renders no summary block when the server sent none', async () => {
+    const { fixture } = await render([leg({ travel_date: null })], [], null);
+    expect((fixture.nativeElement as HTMLElement).querySelector('.summary')).toBeNull();
   });
 });

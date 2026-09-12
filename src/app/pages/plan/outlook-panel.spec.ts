@@ -31,7 +31,7 @@ const outlook = (over: Partial<OutlookResponse> = {}): OutlookResponse => ({
   ],
   baseline: '1991-2020',
   source: 'ERA5',
-  disclaimer: "This is what this stretch is usually like — history, not a forecast.",
+  disclaimer: 'This is what this stretch is usually like — history, not a forecast.',
   coverage: 'full',
   ...over,
 });
@@ -92,10 +92,66 @@ describe('OutlookPanel', () => {
   it('says it has no history rather than rendering an empty list', () => {
     // An empty list would read as "nothing to worry about" — the state every route is in until
     // the climate table is loaded.
-    const text = render(outlook({ coverage: 'none', baseline: null, source: null,
-      points: [{ index: 0, latitude: 30, longitude: -97, distance_from_start_meters: 0, typical: null }] })).textContent ?? '';
+    const text =
+      render(
+        outlook({
+          coverage: 'none',
+          baseline: null,
+          source: null,
+          points: [
+            {
+              index: 0,
+              latitude: 30,
+              longitude: -97,
+              distance_from_start_meters: 0,
+              typical: null,
+            },
+          ],
+        }),
+      ).textContent ?? '';
     expect(text).toContain('No history for this route yet');
     expect(text).toContain('history, not a forecast');
+  });
+
+  it("shows the server's risk sentences verbatim", () => {
+    // Verbatim on purpose: a chip this panel composed itself from `kind` is a chip that can get
+    // the tense wrong, and "expect snow" for a climatology leg undoes the whole feature.
+    const note =
+      'Snow is part of the record on this stretch in late October — roughly one day in 6.';
+    const text =
+      render(outlook({ risks: [{ kind: 'snow', probability: 0.16, note }] })).textContent ?? '';
+    expect(text).toContain(note);
+  });
+
+  it('shows the better-window suggestion when the server sent one', () => {
+    const note = 'Historically, early November is a kinder week on this stretch than late October.';
+    const text =
+      render(
+        outlook({
+          better_window: { travel_date: '2026-11-03', planned_score: 0.4, score: 0.1, note },
+        }),
+      ).textContent ?? '';
+    expect(text).toContain(note);
+  });
+
+  it('draws a risk in the same muted treatment as everything else here', () => {
+    // A risk in a warning colour would be the forecast severity vocabulary borrowed for a 30-year
+    // average — the one thing this panel must never do, however alarming the sentence is.
+    const html = render(
+      outlook({ risks: [{ kind: 'snow', probability: 0.4, note: 'Snow is part of the record.' }] }),
+    ).innerHTML;
+    for (const forbidden of ['sev-', 'severity', '#b3261e']) {
+      expect(html).not.toContain(forbidden);
+    }
+  });
+
+  it('renders nothing when there are no risks rather than an all-clear', () => {
+    // Empty means nothing stood out, NOT that the route is safe — and it is also what an
+    // unloaded climate table returns for every route on earth.
+    const element = render(outlook({ risks: [], better_window: null }));
+    expect(element.querySelector('.risk')).toBeNull();
+    expect(element.querySelector('.window')).toBeNull();
+    expect((element.textContent ?? '').toLowerCase()).not.toContain('all clear');
   });
 
   it('shows no severity vocabulary anywhere', () => {

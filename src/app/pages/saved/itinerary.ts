@@ -53,6 +53,12 @@ import { PlaceField, type PlaceValue } from '../plan/place-field';
               }
             </div>
             <p class="strip-copy">{{ boundaryCopy() }}</p>
+            <!-- The server's paragraph, shown as-is under the strip it describes. Deliberately
+                 not merged with the line above: that one is about the boundary and is computed
+                 here, this one is about the whole plan and is the product's voice. -->
+            @if (summary()) {
+              <p class="summary">{{ summary() }}</p>
+            }
           </section>
         }
 
@@ -262,6 +268,14 @@ import { PlaceField, type PlaceValue } from '../plan/place-field';
         font-size: 12px;
         color: var(--text-secondary, #82796a);
       }
+      .summary {
+        margin: 0;
+        padding-top: 8px;
+        border-top: 1px solid var(--border);
+        font-size: 13px;
+        line-height: 1.55;
+        color: var(--text);
+      }
       .legs {
         margin: 0;
         padding: 0;
@@ -403,6 +417,12 @@ export class Itinerary implements OnInit {
 
   readonly legs = signal<TripLegModel[]>([]);
   readonly warnings = signal<string[]>([]);
+  /**
+   * The server's one-paragraph read on the whole plan. Null when every leg is undated, and shown
+   * verbatim — it says what it can honestly say about a trip that is mostly history, and a client
+   * that rewrote it would be the client that got that wrong.
+   */
+  readonly summary = signal<string | null>(null);
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
@@ -424,6 +444,7 @@ export class Itinerary implements OnInit {
       const response = await this.api.tripLegs(this.tripId);
       this.legs.set(response.legs);
       this.warnings.set(response.warnings ?? []);
+      this.summary.set(response.summary ?? null);
       // A trip saved before legs existed has none. Seeding one from the trip's own endpoints is
       // the honest migration: it is the drive they saved, it just did not have a day of its own.
       if (!response.legs.length) this.seedFromTrip();
@@ -606,6 +627,7 @@ export class Itinerary implements OnInit {
       const response = await this.api.replaceTripLegs(this.tripId, this.legs());
       this.legs.set(response.legs);
       this.warnings.set(response.warnings ?? []);
+      this.summary.set(response.summary ?? null);
       this.dirty.set(false);
     } catch (err) {
       this.handle(err);

@@ -22,13 +22,38 @@ import { IconComponent } from '../../ui/icon';
         <span>{{ outlook().disclaimer }}</span>
       </p>
 
+      <!-- Phase 2. Above the per-point numbers because a driver scanning this screen wants the
+           headline - "snow is part of the record here" - before a list of distances. Every
+           sentence is the SERVER'S, shown as-is: a chip this panel composed itself from the risk
+           kind is a chip that can get the tense wrong, and "expect snow" for a climatology leg
+           undoes the whole feature. -->
+      @if (outlook().risks?.length) {
+        <ul class="risks">
+          @for (risk of outlook().risks; track risk.note) {
+            <li class="risk">
+              <app-icon name="triangle-alert" [size]="14" />
+              <span>{{ risk.note }}</span>
+            </li>
+          }
+        </ul>
+      }
+
+      @if (outlook().better_window; as window) {
+        <p class="window">
+          <app-icon name="calendar" [size]="14" />
+          <span>{{ window.note }}</span>
+        </p>
+      }
+
       @if (hasHistory()) {
         <ul class="points">
           @for (p of withHistory(); track p.index) {
             <li class="point">
               <div class="head">
                 <span class="mi">{{ mi(p.distance_from_start_meters) }} mi</span>
-                <span class="temps">{{ temp(p.typical!.temp_high_c) }} / {{ temp(p.typical!.temp_low_c) }}</span>
+                <span class="temps"
+                  >{{ temp(p.typical!.temp_high_c) }} / {{ temp(p.typical!.temp_low_c) }}</span
+                >
               </div>
               <div class="chips">
                 @for (chip of chips(p.typical!); track chip) {
@@ -109,6 +134,29 @@ import { IconComponent } from '../../ui/icon';
         background: var(--well, #f9f4ed);
         color: var(--text-secondary, #82796a);
         font-size: 11px;
+        font-weight: 600;
+      }
+      .risks {
+        display: grid;
+        gap: 6px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      /* Muted, like everything else on this surface. A risk drawn in a warning colour would be
+         the forecast severity vocabulary borrowed for a 30-year average — the one thing this
+         panel must never do, however alarming the sentence is. */
+      .risk,
+      .window {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        margin: 0;
+        padding: 9px 11px;
+        border-radius: 11px;
+        background: var(--well, #f9f4ed);
+        color: var(--text-secondary, #82796a);
+        font-size: 13px;
         font-weight: 600;
       }
       .empty {

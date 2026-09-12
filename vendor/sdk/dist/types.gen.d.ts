@@ -71,6 +71,37 @@ export type AddStopPreviewResponse = {
     worst_after: 'clear' | 'caution' | 'severe';
 };
 /**
+ * BetterWindowModel
+ *
+ * A nearby date the record says is kinder to this route than the planned one.
+ *
+ * Null on the response far more often than not, and that is the correct answer: most dates are
+ * unremarkable, and suggesting a shift for a rounding error teaches the driver to ignore the
+ * suggestion.
+ */
+export type BetterWindowModel = {
+    /**
+     * Travel Date
+     */
+    travel_date: string;
+    /**
+     * Planned Score
+     *
+     * How unkind the PLANNED date is, 0..1, lower being better.
+     */
+    planned_score: number;
+    /**
+     * Score
+     *
+     * The same score for the suggested date.
+     */
+    score: number;
+    /**
+     * Note
+     */
+    note: string;
+};
+/**
  * BlockRequest
  *
  * POST /v1/social/blocks — block the other party of an existing relationship.
@@ -1878,6 +1909,16 @@ export type OutlookResponse = {
      * How much of the route we hold history for. 'none' means the screen should say we have nothing for this route rather than render an empty timeline.
      */
     coverage: 'full' | 'partial' | 'none';
+    /**
+     * Risks
+     *
+     * What the record flags about this route on this date, worst first. Empty is the common answer and means nothing stood out — NOT that the route is safe.
+     */
+    risks?: Array<SeasonalRiskModel>;
+    /**
+     * A nearby date the record likes better, when the difference is worth acting on. Null otherwise, which is most of the time.
+     */
+    better_window?: BetterWindowModel | null;
 };
 /**
  * OverviewResponse
@@ -2748,6 +2789,33 @@ export type SavedTripsResponse = {
     trips: Array<SavedTripModel>;
 };
 /**
+ * SeasonalRiskModel
+ *
+ * One thing the historical record says about this route at this time of year.
+ *
+ * Scored on the WORST point along the route, not the average: a route over one reliably snowy
+ * pass is a snowy route however calm the other ninety miles are, and averaging the pass away is
+ * how a planning tool stays quiet about the only part that mattered.
+ */
+export type SeasonalRiskModel = {
+    /**
+     * Kind
+     */
+    kind: 'snow' | 'wet' | 'wind' | 'heat' | 'cold';
+    /**
+     * Probability
+     *
+     * Share of days in this period that carry it. Zero for `cold`, which is judged on the typical low rather than a frequency — the note says so.
+     */
+    probability: number;
+    /**
+     * Note
+     *
+     * Plain-language and phrased as HISTORY. Show it as-is: a client that writes its own sentence from `kind` is a client that can get the tense wrong, and 'expect snow' for a climatology leg is the same lie as a severity chip would be.
+     */
+    note: string;
+};
+/**
  * SegmentModel
  *
  * A stretch of the route polyline drawn in a single color (its worst-of-interval severity).
@@ -3193,6 +3261,14 @@ export type TripLegsResponse = {
      * Legs
      */
     legs: Array<TripLegModel>;
+    /**
+     * Summary
+     *
+     * One honest paragraph across the whole itinerary: how much of it is forecast and how much is history, which days were flagged, and where the plan has the least room. Null when every leg is undated, because there is nothing to say yet.
+     *
+     * It deliberately does NOT characterise the outlook days — that needs each leg's route and its climate normals, and inferring it from the endpoints would source a confident-looking claim from a straight line nobody is going to drive. It points at those days instead; `POST /v1/trips/outlook` answers them properly.
+     */
+    summary?: string | null;
     /**
      * Warnings
      *
