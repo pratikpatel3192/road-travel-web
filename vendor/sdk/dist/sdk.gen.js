@@ -45,6 +45,48 @@ export const deleteTripV1TripsTripIdDelete = (options) => (options.client ?? cli
     ...options
 });
 /**
+ * A trip's legs, in order
+ */
+export const getTripLegsV1TripsTripIdLegsGet = (options) => (options.client ?? client).get({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/trips/{trip_id}/legs',
+    ...options
+});
+/**
+ * Replace a trip's legs — its individually dated travel days
+ *
+ * A trip is a sequence of legs, each with its own date, so a month-long itinerary is a first-class object rather than one origin-to-destination hop.
+ *
+ * The whole list is replaced: reordering and re-dating are the common edits and both are whole-list operations, where a sequence of per-leg patches can leave half an itinerary applied. A leg sent back with its `id` keeps its server-owned state, so an edit does not make the driver hear about the same leg twice.
+ *
+ * Dates that run backwards come back as `warnings`, not as an error: a driver mid-edit has a half-ordered itinerary by definition, and refusing the save would lose their work.
+ */
+export const replaceTripLegsV1TripsTripIdLegsPut = (options) => (options.client ?? client).put({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/trips/{trip_id}/legs',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
+ * Typical conditions along a route for a date beyond the forecast (never a forecast)
+ *
+ * For a leg dated past the forecast horizon, this returns what the route is USUALLY like in the 5-day period around that date, from a fixed climate baseline.
+ *
+ * It is a separate response shape from `/plan` on purpose: nothing here is called `weather`, nothing carries a severity or a condition symbol, and there is no forecast hour — so a client cannot feed it into the renderer that draws forecasts. The `tier` field is the constant `outlook`, and `disclaimer` is the sentence the client must show.
+ */
+export const tripOutlookV1TripsOutlookPost = (options) => (options.client ?? client).post({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/trips/outlook',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
  * One-tap corridor discovery: ranked stops along the planned trip (Pro)
  */
 export const exploreV1TripsExplorePost = (options) => (options.client ?? client).post({
@@ -589,6 +631,26 @@ export const previewSequenceV1OpsLifecyclePreviewPost = (options) => (options.cl
 export const runConversionEmailsV1OpsLifecycleRunConversionPost = (options) => (options.client ?? client).post({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/v1/ops/lifecycle/run-conversion',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
+ * Check legs that have come inside the forecast window (operator only; dry by default)
+ *
+ * Finds every dated trip leg inside the 10-day forecast window that has never been checked, plans it for real, and compares the forecast with the climate normals the driver had been shown.
+ *
+ * **It stays quiet unless the answer got materially worse.** A clear leg is never mentioned; a caution leg is mentioned only when history had not already said so; a severe leg is always mentioned. A leg that IS worth mentioning gets a one-line note stored on it (shown in the app) and one transactional email to its owner.
+ *
+ * Idempotent: `upgrade_checked_at` is claimed before the send and only from null, so overlapping runs cannot mail the same leg twice and a re-run skips everything already checked. Legs whose forecast could not be fetched are left unmarked and retried.
+ *
+ * `dry_run` defaults to **true**: the default behaviour of an endpoint that mails real users should be to send nothing.
+ */
+export const runLegUpgradeSweepV1OpsLifecycleRunLegUpgradesPost = (options) => (options.client ?? client).post({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/ops/lifecycle/run-leg-upgrades',
     ...options,
     headers: {
         'Content-Type': 'application/json',
