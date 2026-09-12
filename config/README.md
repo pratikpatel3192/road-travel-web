@@ -18,14 +18,14 @@ Marketing/legal stay on the apex `roadtravel.info` (+ `www`).
 
 ```bash
 # Deploy pipeline: copy the target env's template into the served web root as config.json,
-# then fill supabaseAnonKey / mapboxToken / revenueCatWebApiKey from that env's secrets.
+# then fill supabaseAnonKey / revenueCatWebApiKey from that env's secrets.
 cp config/config.<env>.json <served-root>/config.json
 
 # Local dev, pointed at DEV Supabase:
 cp config/config.dev.json public/config.json   # then fill supabaseAnonKey locally (gitignored)
 ```
 
-`supabaseUrl`/`supabaseAnonKey`/`mapboxToken`/`revenueCatWebApiKey` are left blank
+`supabaseUrl`/`supabaseAnonKey`/`revenueCatWebApiKey` are left blank
 in uat/prod (and the anon key blank in dev) — fill them from that environment's
 secrets at deploy time, never commit real keys. `config.example.json` is the
 generic slot list.
