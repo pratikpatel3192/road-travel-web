@@ -93,7 +93,7 @@ import {
             kind="origin"
             placeholder="Origin"
             [place]="origin()"
-            [near]="destination()"
+            [near]="originBias()"
             (placeChange)="origin.set($event)"
           />
           <div class="divider">
@@ -109,14 +109,14 @@ import {
           <!-- F-006: up to 3 ordered stops between origin and destination; every edit re-plans. -->
           <app-stop-list
             [stops]="stops()"
-            [near]="stopBias()"
+            [near]="searchBias()"
             (stopsChange)="onStopsChange($event)"
           />
           <app-place-field
             kind="destination"
             placeholder="Destination"
             [place]="destination()"
-            [near]="origin()"
+            [near]="destinationBias()"
             (placeChange)="destination.set($event)"
           />
         </div>
@@ -756,10 +756,23 @@ export class Plan implements OnInit {
     return `linear-gradient(to right, ${stops.join(', ')})`;
   });
 
-  /** Proximity bias for stop autocomplete: the midpoint of origin↔destination (the route corridor),
-   *  so a typed stop name resolves near the trip — "Santa Fe" on an Austin→LA route is New Mexico,
-   *  not somewhere on another continent. Falls back to whichever endpoint is set. */
-  readonly stopBias = computed(() => {
+  /** Proximity bias for autocomplete: the midpoint of origin↔destination (the route corridor), so
+   *  a typed stop name resolves near the trip — "Santa Fe" on an Austin→LA route is New Mexico, not
+   *  somewhere on another continent.
+   *
+   *  Falls back to whichever endpoint is set, and then to the user's own location. That last step is
+   *  the one that was missing: someone who opens the planner and types a STOP before filling in
+   *  either endpoint got no bias at all, and Photon's unbiased global ranking answers "san" with
+   *  Poland, San Marino, Chile and Costa Rica. Which is what the planner was showing.
+   *
+   *  iOS never had the problem because MKLocalSearchCompleter defaults its region to where the user
+   *  is. This makes the web planner do the same thing. */
+  /** Origin autocomplete looks toward the other end of the trip, then to where the user is. */
+  readonly originBias = computed(() => this.destination() ?? this.userLocation());
+  /** ...and the destination field looks back toward the origin, same fallback. */
+  readonly destinationBias = computed(() => this.origin() ?? this.userLocation());
+
+  readonly searchBias = computed(() => {
     const o = this.origin();
     const d = this.destination();
     if (o && d) {
@@ -768,7 +781,7 @@ export class Plan implements OnInit {
         longitude: (o.longitude + d.longitude) / 2,
       };
     }
-    return o ?? d ?? null;
+    return o ?? d ?? this.userLocation();
   });
 
   // --- F-005 Trip Explorer state -----------------------------------------------------------------
