@@ -1,10 +1,12 @@
 import {
+  MAX_NIGHTS,
   MAX_STOPS,
   buildBriefingRequest,
   buildPlanRequest,
   fromWaypoints,
   newStop,
   normalizeDwell,
+  normalizeNights,
   toWaypoints,
   waypointsKey,
 } from './waypoints';
@@ -125,6 +127,66 @@ describe('F-006 stop drafts <-> waypoints', () => {
     expect(normalizeDwell(45)).toBe(45);
     expect(normalizeDwell(17 as never)).toBe(0);
     expect(normalizeDwell(undefined)).toBe(0);
+  });
+});
+
+/** A stop that is slept at: `nights` rides the wire, and the dwell question stops applying. */
+describe('multi-day stops on the wire', () => {
+  it('sends nights + the morning departure time, and drops the dwell that no longer applies', () => {
+    const stop = newStop(HARRIS, 45, 3, '09:30');
+    expect(toWaypoints([stop])).toEqual([
+      {
+        name: HARRIS.name,
+        latitude: HARRIS.latitude,
+        longitude: HARRIS.longitude,
+        dwell_minutes: 0,
+        nights: 3,
+        departure_time: '09:30',
+      },
+    ]);
+  });
+
+  it('omits both keys on a pass-through stop, so a same-day trip sends the body it always did', () => {
+    const wire = toWaypoints([newStop(HARRIS, 30)]);
+    expect('nights' in wire[0]).toBe(false);
+    expect('departure_time' in wire[0]).toBe(false);
+  });
+
+  it('omits an unanswered departure time rather than guessing a morning hour', () => {
+    const wire = toWaypoints([newStop(HARRIS, 0, 2)]);
+    expect(wire[0].nights).toBe(2);
+    expect('departure_time' in wire[0]).toBe(false);
+  });
+
+  it('restores a saved overnight stop into its row', () => {
+    const rows = fromWaypoints([
+      {
+        name: HARRIS.name,
+        latitude: HARRIS.latitude,
+        longitude: HARRIS.longitude,
+        nights: 2,
+        departure_time: '08:15',
+      },
+    ]);
+    expect(rows[0].nights).toBe(2);
+    expect(rows[0].departureTime).toBe('08:15');
+  });
+
+  it('coerces nights into the contract range (a number input hands back anything)', () => {
+    expect(normalizeNights(3)).toBe(3);
+    expect(normalizeNights(2.5)).toBe(2); // half a night would shift every later date by half a day
+    expect(normalizeNights(-1)).toBe(0);
+    expect(normalizeNights(MAX_NIGHTS + 50)).toBe(MAX_NIGHTS);
+    expect(normalizeNights(null)).toBe(0);
+    expect(normalizeNights(Number.NaN)).toBe(0);
+  });
+
+  it('invalidates the briefing when a night or a departure time changes', () => {
+    // A night added moves every later leg onto a different DATE — the shown briefing is not stale,
+    // it is about a different trip.
+    const base = waypointsKey(toWaypoints([newStop(HARRIS, 0, 1)]));
+    expect(waypointsKey(toWaypoints([newStop(HARRIS, 0, 2)]))).not.toBe(base);
+    expect(waypointsKey(toWaypoints([newStop(HARRIS, 0, 1, '07:00')]))).not.toBe(base);
   });
 });
 

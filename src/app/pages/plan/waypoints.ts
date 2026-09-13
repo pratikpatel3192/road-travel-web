@@ -5,6 +5,7 @@ import type {
   WaypointModel,
 } from '@road-travel/sdk';
 
+import type { ItineraryStop } from '../../core/itinerary';
 import type { PlaceValue } from './place-field';
 
 /**
@@ -16,6 +17,9 @@ import type { PlaceValue } from './place-field';
 /** The product's dwell presets (minutes). Anything else is rejected server-side (422). */
 export type DwellMinutes = 0 | 15 | 30 | 45 | 60;
 export const DWELL_PRESETS: readonly DwellMinutes[] = [0, 15, 30, 45, 60];
+
+/** Mirrors the contract's `nights` maximum — a stop longer than this is a second trip. */
+export const MAX_NIGHTS = 120;
 
 /** Product cap — mirrors the server's `MAX_WAYPOINTS` (a 4th stop is a 422; ADR-0031). */
 /**
@@ -31,14 +35,20 @@ export interface StopDraft {
   id: number;
   place: PlaceValue | null;
   dwellMinutes: DwellMinutes;
+  /** Nights spent here. 0 is a pass-through; 1+ ends a travel day and starts the next one. */
+  nights: number;
+  /** `HH:MM` set off time for the morning after the stay; null = "sometime that day". */
+  departureTime: string | null;
 }
 
 let stopSeq = 0;
 export function newStop(
   place: PlaceValue | null = null,
   dwellMinutes: DwellMinutes = 0,
+  nights = 0,
+  departureTime: string | null = null,
 ): StopDraft {
-  return { id: ++stopSeq, place, dwellMinutes };
+  return { id: ++stopSeq, place, dwellMinutes, nights: normalizeNights(nights), departureTime };
 }
 
 /** Coerce a server/storage dwell value onto the preset scale (defensive; server validates too). */
@@ -48,17 +58,42 @@ export function normalizeDwell(minutes: number | undefined | null): DwellMinutes
     : 0;
 }
 
-/** The complete (place-selected) rows as ordered contract waypoints; incomplete rows don't plan. */
+/**
+ * Coerce a nights value into the contract's range. A number input hands back `null` mid-edit and
+ * happily accepts `2.5` or `-1`; none of those is a number of nights, and a fractional one would
+ * shift every later date by a fraction of a day the traveller could never see.
+ */
+export function normalizeNights(nights: number | undefined | null): number {
+  if (nights == null || !Number.isFinite(nights)) return 0;
+  return Math.min(MAX_NIGHTS, Math.max(0, Math.floor(nights)));
+}
+
+/**
+ * The complete (place-selected) rows as ordered contract waypoints; incomplete rows don't plan.
+ *
+ * `nights` and `departure_time` ride along only when they say something, so a trip where nobody
+ * stays anywhere sends the body it always did. A dwell is dropped on an overnight stop for the
+ * same reason the row hides it: "45 minutes" is not an answer to "you slept there", and sending a
+ * hidden one would shift that day's ETAs by a stop the traveller can no longer see.
+ */
 export function toWaypoints(stops: readonly StopDraft[]): WaypointModel[] {
   return stops
     .filter((s): s is StopDraft & { place: PlaceValue } => !!s.place)
     .slice(0, MAX_STOPS)
-    .map((s) => ({
-      name: s.place.name,
-      latitude: s.place.latitude,
-      longitude: s.place.longitude,
-      dwell_minutes: s.dwellMinutes,
-    }));
+    .map((s) => {
+      const nights = normalizeNights(s.nights);
+      const waypoint: WaypointModel = {
+        name: s.place.name,
+        latitude: s.place.latitude,
+        longitude: s.place.longitude,
+        dwell_minutes: nights > 0 ? 0 : s.dwellMinutes,
+      };
+      if (nights > 0) {
+        waypoint.nights = nights;
+        if (s.departureTime) waypoint.departure_time = s.departureTime;
+      }
+      return waypoint;
+    });
 }
 
 /** Stage saved/staged waypoints back into editable rows (opening a saved multi-stop trip). */
@@ -69,18 +104,41 @@ export function fromWaypoints(waypoints: readonly WaypointModel[] | undefined | 
       newStop(
         { name: w.name, latitude: w.latitude, longitude: w.longitude },
         normalizeDwell(w.dwell_minutes),
+        normalizeNights(w.nights),
+        w.departure_time ?? null,
       ),
     );
+}
+
+/**
+ * The planned waypoints as the itinerary derivation's stops — fed from the SAME array the plan
+ * request carries, so the days shown in the planner cannot disagree with the days the server
+ * derives from the body it was sent.
+ */
+export function toItineraryStops(waypoints: readonly WaypointModel[]): ItineraryStop<PlaceValue>[] {
+  return waypoints.map((w) => ({
+    place: { name: w.name, latitude: w.latitude, longitude: w.longitude },
+    nights: w.nights ?? 0,
+    departureTime: w.departure_time ?? null,
+  }));
 }
 
 /**
  * Trip-identity key extension for briefing staleness (F-001 US-3 / ADR-0031 §3): includes every
  * waypoint AND its dwell, so any stop add/remove/reorder/dwell change yields a different key and
  * invalidates a shown briefing. Empty = legacy A→B identity.
+ *
+ * Nights and the morning's departure time are in the key too, and they matter more than the rest of
+ * it: a night added at a stop moves every later leg onto a different DATE, so a briefing written
+ * for the old dates is not merely stale, it is about a different trip.
  */
 export function waypointsKey(waypoints: readonly WaypointModel[]): string {
   return waypoints
-    .map((w) => `${w.name}@${w.latitude},${w.longitude}:${w.dwell_minutes ?? 0}`)
+    .map(
+      (w) =>
+        `${w.name}@${w.latitude},${w.longitude}:${w.dwell_minutes ?? 0}` +
+        `:${w.nights ?? 0}:${w.departure_time ?? ''}`,
+    )
     .join('|');
 }
 
@@ -137,4 +195,9 @@ export function buildBriefingRequest(args: {
 /** "Pass through" / "15 min stop" — the shared dwell label (timeline cells + pickers). */
 export function formatDwell(minutes: number): string {
   return minutes <= 0 ? 'Pass through' : `${minutes} min stop`;
+}
+
+/** "1 night" / "3 nights" — the stay label (day list + stop rows). */
+export function formatNights(nights: number): string {
+  return `${nights} ${nights === 1 ? 'night' : 'nights'}`;
 }

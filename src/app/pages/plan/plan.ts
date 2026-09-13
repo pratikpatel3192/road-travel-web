@@ -16,6 +16,7 @@ import { EntitlementService } from '../../core/entitlement.service';
 import { AccountRequiredError, PaywallError } from '../../core/errors';
 import { FORECAST_HORIZON_DAYS, isoDay, tierFor } from '../../core/forecast-horizon';
 import { GeocodeService } from '../../core/geocode.service';
+import { deriveLegs } from '../../core/itinerary';
 import { PaywallService } from '../../core/paywall.service';
 import { SettingsService } from '../../core/settings.service';
 import { TripsService } from '../../core/trips.service';
@@ -29,6 +30,7 @@ import { RouteMap } from './route-map';
 import { SEVERITY_RANK, formatDuration, severityOrFallback } from './severity';
 import { StopList } from './stop-list';
 import { Timeline } from './timeline';
+import { TravelDays } from './travel-days';
 import {
   type DwellMinutes,
   MAX_STOPS,
@@ -37,6 +39,7 @@ import {
   buildPlanRequest,
   fromWaypoints,
   newStop,
+  toItineraryStops,
   toWaypoints,
   waypointsKey,
 } from './waypoints';
@@ -59,6 +62,7 @@ import {
     AheadBanner,
     ExplorePanel,
     OutlookPanel,
+    TravelDays,
     IconComponent,
   ],
   template: `
@@ -157,6 +161,13 @@ import {
             {{ loading() ? 'Planning…' : 'Get briefing' }}
           </button>
         </div>
+
+        @if (travelDays().length > 1) {
+          <!-- Derived, never typed: the stops above say this trip takes these days. Shown as soon
+               as a stop has nights, before anything is planned or saved. -->
+          <h3 class="section">Your days</h3>
+          <app-travel-days [legs]="travelDays()" />
+        }
 
         @if (error()) {
           <p class="error" role="alert">{{ error() }}</p>
@@ -640,7 +651,11 @@ export class Plan implements OnInit {
   readonly origin = signal<PlaceValue | null>(null);
   readonly destination = signal<PlaceValue | null>(null);
 
-  departureAt = this.defaultDeparture();
+  /**
+   * A signal rather than a plain field because the derived travel days are computed FROM it —
+   * a date typed here has to move the days list on the same keystroke, with nothing to re-plan.
+   */
+  readonly departureAt = signal(this.defaultDeparture());
 
   /** F-006: the ordered stop rows (max 3). Incomplete rows (no place yet) don't plan. */
   readonly stops = signal<StopDraft[]>([]);
@@ -798,6 +813,30 @@ export class Plan implements OnInit {
   /** The current effective waypoints (same composition the plan/briefing requests use). */
   readonly exploreWaypoints = computed(() => toWaypoints(this.stops()));
 
+  /**
+   * The travel days the current stops imply — derived locally, from the same waypoints the plan
+   * request carries, so they appear as the traveller types rather than after a round trip.
+   *
+   * Empty until both endpoints are picked: a day from an unnamed place to an unnamed place is not
+   * something to show anyone.
+   */
+  readonly travelDays = computed(() => {
+    const origin = this.origin();
+    const destination = this.destination();
+    if (!origin || !destination) return [];
+    // `datetime-local` is already the user's LOCAL wall clock in `YYYY-MM-DDTHH:MM` — split rather
+    // than round-tripped through Date, which would re-interpret it in UTC and shift the day west
+    // of Greenwich. An empty field derives undated days rather than today's.
+    const [day, time] = this.departureAt().split('T');
+    return deriveLegs<PlaceValue>({
+      origin,
+      destination,
+      stops: toItineraryStops(toWaypoints(this.stops())),
+      departureDate: day || null,
+      departureTime: time || null,
+    });
+  });
+
   /** Whether the currently-shown trip is in the saved list (reacts to saves + endpoint changes). */
   readonly isCurrentSaved = computed(() => {
     const o = this.origin();
@@ -829,7 +868,7 @@ export class Plan implements OnInit {
             }),
           }
         : null;
-      if (staged.departureAt) this.departureAt = this.toLocalInput(new Date(staged.departureAt));
+      if (staged.departureAt) this.departureAt.set(this.toLocalInput(new Date(staged.departureAt)));
       void this.submit();
       return;
     }
@@ -930,7 +969,7 @@ export class Plan implements OnInit {
       await this.trips.toggleSave({
         origin,
         destination,
-        departureAt: new Date(this.departureAt).toISOString(),
+        departureAt: new Date(this.departureAt()).toISOString(),
         distanceMeters: p?.distance_meters,
         durationSeconds: p?.duration_seconds,
         // No `as Severity` here: the SDK already types this as the severity union, and the cast
@@ -1169,7 +1208,7 @@ export class Plan implements OnInit {
     // A new plan is a new trip — any open Explore session (results, pins) is for the old one.
     this.closeExplore();
 
-    const base = new Date(this.departureAt);
+    const base = new Date(this.departureAt());
     const departureAt = base.toISOString();
     // F-006: the plan AND the briefing carry the same waypoints (the briefing narrates the stops).
     const waypoints = toWaypoints(this.stops());

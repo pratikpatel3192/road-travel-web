@@ -95,3 +95,62 @@ describe('StopList (F-006 stop editor)', () => {
     expect(options).toEqual(['Pass through', '15 min', '30 min', '45 min', '60 min']);
   });
 });
+
+/**
+ * The multi-day row: nights decides which question the row asks. "How long?" is the wrong question
+ * about a three-night stay, so the dwell picker is gone — not disabled — once one is entered.
+ */
+describe('StopList (overnight stops)', () => {
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [StopList],
+      providers: [{ provide: GeocodeService, useValue: { search: async () => [] } }],
+    }).compileComponents();
+  });
+
+  function render(stops: StopDraft[]) {
+    const fixture = TestBed.createComponent(StopList);
+    fixture.componentRef.setInput('stops', stops);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  const dwell = (el: HTMLElement) => el.querySelector('.dwell select');
+  const departAt = (el: HTMLElement) =>
+    el.querySelector<HTMLInputElement>('input[aria-label="Departure time from stop 1"]');
+
+  it('asks how long a pass-through lasts, and says nothing about departure', () => {
+    const el = render([newStop(HARRIS, 30)]).nativeElement as HTMLElement;
+    expect(dwell(el)).not.toBeNull();
+    expect(departAt(el)).toBeNull();
+  });
+
+  it('swaps the dwell picker for a departure time once the stop has a night', () => {
+    const fixture = render([newStop(HARRIS, 30)]);
+    const el = fixture.nativeElement as HTMLElement;
+    fixture.componentInstance.setNights(0, 2);
+    fixture.detectChanges();
+    expect(dwell(el)).toBeNull();
+    expect(departAt(el)).not.toBeNull();
+  });
+
+  it('clamps what the number input hands back and edits only its own row', () => {
+    const fixture = render([newStop(HARRIS), newStop(KETTLEMAN)]);
+    fixture.componentInstance.setNights(1, 2.7);
+    expect(fixture.componentInstance.stops().map((s) => s.nights)).toEqual([0, 2]);
+  });
+
+  it('drops the departure time when the stay goes — a time to leave nowhere means nothing', () => {
+    const fixture = render([newStop(HARRIS, 0, 2, '09:30')]);
+    fixture.componentInstance.setNights(0, 0);
+    expect(fixture.componentInstance.stops()[0].departureTime).toBeNull();
+    // The dwell the traveller had set is untouched, so flipping back restores their stop.
+    expect(fixture.componentInstance.stops()[0].dwellMinutes).toBe(0);
+  });
+
+  it('keeps a blank departure time as null — "sometime that day" is the honest answer', () => {
+    const fixture = render([newStop(HARRIS, 0, 1, '09:30')]);
+    fixture.componentInstance.setDepartureTime(0, '');
+    expect(fixture.componentInstance.stops()[0].departureTime).toBeNull();
+  });
+});
