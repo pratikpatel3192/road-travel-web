@@ -2,10 +2,17 @@ import { Component, computed, input } from '@angular/core';
 import type { PlanTripResponse } from '@road-travel/sdk';
 
 import { IconComponent } from '../../ui/icon';
-import { SEVERITY_LABEL, type Severity, formatTemp, formatWind } from './severity';
+import {
+  SEVERITY_LABEL,
+  type Severity,
+  formatTemp,
+  formatWind,
+  isHazard,
+  severityOrFallback,
+} from './severity';
 
 /**
- * A heads-up banner for the first notable (caution/severe) weather along the route — the planning
+ * A heads-up banner for the first notable (caution-or-worse) weather along the route — the planning
  * analogue of the iOS live "weather ahead" monitor (which uses the driver's GPS). Hidden when the
  * whole route is clear.
  */
@@ -14,7 +21,7 @@ import { SEVERITY_LABEL, type Severity, formatTemp, formatWind } from './severit
   imports: [IconComponent],
   template: `
     @if (ahead(); as a) {
-      <div class="banner" [class.severe]="a.severity === 'severe'" role="status">
+      <div [class]="'banner sev-' + a.severity" role="status">
         <span class="ic" aria-hidden="true"><app-icon name="triangle-alert" [size]="20" /></span>
         <div class="body">
           <div class="head">{{ label(a.severity) }} weather ~{{ a.miles }} mi in</div>
@@ -37,8 +44,16 @@ import { SEVERITY_LABEL, type Severity, formatTemp, formatWind } from './severit
         color: #ffffff;
         box-shadow: var(--shadow-md);
       }
-      .banner.severe {
+      /* One fill per level, so the banner's weight tracks the scale instead of collapsing every
+         level above caution into the same orange. The banner only ever shows caution-or-worse. */
+      .banner.sev-high {
+        background: var(--sev-high);
+      }
+      .banner.sev-severe {
         background: var(--sev-severe);
+      }
+      .banner.sev-extreme {
+        background: var(--sev-extreme);
       }
       .ic {
         flex: 0 0 auto;
@@ -70,15 +85,20 @@ export class AheadBanner {
   readonly plan = input.required<PlanTripResponse>();
   readonly units = input<'imperial' | 'metric'>('imperial');
 
-  /** The first sample whose weather is caution-or-worse, distilled for display (null if all clear). */
+  /**
+   * The first sample whose weather is caution-or-worse, distilled for display (null if all clear).
+   * Ranked, not enumerated: the old `=== 'caution' || === 'severe'` test silently dropped every
+   * level added since, which meant the WORST weather on a route was the weather that never raised
+   * the banner.
+   */
   readonly ahead = computed(() => {
     const sample = this.plan().samples.find(
-      (s) => s.weather && (s.weather.severity === 'caution' || s.weather.severity === 'severe'),
+      (s) => s.weather && isHazard(severityOrFallback(s.weather.severity)),
     );
     const w = sample?.weather;
     if (!sample || !w) return null;
     return {
-      severity: w.severity as Severity,
+      severity: severityOrFallback(w.severity),
       miles: Math.round(sample.distance_from_start_meters / 1609.344),
       condition: w.condition_text,
       tempC: w.temperature_c,

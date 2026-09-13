@@ -26,7 +26,7 @@ import { ExplorePanel } from './explore-panel';
 import { PlaceField, type PlaceValue } from './place-field';
 import { BriefingMemory, tripBaselineKey } from './rebrief';
 import { RouteMap } from './route-map';
-import { type Severity, formatDuration } from './severity';
+import { SEVERITY_RANK, formatDuration, severityOrFallback } from './severity';
 import { StopList } from './stop-list';
 import { Timeline } from './timeline';
 import {
@@ -740,8 +740,12 @@ export class Plan implements OnInit {
       const frac = Math.min((s.distance_from_start_meters / total) * 100, 100);
       const w = s.weather;
       let cond = 'var(--cond-clear)';
-      if (w?.severity === 'severe') cond = 'var(--cond-heavy)';
-      else if (w?.severity === 'caution') cond = 'var(--cond-rain)';
+      // Ranked, not enumerated. The old chain tested `=== 'severe'` then `=== 'caution'` and let
+      // everything else fall through to the clear band — so a level this build predates painted
+      // the band the same colour as a sunny afternoon. Anything above caution reads as heavy.
+      const sev = w ? severityOrFallback(w.severity) : null;
+      if (sev != null && SEVERITY_RANK[sev] >= SEVERITY_RANK.high) cond = 'var(--cond-heavy)';
+      else if (sev === 'caution') cond = 'var(--cond-rain)';
       else {
         const texture = `${w?.condition_symbol ?? ''} ${w?.condition_text ?? ''}`.toLowerCase();
         if (/cloud|overcast|fog|haze|mist/.test(texture)) cond = 'var(--cond-clouds)';
@@ -916,7 +920,9 @@ export class Plan implements OnInit {
         departureAt: new Date(this.departureAt).toISOString(),
         distanceMeters: p?.distance_meters,
         durationSeconds: p?.duration_seconds,
-        worstSeverity: p?.worst_severity as Severity | undefined,
+        // No `as Severity` here: the SDK already types this as the severity union, and the cast
+        // only ever served to silence the compiler at exactly the place a new level slips past.
+        worstSeverity: p?.worst_severity,
         waypoints: toWaypoints(this.stops()),
       });
       // ADR-0037: only the SAVE direction is an activation signal (un-starring isn't), and only

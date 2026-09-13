@@ -1,13 +1,40 @@
-// The engine's 3-level severity scale (ADR-0002). Values match the API contract.
-export type Severity = 'clear' | 'caution' | 'severe';
+// The engine's severity scale (ADR-0002), widened from three levels to five. Values match the API
+// contract and are ordered worst-last: `high` slots between caution and severe, `extreme` above
+// severe. The three original values keep exactly the meaning they always had.
+//
+//   clear   — drive normally
+//   caution — slow down; conditions are noticeable
+//   high    — changes how you should drive; avoid the highway if you can
+//   severe  — avoid unnecessary driving
+//   extreme — do not drive into this (an official warning is in force, or hail/tornado-grade)
+export type Severity = 'clear' | 'caution' | 'high' | 'severe' | 'extreme';
 
-// Organic 3.1.0 hues (branding-3.1.0 tokens): all-clear = sage, hazard = terracotta ramp.
-// The 3-level scale itself is untouched — this is presentation only. Mirrors iOS
-// Color.rtSeverity. Keep in sync with the --sev-* variables in src/styles.css.
+/** Worst-last rank, for comparisons. Mirrors iOS `Severity.rank`. */
+export const SEVERITY_RANK: Record<Severity, number> = {
+  clear: 0,
+  caution: 1,
+  high: 2,
+  severe: 3,
+  extreme: 4,
+};
+
+/**
+ * Every level, worst-last. Iterate this rather than re-listing the union — a sixth level added to
+ * `Severity` then fails to compile here instead of silently missing from a table somewhere.
+ */
+export const SEVERITY_LEVELS = ['clear', 'caution', 'high', 'severe', 'extreme'] as const;
+
+// Organic 3.1.0 hues (branding-3.1.0 tokens): all-clear = sage, hazard = terracotta ramp — except
+// `extreme`, which deliberately leaves the ramp for red. Four steps of one brown ramp would read as
+// "more of the same"; an official warning in force is a different KIND of statement, and the colour
+// says so. Values are the LIGHT theme's (this map is static; the --sev-* variables in
+// src/styles.css carry the dark flip). Mirrors iOS Color.rtSeverity hex-for-hex — keep both in sync.
 export const SEVERITY_COLOR: Record<Severity, string> = {
   clear: '#7a8a5e', // sage
   caution: '#f6a06b', // terracotta accent-400
+  high: '#d97b3c', // terracotta, between accent-400 and accent-600
   severe: '#b2622d', // terracotta accent-600
+  extreme: '#8c1d18', // off-ramp red — warning-grade, not another brown
 };
 
 /** A stretch or point the forecast does not reach. Grey, never the calm sage of "clear". */
@@ -17,8 +44,39 @@ export const UNKNOWN_LABEL = 'No forecast yet';
 export const SEVERITY_LABEL: Record<Severity, string> = {
   clear: 'Clear',
   caution: 'Caution',
+  high: 'High',
   severe: 'Severe',
+  extreme: 'Extreme',
 };
+
+/**
+ * The fail-safe reading of a severity the client does not recognise — a level the server added that
+ * this build predates. NOT 'clear': an unknown word is the one case where guessing calm is the
+ * dangerous guess, because a server that grew the scale grew it at the bad end. Caution is the
+ * mildest level that still says "look at this", so an unrecognised value degrades to it.
+ *
+ * This is for an unrecognised value only. A genuinely ABSENT forecast is a different thing and gets
+ * UNKNOWN_COLOR / UNKNOWN_LABEL — "nobody knows yet" is not "be a bit careful".
+ */
+export const SEVERITY_FALLBACK: Severity = 'caution';
+
+/** Narrow an API string to a known level, or null when this build does not recognise it. */
+export function toSeverity(value: string | null | undefined): Severity | null {
+  return value != null && value in SEVERITY_RANK ? (value as Severity) : null;
+}
+
+/**
+ * The level to RENDER for an API value: the value itself when known, else the fail-safe. Use this
+ * instead of `x as Severity` — the cast is what lets a new server level slip through silently.
+ */
+export function severityOrFallback(value: string | null | undefined): Severity {
+  return toSeverity(value) ?? SEVERITY_FALLBACK;
+}
+
+/** Caution-or-worse: the levels that are worth interrupting the driver about. */
+export function isHazard(sev: Severity | null | undefined): boolean {
+  return sev != null && SEVERITY_RANK[sev] >= SEVERITY_RANK.caution;
+}
 
 const MI_PER_M = 1 / 1609.344;
 

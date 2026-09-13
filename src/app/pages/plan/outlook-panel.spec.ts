@@ -3,6 +3,19 @@ import type { OutlookResponse } from '@road-travel/sdk';
 
 import { OutlookPanel } from './outlook-panel';
 import { Plan } from './plan';
+import { SEVERITY_COLOR, SEVERITY_LEVELS } from './severity';
+
+/**
+ * The severity vocabulary this panel must never speak, derived from the scale itself rather than
+ * listed by hand. A hand-written list only guards the levels that existed when it was written —
+ * when the scale went from three levels to five, a list naming clear/caution/severe would have
+ * gone on passing while `sev-high` and `sev-extreme` leaked straight through it.
+ */
+const SEVERITY_VOCABULARY = [
+  'severity',
+  ...SEVERITY_LEVELS.map((level) => `sev-${level}`),
+  ...Object.values(SEVERITY_COLOR),
+];
 
 const outlook = (over: Partial<OutlookResponse> = {}): OutlookResponse => ({
   tier: 'outlook',
@@ -140,7 +153,7 @@ describe('OutlookPanel', () => {
     const html = render(
       outlook({ risks: [{ kind: 'snow', probability: 0.4, note: 'Snow is part of the record.' }] }),
     ).innerHTML;
-    for (const forbidden of ['sev-', 'severity', '#b3261e']) {
+    for (const forbidden of ['sev-', '#b3261e', ...SEVERITY_VOCABULARY]) {
       expect(html).not.toContain(forbidden);
     }
   });
@@ -157,7 +170,7 @@ describe('OutlookPanel', () => {
   it('shows no severity vocabulary anywhere', () => {
     // The structural guarantee, on the client side: nothing in this surface may read as a forecast.
     const html = render(outlook()).innerHTML;
-    for (const forbidden of ['severity', 'sev-clear', 'sev-caution', 'sev-severe']) {
+    for (const forbidden of SEVERITY_VOCABULARY) {
       expect(html).not.toContain(forbidden);
     }
   });

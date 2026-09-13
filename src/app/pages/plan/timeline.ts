@@ -4,9 +4,12 @@ import type { PlanTripResponse } from '@road-travel/sdk';
 import { IconComponent } from '../../ui/icon';
 import {
   SEVERITY_COLOR,
+  SEVERITY_FALLBACK,
+  UNKNOWN_COLOR,
   type Severity,
   formatTemp,
   formatWind,
+  isHazard,
   weatherEmoji,
   weatherIcon,
 } from './severity';
@@ -103,7 +106,7 @@ import { formatDwell } from './waypoints';
         transition: box-shadow 150ms ease-out, transform 150ms ease-out,
           border-color 150ms ease-out, background 150ms ease-out;
       }
-      /* Caution/severe milestones flip to the hazard tint (dark flip below via :host-context). */
+      /* Caution-or-worse milestones flip to the hazard tint (dark flip below via :host-context). */
       .cell.hazard {
         background: var(--accent-100);
         color: var(--accent-800);
@@ -262,12 +265,17 @@ export class Timeline {
     });
   }
 
+  /**
+   * The milestone dot's colour. A sample with NO weather has no forecast to show, and gets the
+   * explicit unknown grey — never the sage of "clear", which would tell a driver the road is fine
+   * when nobody has looked. A severity this build does not recognise degrades to caution instead.
+   */
   dot(sev?: Severity): string {
-    return SEVERITY_COLOR[sev ?? 'clear'];
+    return sev == null ? UNKNOWN_COLOR : SEVERITY_COLOR[sev] ?? SEVERITY_COLOR[SEVERITY_FALLBACK];
   }
-  /** Organic 3.1.0: caution/severe milestones flip the cell to the terracotta hazard tint. */
+  /** Organic 3.1.0: caution-or-worse milestones flip the cell to the terracotta hazard tint. */
   hazard(sev?: Severity): boolean {
-    return sev === 'caution' || sev === 'severe';
+    return isHazard(sev);
   }
   /** Lucide condition glyph (weatherIcon mirrors weatherEmoji's decision order). */
   icon(symbol?: string, text?: string): string {

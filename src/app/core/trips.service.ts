@@ -2,6 +2,7 @@ import { Injectable, effect, inject, signal } from '@angular/core';
 import type { SavedTripModel, WaypointModel } from '@road-travel/sdk';
 
 import type { PlaceValue } from '../pages/plan/place-field';
+import { SEVERITY_FALLBACK } from '../pages/plan/severity';
 import { ApiService } from './api.service';
 import { AuthService } from './auth.service';
 
@@ -157,7 +158,11 @@ export class TripsService {
       departure_at: trip.departureAt,
       distance_meters: trip.distanceMeters ?? 0,
       duration_seconds: trip.durationSeconds ?? 0,
-      worst_severity: trip.worstSeverity ?? 'clear',
+      // Not 'clear'. `worst_severity` is required on the write, so when we genuinely do not know
+      // the trip's worst stretch we have to persist SOMETHING — and 'clear' persists an
+      // affirmative all-clear that My Trips then draws as a calm sage badge for the life of the
+      // row. Caution is the mildest value that does not make a claim about the road being fine.
+      worst_severity: trip.worstSeverity ?? SEVERITY_FALLBACK,
       waypoints: trip.waypoints ?? [],
     });
     this.saved.set([saved, ...this.saved()]);
@@ -219,7 +224,10 @@ export class TripsService {
           departure_at: t.departureAt ?? new Date().toISOString(),
           distance_meters: t.distanceMeters ?? 0,
           duration_seconds: 0,
-          worst_severity: t.worstSeverity ?? 'clear',
+          // Same reasoning as the save above: a legacy row saved before this field existed has no
+          // worst stretch to migrate, and 'clear' would invent one. This over-marks those old
+          // trips as caution, which is the direction to be wrong in.
+          worst_severity: t.worstSeverity ?? SEVERITY_FALLBACK,
         });
         pushed = true;
       }
