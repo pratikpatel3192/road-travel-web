@@ -13,6 +13,7 @@ import { ApiService } from '../../core/api.service';
 import { PaywallError } from '../../core/errors';
 import { PaywallService } from '../../core/paywall.service';
 import { ExplorePanel } from './explore-panel';
+import { MAX_STOPS } from './waypoints';
 import type { DwellMinutes } from './waypoints';
 import type { PlaceValue } from './place-field';
 
@@ -208,7 +209,9 @@ describe('ExplorePanel (F-005 Trip Explorer)', () => {
     intentButton(el, 'Scenic stops').click();
     await flush(fixture);
 
-    expect(el.querySelector('.summary')?.textContent).toContain('No good options along this stretch');
+    expect(el.querySelector('.summary')?.textContent).toContain(
+      'No good options along this stretch',
+    );
     expect(el.querySelector('.attribution')?.textContent).toContain('Mock data');
 
     intentButton(el, 'Stops for passengers').click(); // and with results
@@ -258,8 +261,9 @@ describe('ExplorePanel (F-005 Trip Explorer)', () => {
     ]);
   });
 
-  it('hides "Add as stop" when the trip already has 3 stops', async () => {
-    const fixture = render([HARRIS, { ...HARRIS, name: 'B' }, { ...HARRIS, name: 'C' }]);
+  it('hides "Add as stop" when the trip is already at the stop cap', async () => {
+    const full = Array.from({ length: MAX_STOPS }, (_, i) => ({ ...HARRIS, name: `Stop ${i}` }));
+    const fixture = render(full);
     const el = fixture.nativeElement as HTMLElement;
     intentButton(el, 'Stops for passengers').click();
     await flush(fixture);

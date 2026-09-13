@@ -187,15 +187,20 @@ import {
             </div>
             <input
               type="range"
-              min="0"
-              max="180"
-              step="5"
+              [min]="earliestOffset()"
+              [max]="LATEST_OFFSET"
+              [step]="scrubStep()"
               [value]="departureOffset()"
               (input)="onScrub($event)"
               [style.background]="scrubGradient()"
               aria-label="Shift departure time"
+              [attr.aria-valuetext]="scrubLabel()"
             />
-            <div class="scrub-ticks"><span>now</span><span>+3h</span></div>
+            <div class="scrub-ticks">
+              <span>{{ earliestLabel() }}</span>
+              <span class="scrub-now">planned</span>
+              <span>+6h</span>
+            </div>
           </div>
           <h3 class="section">Along the way</h3>
           @if (hasBeyondForecast()) {
@@ -600,6 +605,12 @@ import {
         border: 3px solid var(--accent);
         box-shadow: var(--shadow-md);
       }
+      .scrub-now {
+        /* The planned time is not the middle of the track unless a full six hours of earlier is
+           available, so it is labelled rather than positioned. */
+        font-weight: 700;
+        color: var(--text-secondary);
+      }
       .scrub-ticks {
         display: flex;
         justify-content: space-between;
@@ -645,7 +656,50 @@ export class Plan implements OnInit {
 
   // Departure scrubber: nudge the planned departure forward and re-fetch the route weather (mirrors
   // the iOS result-screen scrubber). The briefing text stays as first generated.
-  readonly departureOffset = signal(0); // minutes past the planned departure
+  readonly departureOffset = signal(0); // minutes either side of the planned departure
+
+  /**
+   * How far the scrubber reaches forward, and how far back.
+   *
+   * Backwards is the half that matters — "if I leave two hours earlier I get ahead of the band" is
+   * the most common weather-driving decision there is, and the control could not express it at all.
+   * The backward bound is NOT a flat -360: you cannot leave before now, and the forecast has no
+   * hours behind the present either, so it narrows to whatever is actually left before the planned
+   * departure.
+   */
+  readonly LATEST_OFFSET = 360;
+  readonly earliestOffset = computed(() => {
+    const base = this.plannedBase();
+    if (!base) return 0;
+    const untilDeparture = (base.getTime() - Date.now()) / 60_000;
+    return -Math.min(360, Math.max(0, Math.round(untilDeparture / 5) * 5));
+  });
+  /**
+   * Coarser further out. A flat 5-minute step across 12 hours is 144 positions in a few hundred
+   * pixels — finer than a pointer can land, and it makes the near-term choices people actually
+   * make the hardest ones to hit.
+   */
+  readonly scrubStep = computed(() => (Math.abs(this.departureOffset()) < 60 ? 5 : 15));
+
+  /** "−2h30" / "+45m" / "planned" — the tick under the left end, and the a11y value. */
+  readonly earliestLabel = computed(() => {
+    const earliest = this.earliestOffset();
+    return earliest === 0 ? 'now' : `−${Plan.compactOffset(-earliest)}`;
+  });
+  readonly scrubLabel = computed(() => {
+    const offset = this.departureOffset();
+    if (offset === 0) return 'leaving at the planned time';
+    const magnitude = Plan.compactOffset(Math.abs(offset));
+    return offset < 0 ? `${magnitude} earlier` : `${magnitude} later`;
+  });
+
+  static compactOffset(minutes: number): string {
+    const total = Math.round(minutes);
+    const hours = Math.floor(total / 60);
+    const mins = total % 60;
+    if (hours === 0) return `${mins}m`;
+    return mins === 0 ? `${hours}h` : `${hours}h${mins}`;
+  }
   readonly replanning = signal(false);
   private readonly plannedBase = signal<Date | null>(null);
   /** The endpoints the SHOWN plan was generated with (a signal — Explore binds to it). */
@@ -904,7 +958,12 @@ export class Plan implements OnInit {
   });
 
   onScrub(event: Event): void {
-    this.departureOffset.set(Number((event.target as HTMLInputElement).value));
+    const raw = Number((event.target as HTMLInputElement).value);
+    const step = Math.abs(raw) <= 60 ? 5 : 15;
+    const snapped = Math.round(raw / step) * step;
+    this.departureOffset.set(
+      Math.min(Math.max(snapped, this.earliestOffset()), this.LATEST_OFFSET),
+    );
     clearTimeout(this.scrubTimer);
     this.scrubTimer = setTimeout(() => this.replan(), 300);
   }
