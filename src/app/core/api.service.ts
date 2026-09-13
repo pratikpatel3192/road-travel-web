@@ -6,11 +6,7 @@ import {
   type BriefingResponse,
   type CheckoutSessionResponse,
   type ConsentInput,
-  type ConversationModel,
-  type ConversationsResponse,
   type DrivesResponse,
-  type FriendshipModel,
-  type FriendsResponse,
   type ExploreFeedbackRequest,
   type ExploreRequest,
   type ExploreResponse,
@@ -18,8 +14,6 @@ import {
   type OutlookRequest,
   type OutlookResponse,
   type MeStatsResponse,
-  type MessageModel,
-  type MessagesResponse,
   type OnboardingRequest,
   type PaywallResponse,
   type PlanTripRequest,
@@ -30,7 +24,6 @@ import {
   type SaveTripRequest,
   type SavedTripModel,
   type SavedTripsResponse,
-  type SharedDrivesResponse,
   type SurveyQuestionsResponse,
   type TrialClaimResponse,
   type TripLegModel,
@@ -42,21 +35,10 @@ import {
   deleteTripV1TripsTripIdDelete,
   exploreFeedbackV1TripsExploreFeedbackPost,
   exploreV1TripsExplorePost,
-  blockUserV1SocialBlocksPost,
-  createConversationV1ConversationsPost,
-  friendDrivesV1SocialFriendsFriendshipIdDrivesGet,
-  getMessagesV1ConversationsConversationIdMessagesGet,
   getMyStatsV1MeStatsGet,
-  listConversationsV1ConversationsGet,
   listDrivesV1DrivesGet,
-  listFriendsV1SocialFriendsGet,
-  reportMessageV1ConversationsConversationIdMessagesMessageIdReportPost,
-  sendMessageV1ConversationsConversationIdMessagesPost,
   listTripsV1TripsGet,
   listVehiclesV1VehiclesGet,
-  removeFriendV1SocialFriendsFriendshipIdDelete,
-  requestFriendV1SocialFriendsPost,
-  respondV1SocialFriendsFriendshipIdRespondPost,
   createCheckoutSessionV1BillingCheckoutSessionPost,
   createPortalSessionV1BillingPortalSessionPost,
   getPlansV1BillingPlansGet,
@@ -323,126 +305,7 @@ export class ApiService {
     return data as VehiclesResponse;
   }
 
-  /** The caller's friends graph (accepted/incoming/outgoing/their own blocks). */
-  async listFriends(): Promise<FriendsResponse> {
-    const { data, error, response } = await listFriendsV1SocialFriendsGet(this.options());
-    if (error || !data) this.raise(response, error);
-    return data as FriendsResponse;
-  }
-
-  /** A friend's shared drives (accepted friendships only). */
-  async friendDrives(friendshipId: string): Promise<SharedDrivesResponse> {
-    const { data, error, response } = await friendDrivesV1SocialFriendsFriendshipIdDrivesGet({
-      ...this.options(),
-      path: { friendship_id: friendshipId },
-    });
-    if (error || !data) this.raise(response, error);
-    return data as SharedDrivesResponse;
-  }
-
-  /** Send a friend request by email. 404 = no account (or that account blocked us —
-   * indistinguishable by design); 409 = existing relationship; 429 = daily cap. */
-  async requestFriend(email: string): Promise<FriendshipModel> {
-    const { data, error, response } = await requestFriendV1SocialFriendsPost({
-      ...this.options(),
-      body: { email },
-    });
-    if (error || !data) this.raise(response, error);
-    return data as FriendshipModel;
-  }
-
-  /** Accept (200) or decline (204 — the request is deleted) an incoming request. */
-  async respondFriend(friendshipId: string, accept: boolean): Promise<void> {
-    const { error, response } = await respondV1SocialFriendsFriendshipIdRespondPost({
-      ...this.options(),
-      path: { friendship_id: friendshipId },
-      body: { accept },
-    });
-    if (response && !response.ok) this.raise(response, error);
-  }
-
-  /** Unfriend / cancel a pending request / lift one of the caller's blocks. */
-  async removeFriend(friendshipId: string): Promise<void> {
-    const { error, response } = await removeFriendV1SocialFriendsFriendshipIdDelete({
-      ...this.options(),
-      path: { friendship_id: friendshipId },
-    });
-    if (response && !response.ok) this.raise(response, error);
-  }
-
-  /** Block the other party of a relationship (invisible to them; idempotent). */
-  async blockFriend(friendshipId: string): Promise<void> {
-    const { error, response } = await blockUserV1SocialBlocksPost({
-      ...this.options(),
-      body: { friendship_id: friendshipId },
-    });
-    if (response && !response.ok) this.raise(response, error);
-  }
-
   // --- F-007 P3 M8 chat (delivery rides Realtime; see AuthService.channel) -----------------------
-
-  /** Start (or dedupe into) the DM behind an accepted friendship. 404 covers pending, blocked,
-   * and nonexistent alike — indistinguishable by design. */
-  async openDm(friendshipId: string): Promise<ConversationModel> {
-    const { data, error, response } = await createConversationV1ConversationsPost({
-      ...this.options(),
-      body: { kind: 'dm', friendship_id: friendshipId },
-    });
-    if (error || !data) this.raise(response, error);
-    return data as ConversationModel;
-  }
-
-  /** Create a group from accepted friendships (2–7 friends) with an optional title. */
-  async createGroup(friendshipIds: string[], title: string | null): Promise<ConversationModel> {
-    const { data, error, response } = await createConversationV1ConversationsPost({
-      ...this.options(),
-      body: { kind: 'group', friendship_ids: friendshipIds, title },
-    });
-    if (error || !data) this.raise(response, error);
-    return data as ConversationModel;
-  }
-
-  /** The caller's conversations, newest first (dead DMs are absent — server-omitted). */
-  async listConversations(): Promise<ConversationsResponse> {
-    const { data, error, response } = await listConversationsV1ConversationsGet(this.options());
-    if (error || !data) this.raise(response, error);
-    return data as ConversationsResponse;
-  }
-
-  /** History, newest first (server-capped window; members only, 404 otherwise). */
-  async listMessages(conversationId: string): Promise<MessagesResponse> {
-    const { data, error, response } = await getMessagesV1ConversationsConversationIdMessagesGet({
-      ...this.options(),
-      path: { conversation_id: conversationId },
-    });
-    if (error || !data) this.raise(response, error);
-    return data as MessagesResponse;
-  }
-
-  /** Send a message (server-sanitized; 429 = rate limit, 404 = dead DM/non-member). */
-  async sendMessage(
-    conversationId: string,
-    body: string,
-    driveId: string | null = null,
-  ): Promise<MessageModel> {
-    const { data, error, response } = await sendMessageV1ConversationsConversationIdMessagesPost({
-      ...this.options(),
-      path: { conversation_id: conversationId },
-      body: { body, drive_id: driveId },
-    });
-    if (error || !data) this.raise(response, error);
-    return data as MessageModel;
-  }
-
-  /** Report a message to the moderation log (members only). */
-  async reportMessage(conversationId: string, messageId: string): Promise<void> {
-    const { error, response } =
-      await reportMessageV1ConversationsConversationIdMessagesMessageIdReportPost({
-        ...this.options(),
-        path: { conversation_id: conversationId, message_id: messageId },
-      });
-    if (response && !response.ok) this.raise(response, error);
-  }
 
   /** Delete one of the caller's saved trips. Missing/foreign ids 404 (surfaced as ApiError). */
   async deleteTrip(tripId: string): Promise<void> {

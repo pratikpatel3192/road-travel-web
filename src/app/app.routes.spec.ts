@@ -70,8 +70,6 @@ describe('ADR-0038 routing: landing page at /, planner at /plan', () => {
       'settings',
       'saved',
       'driving',
-      'chats',
-      'friends',
       'privacy',
       'terms',
       'support',
