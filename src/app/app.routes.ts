@@ -61,18 +61,6 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/driving/driving').then((m) => m.Driving),
     canActivate: [realAccountGuard],
   },
-  // F-007 P3 M8: chat (history via REST, delivery via Realtime — ADR-0034).
-  {
-    path: 'chats',
-    loadComponent: () => import('./pages/driving/chats').then((m) => m.Chats),
-    canActivate: [realAccountGuard],
-  },
-  // F-007 P2.1: friend-request invite emails land here (explicit confirm; never a GET action).
-  {
-    path: 'friends/respond',
-    loadComponent: () => import('./pages/respond/respond').then((m) => m.Respond),
-    canActivate: [realAccountGuard],
-  },
   // The unsubscribe link in marketing email. PUBLIC on purpose — no guard of any kind: the
   // recipient may be signed out, may have deleted their account, or may never have had one, and a
   // login wall in front of "stop emailing me" is both hostile and non-compliant. The signed token
