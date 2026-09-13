@@ -4,7 +4,7 @@ import type { SavedTripModel } from '@road-travel/sdk';
 
 import { SettingsService } from '../../core/settings.service';
 import { type RecentTrip, TripsService } from '../../core/trips.service';
-import { SEVERITY_COLOR, type Severity, formatDistance } from '../plan/severity';
+import { SEVERITY_COLOR, formatDistance, severityOrFallback } from '../plan/severity';
 
 /** "My trips" — the server-authoritative saved list (ADR-0029; no recents). Tap one to reopen. */
 @Component({
@@ -246,7 +246,13 @@ export class Saved {
   dist(m: number): string {
     return formatDistance(m, this.settings.units());
   }
+  /**
+   * The worst-stretch badge on a saved trip. An absent value stays the neutral border — the row
+   * was saved without a worst stretch and we will not invent one. A PRESENT but unrecognised value
+   * degrades to caution: the `as Severity` cast used to hand it straight to the lookup, which
+   * returned undefined and drew no badge at all, hiding the one row that most deserved one.
+   */
   color(s?: string | null): string {
-    return s ? SEVERITY_COLOR[s as Severity] : 'var(--border)';
+    return s ? SEVERITY_COLOR[severityOrFallback(s)] : 'var(--border)';
   }
 }

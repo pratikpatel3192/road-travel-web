@@ -7,7 +7,7 @@ import type {
 } from '@road-travel/sdk';
 
 import type { PlaceValue } from './place-field';
-import { SEVERITY_LABEL, type Severity } from './severity';
+import { SEVERITY_LABEL, severityOrFallback } from './severity';
 import type { DwellMinutes } from './waypoints';
 
 /**
@@ -142,11 +142,16 @@ export function exposureDeltaLabel(p: AddStopPreviewResponse): string {
     : `weather exposure ${p.exposure_before} → ${p.exposure_after}`;
 }
 
-/** "worst stretch Caution → Severe" / "worst stretch unchanged" for the preview confirm. */
+/**
+ * "worst stretch Caution → Severe" / "worst stretch unchanged" for the preview confirm.
+ * `severityOrFallback` rather than `as Severity`: the cast turned a level this build predates into
+ * an `undefined` lookup, so the sentence read "worst stretch undefined → undefined" — on the one
+ * screen whose whole job is telling you whether adding this stop makes the drive worse.
+ */
 export function worstDeltaLabel(p: AddStopPreviewResponse): string {
   return p.worst_before === p.worst_after
     ? 'worst stretch unchanged'
-    : `worst stretch ${SEVERITY_LABEL[p.worst_before as Severity]} → ${SEVERITY_LABEL[p.worst_after as Severity]}`;
+    : `worst stretch ${SEVERITY_LABEL[severityOrFallback(p.worst_before)]} → ${SEVERITY_LABEL[severityOrFallback(p.worst_after)]}`;
 }
 
 /** "Park" from `park`, "Rest area" from `rest_area` — the card's category badge text. */

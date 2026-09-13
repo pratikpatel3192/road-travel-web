@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import type { PlanTripResponse, RouteSampleModel, WeatherSnapshotModel } from '@road-travel/sdk';
 
+import { SEVERITY_COLOR, SEVERITY_LEVELS, UNKNOWN_COLOR, type Severity } from './severity';
 import { Timeline } from './timeline';
 
 const weather = (over: Partial<WeatherSnapshotModel> = {}): WeatherSnapshotModel => ({
@@ -98,6 +99,47 @@ describe('Timeline stop cells (F-006)', () => {
     fixture.componentInstance.selectedChange.subscribe((i) => (selected = i));
     (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.cell.stop')!.click();
     expect(selected).toBe(1);
+  });
+});
+
+/**
+ * The hazard tint is the timeline's whole at-a-glance signal. It used to be an enumeration —
+ * `sev === 'caution' || sev === 'severe'` — which meant the two levels added ABOVE caution both
+ * came out untinted, so the worst weather on a route drew the calmest cell on the strip.
+ */
+describe('Timeline — the hazard tint across the five-level scale', () => {
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [Timeline] }).compileComponents();
+  });
+
+  const cellFor = (severity: Severity): HTMLElement => {
+    const p = plan();
+    p.samples = [sample(0, { weather: weather({ severity }) })];
+    const fixture = TestBed.createComponent(Timeline);
+    fixture.componentRef.setInput('plan', p);
+    fixture.detectChanges();
+    return (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.cell')!;
+  };
+
+  it.each([
+    ['clear', false],
+    ['caution', true],
+    ['high', true],
+    ['severe', true],
+    ['extreme', true],
+  ] as const)('tints a %s milestone: %s', (severity, tinted) => {
+    expect(cellFor(severity).classList.contains('hazard')).toBe(tinted);
+  });
+
+  it.each(SEVERITY_LEVELS)('colours the %s dot with its own swatch', (severity) => {
+    const fixture = TestBed.createComponent(Timeline);
+    expect(fixture.componentInstance.dot(severity)).toBe(SEVERITY_COLOR[severity]);
+  });
+
+  it('gives a milestone with no weather the unknown grey, not the sage of clear', () => {
+    const fixture = TestBed.createComponent(Timeline);
+    expect(fixture.componentInstance.dot(undefined)).toBe(UNKNOWN_COLOR);
+    expect(fixture.componentInstance.dot(undefined)).not.toBe(SEVERITY_COLOR.clear);
   });
 });
 

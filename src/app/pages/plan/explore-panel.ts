@@ -28,7 +28,14 @@ import {
 } from './explore';
 import type { PlaceValue } from './place-field';
 import { tripIdentityKey } from './rebrief';
-import { SEVERITY_COLOR, type Severity, formatDuration, formatTemp, weatherEmoji } from './severity';
+import {
+  SEVERITY_COLOR,
+  UNKNOWN_COLOR,
+  formatDuration,
+  formatTemp,
+  severityOrFallback,
+  weatherEmoji,
+} from './severity';
 import { DWELL_PRESETS, type DwellMinutes, MAX_STOPS } from './waypoints';
 
 /**
@@ -734,8 +741,14 @@ export class ExplorePanel {
   temp(c: number): string {
     return formatTemp(c, this.units());
   }
-  sevColor(sev: string): string {
-    return SEVERITY_COLOR[(sev as Severity) ?? 'clear'] ?? SEVERITY_COLOR.clear;
+  /**
+   * The dot beside a candidate stop's forecast. The old double fallback landed on 'clear' twice —
+   * both for a missing value and for an unrecognised one — so a level this build predates painted
+   * the stop sage. It degrades to caution now; a stop with no forecast at all gets the explicit
+   * unknown grey, because "nobody has looked" is not "be a bit careful".
+   */
+  sevColor(sev: string | null | undefined): string {
+    return sev ? SEVERITY_COLOR[severityOrFallback(sev)] : UNKNOWN_COLOR;
   }
   exposure(p: AddStopPreviewResponse): string {
     return exposureDeltaLabel(p);

@@ -2,7 +2,7 @@ import { Component, computed, input, linkedSignal, output } from '@angular/core'
 import type { BriefingResponse, ClaimModel } from '@road-travel/sdk';
 
 import { IconComponent } from '../../ui/icon';
-import { SEVERITY_COLOR, SEVERITY_LABEL, type Severity, formatDistance } from './severity';
+import { SEVERITY_COLOR, SEVERITY_LABEL, formatDistance, severityOrFallback } from './severity';
 
 /** The engine's F-001 v2 verdict scale (US-6) — always server-decided, never derived here. */
 type Verdict = NonNullable<BriefingResponse['verdict']>;
@@ -98,8 +98,11 @@ const VERDICT_LABEL: Record<Verdict, string> = {
           <ul class="hazards">
             @for (h of b.facts.hazards; track $index) {
               <li>
+                <!-- the LABEL, not the raw API value: interpolating h.severity printed
+                     "high"/"extreme" lowercase, mid-sentence, in a card whose every other
+                     severity word is the driver-facing one. -->
                 <span class="hzdot" [style.background]="color(h.severity)"></span>
-                <strong>{{ h.type }}</strong> ({{ h.severity }}) —
+                <strong>{{ h.type }}</strong> ({{ label(h.severity) }}) —
                 {{ dist(h.start_distance_meters) }} to {{ dist(h.end_distance_meters) }}.
                 <span class="peak">{{ h.peak_detail }}</span>
               </li>
@@ -365,11 +368,16 @@ export class BriefingCard {
   verdictLabel(v: Verdict): string {
     return VERDICT_LABEL[v];
   }
-  color(sev: Severity): string {
-    return SEVERITY_COLOR[sev];
+  /**
+   * Both take a plain string rather than `Severity` on purpose. These render SERVER values, and a
+   * level this build predates must still come out as a colour and a word — `severityOrFallback`
+   * degrades it to caution rather than leaving an undefined swatch and a blank label.
+   */
+  color(sev: string): string {
+    return SEVERITY_COLOR[severityOrFallback(sev)];
   }
-  label(sev: Severity): string {
-    return SEVERITY_LABEL[sev];
+  label(sev: string): string {
+    return SEVERITY_LABEL[severityOrFallback(sev)];
   }
   dist(m: number): string {
     return formatDistance(m, this.units());

@@ -5,7 +5,15 @@ import type { TripLegModel, TripLegsResponse } from '@road-travel/sdk';
 
 import { ApiService } from '../../core/api.service';
 import { TripsService } from '../../core/trips.service';
+import { SEVERITY_COLOR, SEVERITY_LEVELS } from '../plan/severity';
 import { Itinerary } from './itinerary';
+
+/** Derived from the scale, so a level added later joins the guard instead of slipping past it. */
+const SEVERITY_VOCABULARY = [
+  'severity',
+  ...SEVERITY_LEVELS.map((level) => `sev-${level}`),
+  ...Object.values(SEVERITY_COLOR),
+];
 
 const NOW = new Date('2026-09-12T12:00:00Z');
 const day = (n: number): string => {
@@ -102,6 +110,13 @@ describe('Itinerary — the forecast/outlook boundary', () => {
     expect(cells.length).toBe(2);
     expect(cells[0].classList.contains('forecast')).toBe(true);
     expect(cells[1].classList.contains('outlook')).toBe(true);
+
+    // "never a severity colour" was only ever a comment here — the positive class assertions above
+    // would have passed just as happily with a terracotta swatch on the outlook cell. Say it.
+    const html = (fixture.nativeElement as HTMLElement).innerHTML;
+    for (const forbidden of SEVERITY_VOCABULARY) {
+      expect(html).not.toContain(forbidden);
+    }
   });
 
   it('marks the cell where the forecast stops', async () => {

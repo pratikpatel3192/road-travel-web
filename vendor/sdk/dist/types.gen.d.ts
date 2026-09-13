@@ -64,11 +64,11 @@ export type AddStopPreviewResponse = {
     /**
      * Worst Before
      */
-    worst_before: 'clear' | 'caution' | 'severe';
+    worst_before: 'clear' | 'caution' | 'high' | 'severe' | 'extreme';
     /**
      * Worst After
      */
-    worst_after: 'clear' | 'caution' | 'severe';
+    worst_after: 'clear' | 'caution' | 'high' | 'severe' | 'extreme';
 };
 /**
  * BetterWindowModel
@@ -100,17 +100,6 @@ export type BetterWindowModel = {
      * Note
      */
     note: string;
-};
-/**
- * BlockRequest
- *
- * POST /v1/social/blocks — block the other party of an existing relationship.
- */
-export type BlockRequest = {
-    /**
-     * Friendship Id
-     */
-    friendship_id: string;
 };
 /**
  * BriefingFactsModel
@@ -151,7 +140,7 @@ export type BriefingFactsModel = {
     /**
      * Overall Severity
      */
-    overall_severity: 'clear' | 'caution' | 'severe';
+    overall_severity: 'clear' | 'caution' | 'high' | 'severe' | 'extreme';
     worst_stretch?: WorstStretchModel | null;
     /**
      * Hazards
@@ -317,47 +306,6 @@ export type CampaignSummary = {
     replies: number;
 };
 /**
- * ChatDriveModel
- *
- * The compact drive card attached to a message (sender's drive; absent if since deleted).
- *
- * Carries the simplified polyline so the card can open a route preview: sharing the card
- * into the conversation is the sender's explicit choice, so members may see the route even
- * when the drive itself isn't friends-visible.
- */
-export type ChatDriveModel = {
-    /**
-     * Id
-     */
-    id: string;
-    /**
-     * Title
-     */
-    title?: string | null;
-    /**
-     * Start Place
-     */
-    start_place?: string | null;
-    /**
-     * End Place
-     */
-    end_place?: string | null;
-    /**
-     * Distance Meters
-     */
-    distance_meters: number;
-    /**
-     * Started At
-     */
-    started_at: string;
-    /**
-     * Polyline
-     *
-     * [latitude, longitude] pairs (engine-simplified).
-     */
-    polyline?: Array<Array<number>>;
-};
-/**
  * CheckoutSessionRequest
  *
  * Start web (Stripe) checkout for a plan. The SERVER decides the trial, never the client.
@@ -516,78 +464,6 @@ export type Contact = {
     suppression_reason?: string | null;
 };
 /**
- * ConversationCreateRequest
- *
- * DM: exactly `friendship_id`. Group: `friendship_ids` (2..7 accepted friends) + title.
- */
-export type ConversationCreateRequest = {
-    /**
-     * Kind
-     */
-    kind?: 'dm' | 'group';
-    /**
-     * Friendship Id
-     */
-    friendship_id?: string | null;
-    /**
-     * Friendship Ids
-     */
-    friendship_ids?: Array<string> | null;
-    /**
-     * Title
-     */
-    title?: string | null;
-};
-/**
- * ConversationModel
- */
-export type ConversationModel = {
-    /**
-     * Id
-     */
-    id: string;
-    /**
-     * Kind
-     */
-    kind: 'dm' | 'group';
-    /**
-     * Title
-     */
-    title?: string | null;
-    /**
-     * Topic
-     *
-     * The Realtime delivery topic: chat:{conversation_id}.
-     */
-    topic: string;
-    /**
-     * Members
-     *
-     * The OTHER members.
-     */
-    members?: Array<PartyModel>;
-    last_message?: MessageModel | null;
-    /**
-     * Unread Count
-     *
-     * Messages from other members since the caller last read this thread.
-     */
-    unread_count?: number;
-    /**
-     * Created At
-     */
-    created_at: string;
-};
-/**
- * ConversationsResponse
- */
-export type ConversationsResponse = {
-    /**
-     * Conversations
-     */
-    conversations: Array<ConversationModel>;
-};
-/**
  * CoordinateModel
  */
 export type CoordinateModel = {
@@ -675,7 +551,7 @@ export type DepartureOptionModel = {
     /**
      * Worst Severity
      */
-    worst_severity: 'clear' | 'caution' | 'severe';
+    worst_severity: 'clear' | 'caution' | 'high' | 'severe' | 'extreme';
 };
 /**
  * DepartureWindowModel
@@ -824,7 +700,7 @@ export type DriveModel = {
     /**
      * Visibility
      */
-    visibility?: 'private' | 'friends';
+    visibility?: 'private';
     /**
      * Title
      */
@@ -1051,11 +927,11 @@ export type FactsDiffEntryModel = {
     /**
      * From Severity
      */
-    from_severity?: 'clear' | 'caution' | 'severe' | null;
+    from_severity?: 'clear' | 'caution' | 'high' | 'severe' | 'extreme' | null;
     /**
      * To Severity
      */
-    to_severity?: 'clear' | 'caution' | 'severe' | null;
+    to_severity?: 'clear' | 'caution' | 'high' | 'severe' | 'extreme' | null;
     /**
      * Residual Minutes
      *
@@ -1080,11 +956,11 @@ export type FactsDiffModel = {
     /**
      * Overall From
      */
-    overall_from: 'clear' | 'caution' | 'severe';
+    overall_from: 'clear' | 'caution' | 'high' | 'severe' | 'extreme';
     /**
      * Overall To
      */
-    overall_to: 'clear' | 'caution' | 'severe';
+    overall_to: 'clear' | 'caution' | 'high' | 'severe' | 'extreme';
     /**
      * Cause
      *
@@ -1097,112 +973,6 @@ export type FactsDiffModel = {
      * F-012: entries beyond what the prose renders. The briefing states the count, so a long diff can never read as though nothing else changed.
      */
     omitted_entries?: number;
-};
-/**
- * FriendRequestCreate
- *
- * POST /v1/social/friends — request a friend by the one identifier people actually know.
- */
-export type FriendRequestCreate = {
-    /**
-     * Email
-     */
-    email: string;
-};
-/**
- * FriendSessionModel
- *
- * A friend's live share as the map consumes it — identity + topic, never a position.
- */
-export type FriendSessionModel = {
-    /**
-     * Session Id
-     */
-    session_id: string;
-    /**
-     * Topic
-     */
-    topic: string;
-    /**
-     * Friendship Id
-     */
-    friendship_id: string;
-    friend: PartyModel;
-    /**
-     * Started At
-     */
-    started_at: string;
-    /**
-     * Expires At
-     */
-    expires_at: string;
-};
-/**
- * FriendSessionsResponse
- */
-export type FriendSessionsResponse = {
-    /**
-     * Sessions
-     */
-    sessions: Array<FriendSessionModel>;
-};
-/**
- * FriendsResponse
- *
- * The caller's whole graph, pre-partitioned; blocks OTHERS placed on the caller are absent
- * (invisible), blocks the CALLER placed appear under ``blocked`` so they can be lifted.
- */
-export type FriendsResponse = {
-    /**
-     * Friends
-     */
-    friends?: Array<FriendshipModel>;
-    /**
-     * Incoming
-     */
-    incoming?: Array<FriendshipModel>;
-    /**
-     * Outgoing
-     */
-    outgoing?: Array<FriendshipModel>;
-    /**
-     * Blocked
-     */
-    blocked?: Array<FriendshipModel>;
-};
-/**
- * FriendshipModel
- */
-export type FriendshipModel = {
-    /**
-     * Id
-     */
-    id: string;
-    /**
-     * Status
-     */
-    status: 'pending' | 'accepted' | 'blocked';
-    /**
-     * Direction
-     *
-     * Relative to the caller: did they send or receive the request?
-     */
-    direction: 'incoming' | 'outgoing';
-    friend: PartyModel;
-    /**
-     * Created At
-     */
-    created_at: string;
-    /**
-     * Responded At
-     */
-    responded_at?: string | null;
-    /**
-     * Expires At
-     *
-     * Pending requests only: past this instant the request is gone.
-     */
-    expires_at?: string | null;
 };
 /**
  * GuidanceRouteModel
@@ -1268,6 +1038,12 @@ export type GuidanceRouteRequest = {
      * Only snap the origin to roads this close — for routing from a live GPS fix. Without it, a driver on toll lanes with tolls excluded is snapped to the frontage road beside them, and every reroute starts somewhere they are not.
      */
     origin_radius_meters?: number | null;
+    /**
+     * Language
+     *
+     * BCP-47 tag for spoken and written instructions, e.g. `fr` or `pt-BR`. The server maps it to the closest language the provider can speak and falls back to English; a client may simply send its device language.
+     */
+    language?: string | null;
     /**
      * Units
      *
@@ -1407,7 +1183,7 @@ export type HazardModel = {
     /**
      * Severity
      */
-    severity: 'clear' | 'caution' | 'severe';
+    severity: 'clear' | 'caution' | 'high' | 'severe' | 'extreme';
     /**
      * Start Index
      */
@@ -1574,36 +1350,17 @@ export type LegUpgradeRunResponse = {
         [key: string]: unknown;
     }>;
     /**
+     * Abandoned
+     *
+     * Legs that ran out of retries and were closed out with no note — most often because there is no road between their endpoints. Their drivers will never be told about them, so a non-empty list here is worth reading.
+     */
+    abandoned?: Array<{
+        [key: string]: unknown;
+    }>;
+    /**
      * Dry Run
      */
     dry_run: boolean;
-};
-/**
- * LocationSessionModel
- */
-export type LocationSessionModel = {
-    /**
-     * Id
-     */
-    id: string;
-    /**
-     * Topic
-     *
-     * The Realtime broadcast topic: location:{session_id}.
-     */
-    topic: string;
-    /**
-     * Started At
-     */
-    started_at: string;
-    /**
-     * Expires At
-     */
-    expires_at: string;
-    /**
-     * Drive Id
-     */
-    drive_id?: string | null;
 };
 /**
  * MeResponse
@@ -1674,45 +1431,6 @@ export type MeStatsResponse = {
     regions?: Array<string>;
 };
 /**
- * MessageModel
- */
-export type MessageModel = {
-    /**
-     * Id
-     */
-    id: string;
-    /**
-     * Conversation Id
-     */
-    conversation_id: string;
-    /**
-     * Body
-     */
-    body: string;
-    /**
-     * Absent when the sender's account was deleted (anonymized).
-     */
-    sender?: PartyModel | null;
-    /**
-     * Mine
-     */
-    mine?: boolean;
-    drive?: ChatDriveModel | null;
-    /**
-     * Created At
-     */
-    created_at: string;
-};
-/**
- * MessagesResponse
- */
-export type MessagesResponse = {
-    /**
-     * Messages
-     */
-    messages: Array<MessageModel>;
-};
-/**
  * MintLinksRequest
  *
  * POST /v1/email/links — operator-only. Mint one unsubscribe URL per address.
@@ -1762,14 +1480,6 @@ export type MintedLink = {
      * Specific to this recipient — never reuse one for another person.
      */
     unsubscribe_url: string;
-};
-/**
- * MySessionResponse
- *
- * The caller's live session, if any — lets the client restore the sharing indicator.
- */
-export type MySessionResponse = {
-    session?: LocationSessionModel | null;
 };
 /**
  * OnboardingRequest
@@ -1970,21 +1680,6 @@ export type OverviewTotals = {
      * Reply Rate
      */
     reply_rate?: number;
-};
-/**
- * PartyModel
- *
- * The displayable identity of the OTHER party — never more than this.
- */
-export type PartyModel = {
-    /**
-     * Email
-     */
-    email?: string | null;
-    /**
-     * Display Name
-     */
-    display_name?: string | null;
 };
 /**
  * PaywallResponse
@@ -2255,7 +1950,7 @@ export type PlanTripResponse = {
      *
      * Worst condition across the trip.
      */
-    worst_severity: 'clear' | 'caution' | 'severe';
+    worst_severity: 'clear' | 'caution' | 'high' | 'severe' | 'extreme';
     /**
      * Route Coordinates
      *
@@ -2528,17 +2223,6 @@ export type ReplyOut = {
     suppressed?: boolean;
 };
 /**
- * RespondRequest
- *
- * POST /v1/social/friends/{id}/respond — the addressee accepts or declines.
- */
-export type RespondRequest = {
-    /**
-     * Accept
-     */
-    accept: boolean;
-};
-/**
  * RevenueCatWebhookBody
  *
  * RevenueCat webhook envelope. ``event`` is kept loose (a raw object) so RevenueCat can add
@@ -2689,7 +2373,7 @@ export type SaveDriveRequest = {
     /**
      * Visibility
      */
-    visibility?: 'private' | 'friends';
+    visibility?: 'private';
 };
 /**
  * SaveTripRequest
@@ -2773,6 +2457,14 @@ export type SavedTripModel = {
      * Waypoints
      */
     waypoints?: Array<WaypointModel>;
+    /**
+     * Legs
+     *
+     * The trip's dated travel days, in order. Carried on the LIST so a client has every itinerary the moment it syncs, rather than discovering them one trip at a time when a screen happens to open — which is what made an itinerary feel absent until you went looking for it.
+     *
+     * Empty for a trip with no days yet, which is every trip saved before legs existed. The whole list is one query, not one per trip.
+     */
+    legs?: Array<TripLegModel>;
 };
 /**
  * SavedTripsResponse
@@ -2832,22 +2524,7 @@ export type SegmentModel = {
      *
      * Null for a stretch no forecast reaches. Clients must draw it as unknown — never as clear, which would tell a driver the road is fine when nobody knows yet.
      */
-    severity?: 'clear' | 'caution' | 'severe' | null;
-};
-/**
- * SendMessageRequest
- */
-export type SendMessageRequest = {
-    /**
-     * Body
-     */
-    body: string;
-    /**
-     * Drive Id
-     *
-     * Share one of YOUR drives into the chat (rendered as a card).
-     */
-    drive_id?: string | null;
+    severity?: 'clear' | 'caution' | 'high' | 'severe' | 'extreme' | null;
 };
 /**
  * SendRequest
@@ -2916,104 +2593,6 @@ export type SendResponse = {
      * Not Attempted
      */
     not_attempted?: Array<string>;
-};
-/**
- * SessionCreateRequest
- */
-export type SessionCreateRequest = {
-    /**
-     * Ttl Minutes
-     *
-     * Session length; server default when omitted.
-     */
-    ttl_minutes?: number | null;
-    /**
-     * Drive Id
-     *
-     * Optionally ties the share to a recorded drive in progress.
-     */
-    drive_id?: string | null;
-};
-/**
- * SharedDriveModel
- *
- * A friend's drive with ``visibility='friends'`` — stats, track, badge, weather chip.
- */
-export type SharedDriveModel = {
-    /**
-     * Id
-     */
-    id: string;
-    /**
-     * Started At
-     */
-    started_at: string;
-    /**
-     * Ended At
-     */
-    ended_at: string;
-    /**
-     * Distance Meters
-     */
-    distance_meters: number;
-    /**
-     * Duration Seconds
-     */
-    duration_seconds: number;
-    /**
-     * Moving Seconds
-     */
-    moving_seconds: number;
-    /**
-     * Avg Speed Mps
-     */
-    avg_speed_mps: number;
-    /**
-     * Max Speed Mps
-     */
-    max_speed_mps: number;
-    /**
-     * Polyline
-     *
-     * Simplified track as [latitude, longitude] pairs.
-     */
-    polyline: Array<Array<number>>;
-    /**
-     * Regions
-     */
-    regions?: Array<string>;
-    /**
-     * Start Place
-     */
-    start_place?: string | null;
-    /**
-     * End Place
-     */
-    end_place?: string | null;
-    /**
-     * Title
-     */
-    title?: string | null;
-    vehicle?: VehicleBadgeModel | null;
-    /**
-     * Trip Worst Severity
-     *
-     * The linked planned trip's worst severity (the weather story chip).
-     */
-    trip_worst_severity?: string | null;
-    /**
-     * Created At
-     */
-    created_at: string;
-};
-/**
- * SharedDrivesResponse
- */
-export type SharedDrivesResponse = {
-    /**
-     * Drives
-     */
-    drives: Array<SharedDriveModel>;
 };
 /**
  * SubscriptionModel
@@ -3237,7 +2816,7 @@ export type TripLegModel = {
     /**
      * Id
      *
-     * Server-assigned; ignored on write.
+     * Server-assigned. Send it BACK on a write: it is how the server carries this leg's upgrade state across the wholesale replace. A leg that arrives without one is a NEW leg and starts with no upgrade state — so dropping ids on a reorder both re-arms every notification and discards the notes already shown.
      */
     id?: string | null;
     /**
@@ -3341,7 +2920,7 @@ export type UpdateDriveRequest = {
     /**
      * Visibility
      */
-    visibility?: 'private' | 'friends' | null;
+    visibility?: 'private' | null;
 };
 /**
  * UpdateModel
@@ -3390,33 +2969,6 @@ export type ValidationError = {
     ctx?: {
         [key: string]: unknown;
     };
-};
-/**
- * VehicleBadgeModel
- *
- * The garage vehicle as shown on a shared drive (display fields only).
- */
-export type VehicleBadgeModel = {
-    /**
-     * Make
-     */
-    make: string;
-    /**
-     * Model
-     */
-    model: string;
-    /**
-     * Year
-     */
-    year?: number | null;
-    /**
-     * Color
-     */
-    color?: string | null;
-    /**
-     * Vehicle Type
-     */
-    vehicle_type: string;
 };
 /**
  * VehicleCreateRequest
@@ -3649,13 +3201,31 @@ export type WeatherSnapshotModel = {
      */
     precipitation_chance: number;
     /**
+     * Precipitation Intensity Mm H
+     *
+     * How hard it is falling, in mm/h. Null means the provider did not say — which is NOT the same as zero, and clients must not render it as 'no rain'. Chance says how likely; only this says how hard.
+     */
+    precipitation_intensity_mm_h?: number | null;
+    /**
      * Wind Speed Kph
      */
     wind_speed_kph: number;
     /**
+     * Wind Gust Kph
+     *
+     * Peak gust in kph, where the provider reports one. The gust is what moves a high-sided vehicle across a lane; the sustained speed is what is left when it passes.
+     */
+    wind_gust_kph?: number | null;
+    /**
+     * Alerts
+     *
+     * Official warnings in force for this hour at this point. Any entry means the sample is `extreme` — this is a human judgement about something already happening, not a forecast. Watches and advisories are deliberately excluded.
+     */
+    alerts?: Array<'tornado' | 'severe_thunderstorm' | 'flash_flood' | 'blizzard' | 'ice_storm'>;
+    /**
      * Severity
      */
-    severity: 'clear' | 'caution' | 'severe';
+    severity: 'clear' | 'caution' | 'high' | 'severe' | 'extreme';
     /**
      * Is Daytime
      *
@@ -3691,7 +3261,7 @@ export type WorstStretchModel = {
     /**
      * Severity
      */
-    severity: 'clear' | 'caution' | 'severe';
+    severity: 'clear' | 'caution' | 'high' | 'severe' | 'extreme';
     /**
      * Dominant Hazard
      */
@@ -4541,337 +4111,6 @@ export type UpdateVehicleV1VehiclesVehicleIdPatchResponses = {
     200: VehicleModel;
 };
 export type UpdateVehicleV1VehiclesVehicleIdPatchResponse = UpdateVehicleV1VehiclesVehicleIdPatchResponses[keyof UpdateVehicleV1VehiclesVehicleIdPatchResponses];
-export type ListFriendsV1SocialFriendsGetData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/v1/social/friends';
-};
-export type ListFriendsV1SocialFriendsGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: FriendsResponse;
-};
-export type ListFriendsV1SocialFriendsGetResponse = ListFriendsV1SocialFriendsGetResponses[keyof ListFriendsV1SocialFriendsGetResponses];
-export type RequestFriendV1SocialFriendsPostData = {
-    body: FriendRequestCreate;
-    path?: never;
-    query?: never;
-    url: '/v1/social/friends';
-};
-export type RequestFriendV1SocialFriendsPostErrors = {
-    /**
-     * user_not_found — also the answer when that user blocked you.
-     */
-    404: unknown;
-    /**
-     * already_friends / request_pending / blocked_by_you.
-     */
-    409: unknown;
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-    /**
-     * rate_limited — daily request cap reached.
-     */
-    429: unknown;
-};
-export type RequestFriendV1SocialFriendsPostError = RequestFriendV1SocialFriendsPostErrors[keyof RequestFriendV1SocialFriendsPostErrors];
-export type RequestFriendV1SocialFriendsPostResponses = {
-    /**
-     * Successful Response
-     */
-    201: FriendshipModel;
-};
-export type RequestFriendV1SocialFriendsPostResponse = RequestFriendV1SocialFriendsPostResponses[keyof RequestFriendV1SocialFriendsPostResponses];
-export type RespondV1SocialFriendsFriendshipIdRespondPostData = {
-    body: RespondRequest;
-    path: {
-        /**
-         * Friendship Id
-         */
-        friendship_id: string;
-    };
-    query?: never;
-    url: '/v1/social/friends/{friendship_id}/respond';
-};
-export type RespondV1SocialFriendsFriendshipIdRespondPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-export type RespondV1SocialFriendsFriendshipIdRespondPostError = RespondV1SocialFriendsFriendshipIdRespondPostErrors[keyof RespondV1SocialFriendsFriendshipIdRespondPostErrors];
-export type RespondV1SocialFriendsFriendshipIdRespondPostResponses = {
-    /**
-     * Successful Response
-     */
-    200: FriendshipModel;
-    /**
-     * Declined — the request is gone.
-     */
-    204: void;
-};
-export type RespondV1SocialFriendsFriendshipIdRespondPostResponse = RespondV1SocialFriendsFriendshipIdRespondPostResponses[keyof RespondV1SocialFriendsFriendshipIdRespondPostResponses];
-export type RemoveFriendV1SocialFriendsFriendshipIdDeleteData = {
-    body?: never;
-    path: {
-        /**
-         * Friendship Id
-         */
-        friendship_id: string;
-    };
-    query?: never;
-    url: '/v1/social/friends/{friendship_id}';
-};
-export type RemoveFriendV1SocialFriendsFriendshipIdDeleteErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-export type RemoveFriendV1SocialFriendsFriendshipIdDeleteError = RemoveFriendV1SocialFriendsFriendshipIdDeleteErrors[keyof RemoveFriendV1SocialFriendsFriendshipIdDeleteErrors];
-export type RemoveFriendV1SocialFriendsFriendshipIdDeleteResponses = {
-    /**
-     * Successful Response
-     */
-    204: void;
-};
-export type RemoveFriendV1SocialFriendsFriendshipIdDeleteResponse = RemoveFriendV1SocialFriendsFriendshipIdDeleteResponses[keyof RemoveFriendV1SocialFriendsFriendshipIdDeleteResponses];
-export type BlockUserV1SocialBlocksPostData = {
-    body: BlockRequest;
-    path?: never;
-    query?: never;
-    url: '/v1/social/blocks';
-};
-export type BlockUserV1SocialBlocksPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-export type BlockUserV1SocialBlocksPostError = BlockUserV1SocialBlocksPostErrors[keyof BlockUserV1SocialBlocksPostErrors];
-export type BlockUserV1SocialBlocksPostResponses = {
-    /**
-     * Successful Response
-     */
-    200: FriendshipModel;
-};
-export type BlockUserV1SocialBlocksPostResponse = BlockUserV1SocialBlocksPostResponses[keyof BlockUserV1SocialBlocksPostResponses];
-export type FriendSessionsV1SocialFriendsSessionsGetData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/v1/social/friends/sessions';
-};
-export type FriendSessionsV1SocialFriendsSessionsGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: FriendSessionsResponse;
-};
-export type FriendSessionsV1SocialFriendsSessionsGetResponse = FriendSessionsV1SocialFriendsSessionsGetResponses[keyof FriendSessionsV1SocialFriendsSessionsGetResponses];
-export type FriendDrivesV1SocialFriendsFriendshipIdDrivesGetData = {
-    body?: never;
-    path: {
-        /**
-         * Friendship Id
-         */
-        friendship_id: string;
-    };
-    query?: never;
-    url: '/v1/social/friends/{friendship_id}/drives';
-};
-export type FriendDrivesV1SocialFriendsFriendshipIdDrivesGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-export type FriendDrivesV1SocialFriendsFriendshipIdDrivesGetError = FriendDrivesV1SocialFriendsFriendshipIdDrivesGetErrors[keyof FriendDrivesV1SocialFriendsFriendshipIdDrivesGetErrors];
-export type FriendDrivesV1SocialFriendsFriendshipIdDrivesGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: SharedDrivesResponse;
-};
-export type FriendDrivesV1SocialFriendsFriendshipIdDrivesGetResponse = FriendDrivesV1SocialFriendsFriendshipIdDrivesGetResponses[keyof FriendDrivesV1SocialFriendsFriendshipIdDrivesGetResponses];
-export type MintSessionV1LocationsSessionsPostData = {
-    body: SessionCreateRequest;
-    path?: never;
-    query?: never;
-    url: '/v1/locations/sessions';
-};
-export type MintSessionV1LocationsSessionsPostErrors = {
-    /**
-     * consent_required: live_location_sharing not at current version.
-     */
-    400: unknown;
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-export type MintSessionV1LocationsSessionsPostError = MintSessionV1LocationsSessionsPostErrors[keyof MintSessionV1LocationsSessionsPostErrors];
-export type MintSessionV1LocationsSessionsPostResponses = {
-    /**
-     * Successful Response
-     */
-    201: LocationSessionModel;
-};
-export type MintSessionV1LocationsSessionsPostResponse = MintSessionV1LocationsSessionsPostResponses[keyof MintSessionV1LocationsSessionsPostResponses];
-export type RevokeSessionV1LocationsSessionsSessionIdDeleteData = {
-    body?: never;
-    path: {
-        /**
-         * Session Id
-         */
-        session_id: string;
-    };
-    query?: never;
-    url: '/v1/locations/sessions/{session_id}';
-};
-export type RevokeSessionV1LocationsSessionsSessionIdDeleteErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-export type RevokeSessionV1LocationsSessionsSessionIdDeleteError = RevokeSessionV1LocationsSessionsSessionIdDeleteErrors[keyof RevokeSessionV1LocationsSessionsSessionIdDeleteErrors];
-export type RevokeSessionV1LocationsSessionsSessionIdDeleteResponses = {
-    /**
-     * Successful Response
-     */
-    204: void;
-};
-export type RevokeSessionV1LocationsSessionsSessionIdDeleteResponse = RevokeSessionV1LocationsSessionsSessionIdDeleteResponses[keyof RevokeSessionV1LocationsSessionsSessionIdDeleteResponses];
-export type MySessionV1LocationsSessionsMineGetData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/v1/locations/sessions/mine';
-};
-export type MySessionV1LocationsSessionsMineGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: MySessionResponse;
-};
-export type MySessionV1LocationsSessionsMineGetResponse = MySessionV1LocationsSessionsMineGetResponses[keyof MySessionV1LocationsSessionsMineGetResponses];
-export type ListConversationsV1ConversationsGetData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/v1/conversations';
-};
-export type ListConversationsV1ConversationsGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: ConversationsResponse;
-};
-export type ListConversationsV1ConversationsGetResponse = ListConversationsV1ConversationsGetResponses[keyof ListConversationsV1ConversationsGetResponses];
-export type CreateConversationV1ConversationsPostData = {
-    body: ConversationCreateRequest;
-    path?: never;
-    query?: never;
-    url: '/v1/conversations';
-};
-export type CreateConversationV1ConversationsPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-export type CreateConversationV1ConversationsPostError = CreateConversationV1ConversationsPostErrors[keyof CreateConversationV1ConversationsPostErrors];
-export type CreateConversationV1ConversationsPostResponses = {
-    /**
-     * Successful Response
-     */
-    201: ConversationModel;
-};
-export type CreateConversationV1ConversationsPostResponse = CreateConversationV1ConversationsPostResponses[keyof CreateConversationV1ConversationsPostResponses];
-export type GetMessagesV1ConversationsConversationIdMessagesGetData = {
-    body?: never;
-    path: {
-        /**
-         * Conversation Id
-         */
-        conversation_id: string;
-    };
-    query?: never;
-    url: '/v1/conversations/{conversation_id}/messages';
-};
-export type GetMessagesV1ConversationsConversationIdMessagesGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-export type GetMessagesV1ConversationsConversationIdMessagesGetError = GetMessagesV1ConversationsConversationIdMessagesGetErrors[keyof GetMessagesV1ConversationsConversationIdMessagesGetErrors];
-export type GetMessagesV1ConversationsConversationIdMessagesGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: MessagesResponse;
-};
-export type GetMessagesV1ConversationsConversationIdMessagesGetResponse = GetMessagesV1ConversationsConversationIdMessagesGetResponses[keyof GetMessagesV1ConversationsConversationIdMessagesGetResponses];
-export type SendMessageV1ConversationsConversationIdMessagesPostData = {
-    body: SendMessageRequest;
-    path: {
-        /**
-         * Conversation Id
-         */
-        conversation_id: string;
-    };
-    query?: never;
-    url: '/v1/conversations/{conversation_id}/messages';
-};
-export type SendMessageV1ConversationsConversationIdMessagesPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-export type SendMessageV1ConversationsConversationIdMessagesPostError = SendMessageV1ConversationsConversationIdMessagesPostErrors[keyof SendMessageV1ConversationsConversationIdMessagesPostErrors];
-export type SendMessageV1ConversationsConversationIdMessagesPostResponses = {
-    /**
-     * Successful Response
-     */
-    201: MessageModel;
-};
-export type SendMessageV1ConversationsConversationIdMessagesPostResponse = SendMessageV1ConversationsConversationIdMessagesPostResponses[keyof SendMessageV1ConversationsConversationIdMessagesPostResponses];
-export type ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostData = {
-    body?: never;
-    path: {
-        /**
-         * Conversation Id
-         */
-        conversation_id: string;
-        /**
-         * Message Id
-         */
-        message_id: string;
-    };
-    query?: never;
-    url: '/v1/conversations/{conversation_id}/messages/{message_id}/report';
-};
-export type ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-export type ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostError = ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostErrors[keyof ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostErrors];
-export type ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostResponses = {
-    /**
-     * Successful Response
-     */
-    204: void;
-};
-export type ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostResponse = ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostResponses[keyof ReportMessageV1ConversationsConversationIdMessagesMessageIdReportPostResponses];
 export type GetConfigV1ConfigGetData = {
     body?: never;
     path?: never;

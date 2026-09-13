@@ -40,10 +40,16 @@
   --neutral-400: #c0b6a5; --neutral-500: #a19786; --neutral-600: #82796a;
   --neutral-700: #645c50; --neutral-800: #474238; --neutral-900: #2e2b25;
 
-  /* Severity (product semantics, re-hued): all-clear = sage, hazard = terracotta. */
+  /* Severity (product semantics, re-hued): all-clear = sage, hazard = a five-step terracotta ramp
+     that deepens as it worsens — except `extreme`, which leaves the ramp for red on purpose. A
+     fourth step of the same brown would read as "more of the same"; an official warning in force
+     is a different kind of statement. Hex-for-hex the same ramp as iOS Color.rtSeverity, and kept
+     in sync with SEVERITY_COLOR in src/app/pages/plan/severity.ts. */
   --sev-clear: #7a8a5e;
   --sev-caution: #f6a06b;
+  --sev-high: #d97b3c;
   --sev-severe: #b2622d;
+  --sev-extreme: #8c1d18;
 
   /* Condition band (timeline) + map semantics. */
   --cond-clear: var(--accent-2-300);
@@ -103,9 +109,14 @@
   --btn-secondary-border: #645c50;
   --link: #ffc6a5;
   --link-hover: #ffe1d0;
+  /* The hazard ramp lightens on charcoal so each step stays legible; `extreme` goes to a bright
+     red rather than the deep one, because the deep end disappears into the ground exactly where
+     it matters most. Mirrors iOS Color.rtSeverity's dark values. */
   --sev-clear: #aebf92;
   --sev-caution: #f6a06b;
+  --sev-high: #e8945c;
   --sev-severe: #d67f48;
+  --sev-extreme: #f2544b;
   --cond-clear: var(--accent-2-700);
   --cond-clouds: var(--neutral-700);
   --cond-rain: var(--accent-700);
@@ -142,9 +153,12 @@
     --btn-secondary-border: #645c50;
     --link: #ffc6a5;
     --link-hover: #ffe1d0;
+    /* Same ramp as the explicit dark block above — see the note there. */
     --sev-clear: #aebf92;
     --sev-caution: #f6a06b;
+    --sev-high: #e8945c;
     --sev-severe: #d67f48;
+    --sev-extreme: #f2544b;
     --cond-clear: var(--accent-2-700);
     --cond-clouds: var(--neutral-700);
     --cond-rain: var(--accent-700);
@@ -261,12 +275,15 @@ button { font-family: inherit; }
 .card { box-shadow: var(--shadow-card); }
 
 /* Route line (Leaflet SVG paths take these as CSS classes so strokes are theme-live):
-   terracotta over a white casing; severity shifts the ramp step (clear=base/caution=400/
-   severe=800-ish via --sev-*). */
+   terracotta over a white casing; severity darkens the stroke step by step, ending at the
+   severity red. route-map.ts builds these names as 'rt-sev-' + level, so EVERY level of
+   `Severity` needs a class here — a missing one falls back to an unstyled stroke silently. */
 .rt-route-casing { stroke: var(--route-casing); }
 .rt-sev-clear { stroke: var(--route-line); }
 .rt-sev-caution { stroke: var(--sev-caution); }
+.rt-sev-high { stroke: var(--sev-high); }
 .rt-sev-severe { stroke: var(--accent-800); }
+.rt-sev-extreme { stroke: var(--sev-extreme); }
 .rt-route-dim { stroke: var(--neutral-400); opacity: 0.45; }
 
 /* Map weather chip (Leaflet divIcon — renders outside components): white pill with the
@@ -313,7 +330,9 @@ button { font-family: inherit; }
   box-shadow: var(--shadow-sm);
 }
 .wx-dot.caution { border-color: var(--sev-caution); }
+.wx-dot.high { border-color: var(--sev-high); }
 .wx-dot.severe { border-color: var(--sev-severe); }
+.wx-dot.extreme { border-color: var(--sev-extreme); }
 
 /* Numbered stop pin (terracotta) + explore pin (sage) — divIcon HTML, global for the same reason. */
 .rt-stop-pin, .rt-explore-pin {

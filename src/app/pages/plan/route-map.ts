@@ -14,7 +14,16 @@ import * as L from 'leaflet';
 
 import { SettingsService } from '../../core/settings.service';
 import { IconComponent, LUCIDE } from '../../ui/icon';
-import { SEVERITY_COLOR, UNKNOWN_COLOR, type Severity, weatherIcon } from './severity';
+import {
+  SEVERITY_COLOR,
+  SEVERITY_FALLBACK,
+  UNKNOWN_COLOR,
+  type Severity,
+  isHazard,
+  severityOrFallback,
+  toSeverity,
+  weatherIcon,
+} from './severity';
 
 // Free, keyless tile sources. Esri World Imagery gives satellite; its reference layers add roads +
 // labels for "hybrid".
@@ -161,7 +170,7 @@ export class RouteMap implements OnDestroy {
   private resizeObserver: ResizeObserver | null = null;
   private readonly markers = new Map<
     number,
-    { marker: L.Marker; sev: Severity; icon: string; temp: string; stop: number | null }
+    { marker: L.Marker; sev: Severity | null; icon: string; temp: string; stop: number | null }
   >();
   private unbindLongPress: (() => void) | null = null;
   private exploreLayer: L.LayerGroup | null = null;
@@ -254,12 +263,15 @@ export class RouteMap implements OnDestroy {
       }).addTo(layer);
     }
     plan.segments.forEach((seg, i) => {
-      // A null severity is a stretch no forecast reaches. It gets grey — deliberately NOT the
-      // sage of "clear", which tells the driver the road is fine when nobody knows yet. The old
-      // `?? 'clear'` fallback drew a whole far-future route green.
-      const known: Severity | null = SEVERITY_COLOR[seg.severity as Severity]
-        ? (seg.severity as Severity)
-        : null;
+      // A null/absent severity is a stretch no forecast reaches. It gets grey — deliberately NOT
+      // the sage of "clear", which tells the driver the road is fine when nobody knows yet. The
+      // old `?? 'clear'` fallback drew a whole far-future route green.
+      //
+      // An UNRECOGNISED severity is a different case and must not share that grey: the server did
+      // say something, this build just predates the word. `toSeverity` separates the two, and an
+      // unrecognised value degrades to caution rather than to "no forecast".
+      const known: Severity | null =
+        seg.severity == null ? null : toSeverity(seg.severity) ?? SEVERITY_FALLBACK;
       L.polyline(segLatLngs[i], {
         className: known ? 'rt-sev-' + known : 'rt-sev-unknown',
         color: known ? SEVERITY_COLOR[known] : UNKNOWN_COLOR,
@@ -271,12 +283,16 @@ export class RouteMap implements OnDestroy {
     });
 
     // A weather chip at every milestone: the condition glyph + temp on a .wx-pin pill (hazard
-    // tint when severity isn't clear; first = origin, last = destination). Stop-marked samples
+    // tint at caution-or-worse; first = origin, last = destination). Stop-marked samples
     // (F-006) get a numbered pin instead, above the weather pins. Click-to-select stays synced
     // with the timeline.
     const units = this.settings.units();
     for (const s of plan.samples) {
-      const sev = (s.weather?.severity as Severity) ?? 'clear';
+      // Null = this milestone has no forecast at all, which `pinIcon` renders untinted: we do not
+      // tint what nobody has looked at (the grey route segment underneath carries that). What we
+      // must NOT do is collapse an unrecognised severity into the same case — `severityOrFallback`
+      // keeps it a hazard, at caution, instead of letting it read as calm.
+      const sev: Severity | null = s.weather ? severityOrFallback(s.weather.severity) : null;
       const icon = weatherIcon(s.weather?.condition_symbol, s.weather?.condition_text);
       const temp = s.weather
         ? `${Math.round(units === 'metric' ? s.weather.temperature_c : s.weather.temperature_c * 1.8 + 32)}°`
@@ -464,7 +480,7 @@ export class RouteMap implements OnDestroy {
    * visually distinct from the weather chips and the endpoint samples. (Severity still colors
    * the route under it; the pin itself is the kit badge.)
    */
-  private stopIcon(n: number, _sev: Severity, selected: boolean): L.DivIcon {
+  private stopIcon(n: number, _sev: Severity | null, selected: boolean): L.DivIcon {
     const size = selected ? 34 : 26;
     const html =
       `<div class="rt-stop-pin" style="width:${size}px;height:${size}px` +
@@ -544,9 +560,12 @@ export class RouteMap implements OnDestroy {
   }
 
   /** Weather milestone chip (kit .wx-pin): Lucide condition glyph + temp on a white pill;
-   *  hazard tint when severity isn't clear, accent ring + slight grow when selected. */
-  private pinIcon(icon: string, temp: string, sev: Severity, selected: boolean): L.DivIcon {
-    const hazard = sev !== 'clear';
+   *  hazard tint at caution-or-worse, accent ring + slight grow when selected. */
+  private pinIcon(icon: string, temp: string, sev: Severity | null, selected: boolean): L.DivIcon {
+    // Caution-or-worse, by rank. `sev !== 'clear'` happened to be right for three levels and is
+    // right for five too, but it says nothing about WHERE the line is — and it treated a null
+    // (no forecast) as a hazard. This states the rule the tint actually means.
+    const hazard = isHazard(sev);
     const svg =
       `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" ` +
       `stroke-linecap="round" stroke-linejoin="round">${LUCIDE[icon] ?? LUCIDE['thermometer']}</svg>`;
