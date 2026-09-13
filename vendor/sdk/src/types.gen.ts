@@ -567,7 +567,7 @@ export type DepartureOptionModel = {
     /**
      * Exposure Score
      *
-     * Σ weight(severity): clear 0 / caution 1 / severe 3.
+     * Σ weight(severity): clear 0 / caution 1 / high 2 / severe 3 / extreme 10. Extreme is weighted far above the linear step on purpose — one hour of 'do not drive into this' should move a departure that a whole afternoon of severe would not.
      */
     exposure_score: number;
     /**
@@ -3277,9 +3277,25 @@ export type WaypointModel = {
     /**
      * Dwell Minutes
      *
-     * Planned stop duration; one of the presets 0/15/30/45/60.
+     * A pause on the same day — coffee, lunch, a photo. One of the presets 0/15/30/45/60. For staying the night somewhere, use `nights`: a 14-hour dwell is not what someone means by 'three nights in Albuquerque', and the ETA maths would carry it as one continuous drive.
      */
     dwell_minutes?: 0 | 15 | 30 | 45 | 60;
+    /**
+     * Nights
+     *
+     * How many nights the traveller stays HERE. Zero is a pass-through stop.
+     *
+     * This is what turns one route into an itinerary: a stop with nights ENDS a travel day, and the next day departs from it. Dallas → Albuquerque (3 nights) → Phoenix (2 nights) → Los Angeles is three travel days spread across eight, and the forecast for each one is read on its own date rather than all on the departure date.
+     */
+    nights?: number;
+    /**
+     * Departure Time
+     *
+     * What time the traveller sets off FROM here, on the morning after their stay. Only meaningful with `nights` — a pass-through stop is described by how long it lasts (`dwell_minutes`), an overnight one by when you leave it.
+     *
+     * Null means 'sometime that day', which is a real answer and the honest default: the hour someone will leave Albuquerque three days from now is a guess, and a guessed hour would have the ETA maths treat a fiction as fact.
+     */
+    departure_time?: string | null;
 };
 
 /**
