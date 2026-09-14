@@ -533,6 +533,55 @@ export type CrossingModel = {
 };
 
 /**
+ * DayChangeEntryModel
+ *
+ * One day that changed, and how.
+ */
+export type DayChangeEntryModel = {
+    /**
+     * Ordinal
+     */
+    ordinal: number;
+    /**
+     * Kind
+     */
+    kind: 'now_forecast' | 'no_longer_forecast' | 'worsened' | 'eased' | 'added' | 'removed';
+    /**
+     * From Severity
+     */
+    from_severity?: 'clear' | 'caution' | 'high' | 'severe' | 'extreme' | null;
+    /**
+     * To Severity
+     */
+    to_severity?: 'clear' | 'caution' | 'high' | 'severe' | 'extreme' | null;
+};
+
+/**
+ * DaySnapshotModel
+ *
+ * The little a client keeps between two looks at the same trip, per travel day.
+ *
+ * `severity` is null — never `clear` — for a day nobody has looked at, exactly as it is on
+ * `ItineraryDayFactsModel`. Sent back as `previous_snapshot`, a null here is what makes "this day
+ * has arrived in the forecast" detectable at all; a snapshot that coerced it to `clear` would
+ * report the day's arrival as an ordinary worsening, or as nothing.
+ */
+export type DaySnapshotModel = {
+    /**
+     * Ordinal
+     */
+    ordinal: number;
+    /**
+     * Severity
+     */
+    severity?: 'clear' | 'caution' | 'high' | 'severe' | 'extreme' | null;
+    /**
+     * Beyond Forecast
+     */
+    beyond_forecast?: boolean;
+};
+
+/**
  * DeleteResponse
  *
  * GDPR/CCPA delete — MVP marks the account for deletion; a background job erases it.
@@ -1319,6 +1368,46 @@ export type HistoryRow = {
 };
 
 /**
+ * ItineraryBriefingRequest
+ *
+ * The trip to brief, plus (optionally) what the caller last saw of it.
+ *
+ * Deliberately a subclass rather than a field on `PlanItineraryRequest`:
+ * `/v1/trips/plan-itinerary` plans a trip and has no previous look to compare against, so a
+ * re-brief field on the shared model would be inert there and invite a client to send it anyway.
+ */
+export type ItineraryBriefingRequest = {
+    origin: PlaceModel;
+    destination: PlaceModel;
+    /**
+     * Departure At
+     *
+     * When the FIRST day sets off. Later days take their time from the stop they depart from, and 'sometime that day' where none is given.
+     */
+    departure_at: string;
+    /**
+     * Waypoints
+     */
+    waypoints?: Array<WaypointModel>;
+    /**
+     * Timezone
+     *
+     * IANA zone the stops' `departure_time` values are written in. A trip crossing zones means '9am' is a different instant on day 1 than on day 4; without this the server reads every one in the departure's own offset, which is the best it can do and is stated rather than hidden.
+     */
+    timezone?: string | null;
+    /**
+     * Step Meters
+     */
+    step_meters?: number | null;
+    /**
+     * Previous Snapshot
+     *
+     * The `snapshot` from this trip's previous briefing (the whole-trip counterpart of `/v1/briefings`'s `previous_facts`): when set, the response carries a grounded `diff` and the prose leads with what changed. Absent means no diff and today's behaviour exactly — it is never an error to omit it, and a first-ever briefing has nothing to send.
+     */
+    previous_snapshot?: Array<DaySnapshotModel> | null;
+};
+
+/**
  * ItineraryBriefingResponse
  *
  * A briefing for a whole trip: every day's facts, the rollup, and prose grounded in both.
@@ -1347,6 +1436,16 @@ export type ItineraryBriefingResponse = {
      */
     days: Array<ItineraryDayFactsModel>;
     rollup: ItineraryRollupModel;
+    /**
+     * Present exactly when the request carried `previous_snapshot`. Present with `has_changes: false` is a real answer — it says a comparison happened and found nothing, which is not the same as null (no comparison was possible).
+     */
+    diff?: ItineraryDiffModel | null;
+    /**
+     * Snapshot
+     *
+     * What to keep and send back as `previous_snapshot` next time. Returned rather than left for each client to derive from `days`: three clients deriving what to remember is three chances to remember it differently, and a client that quietly stored `clear` for an unforecast day would never see that day arrive in the forecast.
+     */
+    snapshot?: Array<DaySnapshotModel>;
 };
 
 /**
@@ -1403,6 +1502,30 @@ export type ItineraryDayFactsModel = {
      * This day's worst. Null — never `clear` — when nobody has looked at the day.
      */
     severity?: 'clear' | 'caution' | 'high' | 'severe' | 'extreme' | null;
+};
+
+/**
+ * ItineraryDiffModel
+ *
+ * What changed since the snapshot the caller sent — and nothing about the days that did not.
+ */
+export type ItineraryDiffModel = {
+    /**
+     * Entries
+     *
+     * Changed days only, worst-first then earliest. Empty means the trip is exactly as the caller last saw it — and a client must then show NO badge: a badge that fires on every look is how a badge comes to mean nothing.
+     */
+    entries: Array<DayChangeEntryModel>;
+    /**
+     * Has Changes
+     */
+    has_changes: boolean;
+    /**
+     * Newly Forecast Ordinals
+     *
+     * Days that crossed INTO the forecast. Server-computed and returned separately because these LEAD the prose even when another day worsened more — a day that worsened was already on the traveller's radar, a day that just arrived was not. A client ranking `entries` itself would re-derive that rule, and eventually derive it differently.
+     */
+    newly_forecast_ordinals?: Array<number>;
 };
 
 /**
@@ -3555,6 +3678,14 @@ export type WaypointModel = {
      * Null means 'sometime that day', which is a real answer and the honest default: the hour someone will leave Albuquerque three days from now is a guess, and a guessed hour would have the ETA maths treat a fiction as fact.
      */
     departure_time?: string | null;
+    /**
+     * Timezone
+     *
+     * IANA zone of THIS STOP, for reading `departure_time`.
+     *
+     * When a traveller says 'we'll leave Albuquerque at nine' they mean nine o'clock in Albuquerque — not nine at home, and not nine UTC. A trip crossing zones has no single right answer at the trip level, so the stop carries its own where the client knows it (MapKit hands it back with the place). Null falls back to the trip's zone, then to the offset the departure arrived with.
+     */
+    timezone?: string | null;
 };
 
 /**
@@ -4082,7 +4213,7 @@ export type CreateBriefingV1BriefingsPostResponses = {
 export type CreateBriefingV1BriefingsPostResponse = CreateBriefingV1BriefingsPostResponses[keyof CreateBriefingV1BriefingsPostResponses];
 
 export type CreateItineraryBriefingV1BriefingsItineraryPostData = {
-    body: PlanItineraryRequest;
+    body: ItineraryBriefingRequest;
     path?: never;
     query?: never;
     url: '/v1/briefings/itinerary';

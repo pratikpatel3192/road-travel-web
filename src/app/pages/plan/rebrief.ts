@@ -1,4 +1,4 @@
-import type { BriefingFactsModel, WaypointModel } from '@road-travel/sdk';
+import type { BriefingFactsModel, DaySnapshotModel, WaypointModel } from '@road-travel/sdk';
 
 import type { PlaceValue } from './place-field';
 import { waypointsKey } from './waypoints';
@@ -72,8 +72,37 @@ export function tripBaselineKey(
  */
 const MAX_REMEMBERED_TRIPS = 20;
 
+/** Re-insert so Map iteration order tracks recency, then evict the oldest. */
+function rememberIn<T>(store: Map<string, T>, key: string, value: T): void {
+  store.delete(key);
+  store.set(key, value);
+  while (store.size > MAX_REMEMBERED_TRIPS) {
+    const oldest = store.keys().next();
+    if (oldest.done) break;
+    store.delete(oldest.value);
+  }
+}
+
 export class BriefingMemory {
   private readonly facts = new Map<string, BriefingFactsModel>();
+  /**
+   * The whole-trip counterpart, kept in the SAME place and under the SAME key as the single-day
+   * baseline rather than in storage of its own.
+   *
+   * Two stores rather than one field of a union type because the two endpoints are not
+   * interchangeable: `/v1/briefings` takes `previous_facts` and `/v1/briefings/itinerary` takes
+   * `previous_snapshot`, and a single slot holding either would let a trip that gained an overnight
+   * stop hand the itinerary endpoint the day-trip's facts. The KEY is shared on purpose — it is the
+   * same trip, whichever shape the plan currently has.
+   *
+   * Deliberately in memory only, exactly like `facts` above. `/v1/briefings/itinerary` takes the
+   * planning body and has no `trip_id`, so there is no ADR-0039 server baseline behind it — a
+   * multi-day re-brief is a within-session comparison and says so by forgetting on reload. Writing
+   * it to localStorage instead would be a new storage mechanism for a whole forecast's worth of
+   * remembered state, and a snapshot that outlives the session is a baseline nobody can see or
+   * clear.
+   */
+  private readonly snapshots = new Map<string, DaySnapshotModel[]>();
 
   /** The prior facts to send for this trip — undefined when it has never been briefed here. */
   previousFactsFor(key: string): BriefingFactsModel | undefined {
@@ -82,13 +111,26 @@ export class BriefingMemory {
 
   /** Store the freshly returned facts as this trip's new baseline (most-recent-wins). */
   remember(key: string, facts: BriefingFactsModel): void {
-    // Re-insert so Map iteration order tracks recency, then evict the oldest.
-    this.facts.delete(key);
-    this.facts.set(key, facts);
-    while (this.facts.size > MAX_REMEMBERED_TRIPS) {
-      const oldest = this.facts.keys().next();
-      if (oldest.done) break;
-      this.facts.delete(oldest.value);
-    }
+    rememberIn(this.facts, key, facts);
+  }
+
+  /**
+   * The prior whole-trip snapshot to send as `previous_snapshot` — undefined on the first look at
+   * this trip, which is what makes `diff: null` (nothing compared) reachable at all.
+   */
+  previousSnapshotFor(key: string): DaySnapshotModel[] | undefined {
+    return this.snapshots.get(key);
+  }
+
+  /**
+   * Store a whole-trip snapshot as this trip's new baseline.
+   *
+   * An EMPTY snapshot is dropped rather than stored: sending `previous_snapshot: []` next time
+   * would not read as "no baseline", it would read as a trip that had no days at all, and every
+   * day of the next briefing would come back as `added`.
+   */
+  rememberSnapshot(key: string, snapshot: readonly DaySnapshotModel[]): void {
+    if (!snapshot.length) return;
+    rememberIn(this.snapshots, key, [...snapshot]);
   }
 }

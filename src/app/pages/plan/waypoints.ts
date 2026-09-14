@@ -1,6 +1,8 @@
 import type {
   BriefingFactsModel,
   BriefingRequest,
+  DaySnapshotModel,
+  ItineraryBriefingRequest,
   PlanItineraryRequest,
   PlanTripRequest,
   WaypointModel,
@@ -180,6 +182,28 @@ export function buildItineraryRequest(args: {
 }): PlanItineraryRequest {
   const body: PlanItineraryRequest = buildPlanRequest(args);
   if (args.timezone) body.timezone = args.timezone;
+  return body;
+}
+
+/**
+ * `/v1/briefings/itinerary` body — the planning body plus, on a re-brief, what the caller last saw.
+ *
+ * `previousSnapshot` is the whole-trip counterpart of `buildBriefingRequest`'s `previousFacts`, and
+ * it is OMITTED rather than sent as null when there is nothing to compare: an absent
+ * `previous_snapshot` is what makes the response's `diff` come back null, and null is the server's
+ * way of saying no comparison happened — which is a different answer from a comparison that found
+ * nothing, and the one that must not draw a badge for a different reason.
+ */
+export function buildItineraryBriefingRequest(args: {
+  origin: PlaceValue;
+  destination: PlaceValue;
+  departureAt: string;
+  waypoints?: readonly WaypointModel[];
+  timezone?: string | null;
+  previousSnapshot?: readonly DaySnapshotModel[];
+}): ItineraryBriefingRequest {
+  const body: ItineraryBriefingRequest = buildItineraryRequest(args);
+  if (args.previousSnapshot?.length) body.previous_snapshot = [...args.previousSnapshot];
   return body;
 }
 

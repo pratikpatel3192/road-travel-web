@@ -52,6 +52,12 @@ const tripBriefingResponse = {
   text: '2 drives across 4 days. Day 2 is the one to watch.',
   model: 'template',
   generated_at: '2026-09-20T10:00:00Z',
+  // Returned on EVERY briefing, re-brief or not — the first look is what gives the second one
+  // something to compare against.
+  snapshot: [
+    { ordinal: 0, severity: 'clear', beyond_forecast: false },
+    { ordinal: 1, severity: null, beyond_forecast: true },
+  ],
   days: [
     { ordinal: 0, origin_name: DALLAS.name, destination_name: ABQ.name, severity: 'clear' },
     { ordinal: 1, origin_name: ABQ.name, destination_name: LA.name, beyond_forecast: true },
@@ -206,14 +212,69 @@ describe('Plan — the briefing follows the shape of the trip', () => {
     expect(!!plan.plan()).toBe(!!plan.briefing());
   });
 
-  it('does not remember a whole-trip briefing as the next re-brief baseline', async () => {
-    // The itinerary endpoint takes the planning body and returns no `facts` — there is nothing to
-    // diff against, and inventing a baseline from a different shape would mislabel the next
+  it('does not remember a whole-trip briefing as the next SINGLE-DAY baseline', async () => {
+    // The two baselines are kept apart on purpose: the itinerary endpoint returns a `snapshot`
+    // (three fields per travel day) and `/v1/briefings` wants `facts` (one day's forecast). Letting
+    // a trip that lost its overnight stop hand one where the other belongs would mislabel the next
     // single-day briefing's "Updated" badge.
     plan.stops.set([newStop(ABQ, 0, 3, '09:30')]);
     await plan.submit();
     plan.stops.set([newStop(ABQ, 45)]);
     await plan.submit();
     expect(createBriefing.mock.calls[0][0].previous_facts).toBeUndefined();
+  });
+
+  /**
+   * The whole-trip re-brief baseline: the `snapshot` a briefing returns, sent back as
+   * `previous_snapshot` on the next look at the SAME trip.
+   *
+   * "Same trip" is the endpoints (`tripBaselineKey`), exactly as the single-day path decides it —
+   * so moving the departure or editing the stops still diffs, because those are the plan and not
+   * the trip, while a different destination matches nothing at all.
+   */
+  describe('the whole-trip re-brief baseline', () => {
+    const bodyOf = (call: number) => createItineraryBriefing.mock.calls[call][0];
+
+    beforeEach(() => {
+      plan.stops.set([newStop(ABQ, 0, 3, '09:30')]);
+    });
+
+    it('sends nothing on the first look at a trip — there is no previous look', async () => {
+      await plan.submit();
+      // Omitted, not null and not empty: absent is what makes the response's `diff` come back
+      // null, and null is the server saying no comparison happened.
+      expect(bodyOf(0).previous_snapshot).toBeUndefined();
+    });
+
+    it('sends the last snapshot back on the next look at the same trip', async () => {
+      await plan.submit();
+      await plan.submit();
+      expect(bodyOf(1).previous_snapshot).toEqual(tripBriefingResponse.snapshot);
+    });
+
+    it('still sends it across a plan edit — the stops are the plan, not the trip', async () => {
+      await plan.submit();
+      plan.stops.set([newStop(ABQ, 0, 5, '07:00')]); // two more nights: same trip, new plan
+      await plan.submit();
+      expect(bodyOf(1).previous_snapshot).toEqual(tripBriefingResponse.snapshot);
+    });
+
+    it('never sends one trip’s snapshot to a different trip', async () => {
+      await plan.submit();
+      plan.destination.set(ABQ);
+      plan.stops.set([newStop(LA, 0, 3, '09:30')]);
+      await plan.submit();
+      expect(bodyOf(1).previous_snapshot).toBeUndefined();
+    });
+
+    it('does not hand the itinerary endpoint a single-day briefing’s baseline', async () => {
+      // Same endpoints, so the same key — and still nothing to send, because a day's `facts` are
+      // not a trip's snapshot and the stores that hold them are separate.
+      plan.stops.set([newStop(ABQ, 45)]);
+      await plan.submit();
+      plan.stops.set([newStop(ABQ, 0, 3, '09:30')]);
+      await plan.submit();
+      expect(bodyOf(0).previous_snapshot).toBeUndefined();
+    });
   });
 });

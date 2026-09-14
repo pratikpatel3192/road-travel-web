@@ -284,3 +284,130 @@ describe('TripBriefingCard — scope', () => {
     expect(prose?.textContent).toContain('<img src=x onerror=alert(1)>');
   });
 });
+
+/**
+ * What changed since the last look at this same trip (US-11, whole-trip half).
+ *
+ * The badge has one job and it is a job it can only do by staying quiet: it has to mean "we
+ * compared this trip against your last look and something moved". Two separate ways of showing it
+ * when nothing did — a first look, and a comparison that found nothing — are what these start with.
+ */
+describe('TripBriefingCard — the "Updated" badge, and which day leads', () => {
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [TripBriefingCard] }).compileComponents();
+  });
+
+  function render(response: ItineraryBriefingResponse, selectedDay: number | null = 0) {
+    const fixture = TestBed.createComponent(TripBriefingCard);
+    fixture.componentRef.setInput('briefing', response);
+    fixture.componentRef.setInput('selectedDay', selectedDay);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  const el = (fixture: { nativeElement: unknown }) => fixture.nativeElement as HTMLElement;
+  const badge = (fixture: { nativeElement: unknown }) => el(fixture).querySelector('.updated');
+  const rows = (fixture: { nativeElement: unknown }) => el(fixture).querySelectorAll('.day');
+
+  it('shows no badge on a first look — nothing was compared', () => {
+    // `diff` absent is the server saying no comparison happened, because the client had no
+    // snapshot to send. A badge here would fire on every first briefing of every trip.
+    const fixture = render(briefing());
+    expect(fixture.componentInstance.rebrief()).toBe('unchecked');
+    expect(badge(fixture)).toBeNull();
+  });
+
+  it('shows no badge when the comparison ran and found nothing', () => {
+    // A DIFFERENT answer from the one above, and deliberately not the same state: a comparison
+    // happened, the trip is exactly as it was left. Same silence, different reason.
+    const fixture = render(
+      briefing({ diff: { entries: [], has_changes: false, newly_forecast_ordinals: [] } }),
+    );
+    expect(fixture.componentInstance.rebrief()).toBe('unchanged');
+    expect(badge(fixture)).toBeNull();
+    expect(el(fixture).querySelector('.changed')).toBeNull();
+  });
+
+  it('shows the badge, in the single-day card’s own words, when something moved', () => {
+    const fixture = render(
+      briefing({
+        days: [
+          day(0, { facts: facts({ overall_severity: 'severe' }), severity: 'severe' }),
+          day(1, { facts: facts(), severity: 'clear' }),
+        ],
+        rollup: rollup({ overall_severity: 'severe', worst_day_ordinal: 0 }),
+        diff: {
+          entries: [
+            { ordinal: 0, kind: 'worsened', from_severity: 'clear', to_severity: 'severe' },
+          ],
+          has_changes: true,
+          newly_forecast_ordinals: [],
+        },
+      }),
+    );
+    expect(fixture.componentInstance.rebrief()).toBe('changed');
+    expect(badge(fixture)?.textContent).toContain('Updated');
+    // The day that moved is marked; the day that did not is left alone.
+    expect(rows(fixture)[0].querySelector('.changed')?.textContent).toContain('Worse than last');
+    expect(rows(fixture)[1].querySelector('.changed')).toBeNull();
+  });
+
+  it('leads with the day that came into the forecast, not the day that worsened more', () => {
+    // THE RULE. Day 1 went clear -> severe and is the rollup's worst day; day 3 merely arrived, at
+    // caution. The arriving day still leads: the worsening was already on the traveller's radar,
+    // and on a trip booked a month out an arrival is the one change they could not have expected.
+    const fixture = render(
+      briefing({
+        days: [
+          day(0, { facts: facts({ overall_severity: 'severe' }), severity: 'severe' }),
+          day(1, { beyond_forecast: true }),
+          day(2, { facts: facts({ overall_severity: 'caution' }), severity: 'caution' }),
+        ],
+        rollup: rollup({ overall_severity: 'severe', worst_day_ordinal: 0 }),
+        diff: {
+          entries: [
+            { ordinal: 0, kind: 'worsened', from_severity: 'clear', to_severity: 'severe' },
+            { ordinal: 2, kind: 'now_forecast', from_severity: null, to_severity: 'caution' },
+          ],
+          has_changes: true,
+          // The server's own ranking. The card must not re-derive it from `entries`, which are
+          // sorted worst-first and would have put day 1 in front.
+          newly_forecast_ordinals: [2],
+        },
+      }),
+    );
+    expect(fixture.componentInstance.leadOrdinal()).toBe(2);
+    expect(rows(fixture)[2].querySelector('.watch')?.textContent).toContain(
+      'came into the forecast',
+    );
+    // The worst day keeps its marker but loses the lead — "the one to watch" is not what this
+    // briefing is about any more.
+    expect(rows(fixture)[0].querySelector('.watch')).toBeNull();
+    expect(rows(fixture)[0].querySelector('.changed')?.textContent).toContain('Worse than last');
+    // And the leading day does not say the same thing twice in one row.
+    expect(rows(fixture)[2].querySelector('.changed')).toBeNull();
+  });
+
+  it('gives the lead back to the worst day when nothing arrived', () => {
+    const fixture = render(
+      briefing({
+        days: [
+          day(0, { facts: facts({ overall_severity: 'severe' }), severity: 'severe' }),
+          day(1, { facts: facts(), severity: 'clear' }),
+        ],
+        rollup: rollup({ overall_severity: 'severe', worst_day_ordinal: 0 }),
+        diff: {
+          entries: [{ ordinal: 1, kind: 'eased', from_severity: 'caution', to_severity: 'clear' }],
+          has_changes: true,
+          newly_forecast_ordinals: [],
+        },
+      }),
+    );
+    expect(fixture.componentInstance.leadOrdinal()).toBe(0);
+    expect(rows(fixture)[0].querySelector('.watch')?.textContent).toContain('the one to watch');
+    // Spelled with the card's own scale words — the ones the dot beside it is labelled with.
+    expect(rows(fixture)[1].querySelector('.changed')?.textContent).toContain(
+      'Eased since last time: Caution → Clear',
+    );
+  });
+});

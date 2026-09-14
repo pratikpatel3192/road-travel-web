@@ -1,5 +1,9 @@
 import { Component, computed, input, output } from '@angular/core';
-import type { ItineraryBriefingResponse, ItineraryDayFactsModel } from '@road-travel/sdk';
+import type {
+  DayChangeEntryModel,
+  ItineraryBriefingResponse,
+  ItineraryDayFactsModel,
+} from '@road-travel/sdk';
 
 import { FORECAST_HORIZON_DAYS, dayLabel } from '../../core/forecast-horizon';
 import { IconComponent } from '../../ui/icon';
@@ -32,6 +36,10 @@ import {
  * `UNKNOWN_LABEL` this app uses everywhere else for "nobody knows yet", never the calm sage of
  * `clear`. On a trip booked a fortnight out that is most of the days, and drawing them calm would
  * tell a traveller their trip is fine when almost none of it has been looked at.
+ *
+ * **What changed since last time** (the whole-trip half of US-11). The same "Updated" badge the
+ * single-day card carries, plus a marker on each day that moved — and the day the card points at
+ * first is decided by the server's `newly_forecast_ordinals`, never by re-ranking `entries` here.
  */
 @Component({
   selector: 'app-trip-briefing-card',
@@ -42,6 +50,13 @@ import {
         <header>
           <span class="ai-disc" aria-hidden="true"><app-icon name="sparkles" [size]="14" /></span>
           <h2>Your trip briefing</h2>
+          @if (rebrief() === 'changed') {
+            <!-- US-11, same badge and same wording as the single-day card: something moved since
+                 the last briefing of this same trip. The prose already leads with what. -->
+            <span class="updated" title="The forecast changed since your last briefing"
+              ><app-icon name="refresh-cw" [size]="11" />Updated</span
+            >
+          }
           <span class="scope-chip">whole trip</span>
         </header>
 
@@ -70,10 +85,13 @@ import {
                 <div class="head">
                   <span class="num">Day {{ day.ordinal + 1 }}</span>
                   <span class="date" [class.undated]="!day.travel_date">{{ date(day) }}</span>
-                  @if (day.ordinal === worstOrdinal()) {
-                    <span class="watch">the one to watch</span>
+                  @if (day.ordinal === leadOrdinal()) {
+                    <span class="watch">{{ leadLabel() }}</span>
                   }
                 </div>
+                @if (changeLabel(day.ordinal); as change) {
+                  <p class="changed">{{ change }}</p>
+                }
                 <p class="route">
                   {{ day.origin_name }} <span class="arrow">→</span> {{ day.destination_name }}
                 </p>
@@ -165,6 +183,19 @@ import {
         border-radius: var(--radius-pill);
         white-space: nowrap;
       }
+      /* Verbatim from the single-day card — the same statement about the same thing, so it is not
+         given a look of its own and does not have to be recognised twice. */
+      .updated {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font: 700 11px var(--font-body);
+        background: var(--accent-2-200);
+        color: var(--accent-2-800);
+        padding: 3px 10px;
+        border-radius: var(--radius-pill);
+        white-space: nowrap;
+      }
       /* Full-strength ink: which days this paragraph is about is part of the claim, not an aside. */
       .scope {
         margin: 0 0 6px;
@@ -240,6 +271,13 @@ import {
         font: 700 11px var(--font-body);
         white-space: nowrap;
         opacity: 0.8;
+      }
+      /* Full weight, above the route: on a re-brief this is the one line in the row the traveller
+         came back to read, and setting it in the same quiet grey as the hazards under it would
+         bury the only thing that is new. */
+      .changed {
+        margin: 4px 0 0;
+        font: 700 11.5px var(--font-body);
       }
       .route {
         margin: 3px 0 0;
@@ -380,6 +418,100 @@ export class TripBriefingCard {
     if (rollup.overall_severity == null || rollup.overall_severity === 'clear') return null;
     return rollup.worst_day_ordinal ?? null;
   });
+
+  /**
+   * Which comparison this briefing is the result of. THREE states, not two.
+   *
+   * `unchecked` is a trip being looked at for the first time here — nothing was compared, so there
+   * is nothing to announce. `unchanged` is a comparison that ran and found the trip exactly as it
+   * was left. Neither draws a badge, and that is precisely why they must stay apart in the code:
+   * collapse them into one falsy test and the badge quietly stops meaning "we looked, and it moved"
+   * — it starts meaning "we happened to have something to compare against".
+   */
+  readonly rebrief = computed<'unchecked' | 'unchanged' | 'changed'>(() => {
+    const diff = this.briefing().diff;
+    if (!diff) return 'unchecked';
+    return diff.has_changes ? 'changed' : 'unchanged';
+  });
+
+  /** The changed days by ordinal, so a row can ask about itself without scanning the list. */
+  private readonly changesByOrdinal = computed(() => {
+    const entries = this.briefing().diff?.entries ?? [];
+    return new Map(entries.map((e) => [e.ordinal, e]));
+  });
+
+  /**
+   * The day that just crossed INTO the forecast, when one did — the day this card leads with.
+   *
+   * Taken from the server's `newly_forecast_ordinals` rather than filtered out of `entries` here.
+   * The ranking is a product rule, not a display detail: on a long trip most days start unforecast
+   * and arrive one at a time, and a day that ARRIVED outranks a day that worsened, because the
+   * worsened day was already on the traveller's radar and the new one was not. Three clients
+   * deriving that rule is three chances to derive it differently, which is why it ships as a field.
+   *
+   * The earliest of them when several arrive at once: they are equally new, so the one the
+   * traveller reaches first is the one they can still act on.
+   */
+  private readonly arrivedOrdinal = computed(() => {
+    const arrived = this.briefing().diff?.newly_forecast_ordinals ?? [];
+    return arrived.length ? Math.min(...arrived) : null;
+  });
+
+  /**
+   * The one day the card points at, in the row chip. A newly-forecast day takes the slot from the
+   * rollup's worst day — see {@link arrivedOrdinal} for why it outranks it.
+   */
+  readonly leadOrdinal = computed(() => this.arrivedOrdinal() ?? this.worstOrdinal());
+
+  readonly leadLabel = computed(() =>
+    this.arrivedOrdinal() == null ? 'the one to watch' : 'came into the forecast',
+  );
+
+  /**
+   * What happened to this day since the last look, or null when nothing did.
+   *
+   * Null for the lead day too: the chip in its header already says it came into the forecast, and
+   * saying it twice in one row is what a template does, not what a person does.
+   */
+  changeLabel(ordinal: number): string | null {
+    if (ordinal === this.arrivedOrdinal()) return null;
+    const entry = this.changesByOrdinal().get(ordinal);
+    return entry ? TripBriefingCard.describe(entry) : null;
+  }
+
+  /**
+   * A change entry in the traveller's words.
+   *
+   * `removed` has no case because a removed day has no row to label — it is not in `days` at all.
+   * An unrecognised kind falls through to the honest generic rather than to nothing: a scale that
+   * grew grew because the server learned to spot something, and dropping the marker would tell the
+   * traveller the day did not change.
+   *
+   * The two severities go through the same `SEVERITY_LABEL` / `severityOrFallback` pair the day
+   * rows use, so "Caution → Severe" here is spelled exactly as the dot beside it is — a second
+   * spelling of the scale in the one place two readings sit side by side is a second scale.
+   */
+  private static describe(entry: DayChangeEntryModel): string {
+    const ramp = `${TripBriefingCard.level(entry.from_severity)} → ${TripBriefingCard.level(entry.to_severity)}`;
+    switch (entry.kind) {
+      case 'now_forecast':
+        return 'Came into the forecast since you last looked';
+      case 'no_longer_forecast':
+        return 'No longer in the forecast — this day has moved further out';
+      case 'worsened':
+        return `Worse than last time: ${ramp}`;
+      case 'eased':
+        return `Eased since last time: ${ramp}`;
+      case 'added':
+        return 'New day on this trip';
+      default:
+        return 'Changed since you last looked';
+    }
+  }
+
+  private static level(severity: string | null | undefined): string {
+    return SEVERITY_LABEL[severityOrFallback(severity)];
+  }
 
   /**
    * The severity to DRAW for a day, or null when there is nothing to draw.

@@ -10,6 +10,7 @@ import {
   type ExploreFeedbackRequest,
   type ExploreRequest,
   type ExploreResponse,
+  type ItineraryBriefingRequest,
   type ItineraryBriefingResponse,
   type MeResponse,
   type OutlookRequest,
@@ -261,8 +262,15 @@ export class ApiService {
    * The response carries every travel day's own facts, a whole-trip rollup, and prose covering all
    * of them. Days nobody forecasts yet come back counted and named rather than omitted, so a caller
    * must read each day's state instead of assuming a day without facts is a calm one.
+   *
+   * The body is the planning one WIDENED by `previous_snapshot` — the whole-trip counterpart of
+   * `createBriefing`'s `previous_facts`. Send back the `snapshot` the last briefing of this same
+   * trip returned and the response carries a `diff`; send nothing and it carries none, which is the
+   * honest answer for a trip being looked at for the first time.
    */
-  async createItineraryBriefing(body: PlanItineraryRequest): Promise<ItineraryBriefingResponse> {
+  async createItineraryBriefing(
+    body: ItineraryBriefingRequest,
+  ): Promise<ItineraryBriefingResponse> {
     const { data, error, response } = await createItineraryBriefingV1BriefingsItineraryPost({
       ...this.options(),
       body,
