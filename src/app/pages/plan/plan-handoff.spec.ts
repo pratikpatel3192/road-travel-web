@@ -53,16 +53,18 @@ describe('Plan — landing-page ?from=&to= handoff', () => {
         { provide: GeocodeService, useValue: { search, reverse: vi.fn(async () => null) } },
         {
           provide: ApiService,
-          useValue: { planTrip, createBriefing: vi.fn(async () => ({ facts: {}, claims: [] })) },
+          useValue: {
+            planTrip,
+            createBriefing: vi.fn(async () => ({ facts: {}, claims: [] })),
+            saveTrip: vi.fn(async () => ({ id: 't1' })),
+          },
         },
         { provide: EntitlementService, useValue: { refresh: vi.fn(async () => undefined) } },
         {
           provide: TripsService,
           useValue: {
             takeStaged: () => null,
-            isSaved: () => false,
-            recordRecent: vi.fn(),
-            toggleSave: vi.fn(),
+            refresh: vi.fn(async () => undefined),
           },
         },
         { provide: AnalyticsService, useValue: { capture: vi.fn() } },

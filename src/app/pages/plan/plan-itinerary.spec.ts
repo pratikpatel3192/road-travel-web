@@ -52,11 +52,13 @@ const dayPlan = (over: Record<string, unknown> = {}) => ({
 describe('Plan — a multi-day trip is planned a day at a time', () => {
   let planTrip: ReturnType<typeof vi.fn>;
   let planItinerary: ReturnType<typeof vi.fn>;
+  let saveTrip: ReturnType<typeof vi.fn>;
   let itineraryResponse: Record<string, unknown>;
 
   function build(): Plan {
     planTrip = vi.fn(async () => dayPlan());
     planItinerary = vi.fn(async () => itineraryResponse);
+    saveTrip = vi.fn(async () => ({ id: 't1' }));
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       providers: [
@@ -84,12 +86,13 @@ describe('Plan — a multi-day trip is planned a day at a time', () => {
               days: [],
               rollup: { days_with_forecast: 0, partly_unknown: false },
             })),
+            saveTrip,
           },
         },
         { provide: EntitlementService, useValue: { refresh: vi.fn(async () => undefined) } },
         {
           provide: TripsService,
-          useValue: { takeStaged: () => null, isSaved: () => false, recordRecent: vi.fn() },
+          useValue: { takeStaged: () => null, refresh: vi.fn(async () => undefined) },
         },
         { provide: AnalyticsService, useValue: { capture: vi.fn() } },
         { provide: PaywallService, useValue: { show: vi.fn() } },
@@ -290,12 +293,17 @@ describe('Plan — a multi-day trip is planned a day at a time', () => {
     expect(plan.shownPlan()).not.toBeNull();
   });
 
-  it('records the WHOLE trip, not the day on screen', async () => {
-    plan.stops.set([newStop(ABQ, 0, 3, '09:30')]);
-    await plan.submit();
-    const trips = TestBed.inject(TripsService);
-    const recorded = vi.mocked(trips.recordRecent).mock.calls[0][0];
-    expect(recorded.distanceMeters).toBe(2_200_000); // both days, summed
-    expect(recorded.worstSeverity).toBe('severe'); // the itinerary's own worst
+  it('auto-saves the WHOLE trip, not the day on screen', async () => {
+    vi.useFakeTimers();
+    try {
+      plan.stops.set([newStop(ABQ, 0, 3, '09:30')]);
+      await plan.submit();
+      await vi.advanceTimersByTimeAsync(2000);
+      const saved = saveTrip.mock.calls[0][0];
+      expect(saved.distance_meters).toBe(2_200_000); // both days, summed
+      expect(saved.worst_severity).toBe('severe'); // the itinerary's own worst
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

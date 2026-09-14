@@ -32,7 +32,7 @@ import { ExplorePanel } from './explore-panel';
 import { PlaceField, type PlaceValue } from './place-field';
 import { BriefingMemory, tripBaselineKey } from './rebrief';
 import { RouteMap } from './route-map';
-import { SEVERITY_RANK, formatDuration, severityOrFallback } from './severity';
+import { SEVERITY_FALLBACK, SEVERITY_RANK, formatDuration, severityOrFallback } from './severity';
 import { StopList } from './stop-list';
 import { Timeline } from './timeline';
 import { TravelDays } from './travel-days';
@@ -81,20 +81,13 @@ import {
         <header class="top">
           <h1>Plan a drive</h1>
           <div class="actions">
-            @if (planned()) {
-              <button
-                class="icon"
-                [class.on]="isCurrentSaved()"
-                (click)="saveTrip()"
-                [attr.aria-label]="isCurrentSaved() ? 'Remove from saved' : 'Save trip'"
-                title="Save trip"
-              >
-                <app-icon name="star" [size]="16" />
-              </button>
-            }
+            <!-- No save toggle here any more. Planning a trip saves it, so a star could only ever
+                 read as already-saved — and the one it replaced meant a trip reached the server
+                 ONLY if the traveller pressed it, which in thirty days of production nobody did.
+                 Deleting a trip stays deliberate, and lives in My Trips. -->
             @if (!auth.configured() || auth.hasRealAccount()) {
               <!-- ADR-0025 §1: My Trips is LOGIN-ONLY — hidden from guests (the route is walled by
-                 realAccountGuard). ADR-0029 removed Recents; Saved is the server's list. -->
+                 realAccountGuard). ADR-0029 removed Recents; this is the server's whole list. -->
               <a class="icon" routerLink="/saved" aria-label="My trips" title="My trips"
                 ><app-icon name="bookmark" [size]="16"
               /></a>
@@ -413,10 +406,6 @@ import {
       .icon:hover {
         background: var(--surface-2);
         text-decoration: none;
-      }
-      .icon.on {
-        background: var(--accent);
-        color: var(--accent-contrast);
       }
       .icon:disabled {
         opacity: 0.45;
@@ -1017,20 +1006,13 @@ export class Plan implements OnInit {
     return `There's no plan for day ${n}.`;
   });
 
-  /** Whether the currently-shown trip is in the saved list (reacts to saves + endpoint changes). */
-  readonly isCurrentSaved = computed(() => {
-    const o = this.origin();
-    const d = this.destination();
-    return !!o && !!d && this.trips.isSaved(o, d);
-  });
-
   /** Session-only geolocation fix for the home map + origin prefill (ADR-0026); never persisted. */
   readonly userLocation = signal<{ latitude: number; longitude: number } | null>(null);
 
   ngOnInit(): void {
     // Know the entitlement/usage up front so gating is correct (server-authoritative; F-002).
     void this.entitlement.refresh();
-    // A trip queued from Recents/Saved: prefill the fields (stops included — a saved multi-stop
+    // A trip queued from My Trips: prefill the fields (stops included — a saved multi-stop
     // trip re-plans as a multi-stop trip, F-006 US-4) and plan it immediately.
     const staged = this.trips.takeStaged();
     if (staged) {
@@ -1153,33 +1135,66 @@ export class Plan implements OnInit {
     this.closeExplore();
   }
 
-  async saveTrip(): Promise<void> {
+  private static readonly AUTO_SAVE_DEBOUNCE_MS = 2000;
+  private autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * Planning a trip is what puts it in My Trips.
+   *
+   * It used to take a deliberate press of a star, and the star is why trips planned on the web were
+   * missing from the traveller's phone: in thirty days of production logs the web client made ZERO
+   * `POST /v1/trips`. What it wrote instead was a device-local "recent" — a list that looked synced
+   * and never left the browser.
+   *
+   * `POST /v1/trips` is an UPSERT on (user, origin, destination), so re-planning the same trip
+   * updates the one row rather than growing the list. The debounce is not for correctness then, but
+   * for volume: the planner re-plans on every stop edit and every nudge of the departure scrubber.
+   *
+   * The pending timer is deliberately NOT cancelled when the page goes away. Opening My Trips
+   * straight after planning is the most ordinary thing a traveller does here, and it is exactly the
+   * navigation that would cancel the save of the trip they went to look for.
+   */
+  private scheduleAutoSave(): void {
+    // Saving needs a real account; a guest's plan is theirs to look at and nothing is sent. Asked
+    // BEFORE the timer, so a signed-out session never even has one pending.
+    if (!this.auth.hasRealAccount()) return;
+    if (this.autoSaveTimer !== null) clearTimeout(this.autoSaveTimer);
+    this.autoSaveTimer = setTimeout(() => {
+      this.autoSaveTimer = null;
+      void this.autoSave();
+    }, Plan.AUTO_SAVE_DEBOUNCE_MS);
+  }
+
+  /**
+   * Background work the traveller did not ask for, so it fails INVISIBLY: no banner, no redirect to
+   * sign-in, nothing on screen moved. Being bounced to /login in the middle of reading a briefing —
+   * because a save they never requested came back 401 — would be the planner losing their trip to
+   * a feature meant to keep it.
+   */
+  private async autoSave(): Promise<void> {
     const origin = this.origin();
     const destination = this.destination();
     if (!origin || !destination) return;
-    // The star is on the TRIP, so a multi-day trip saves its whole-trip totals rather than the day
-    // that happens to be on screen — reopening it from My Trips re-plans the whole thing.
+    // The whole trip, not the day on screen: a multi-day itinerary's totals are summed across its
+    // days, and its stops + dwell + nights ride along so re-opening it re-plans the same trip.
     const totals = this.tripTotals();
     try {
-      // Server-authoritative save/unsave (ADR-0029); the star reflects the server list.
-      // F-006: stops + dwell persist with the trip and are restored on re-open (ADR-0030).
-      await this.trips.toggleSave({
+      await this.api.saveTrip({
         origin,
         destination,
-        departureAt: new Date(this.departureAt()).toISOString(),
-        distanceMeters: totals.distanceMeters,
-        durationSeconds: totals.durationSeconds,
-        // No `as Severity` here: the SDK already types this as the severity union, and the cast
-        // only ever served to silence the compiler at exactly the place a new level slips past.
-        worstSeverity: totals.worstSeverity,
+        departure_at: new Date(this.departureAt()).toISOString(),
+        distance_meters: totals.distanceMeters ?? 0,
+        duration_seconds: totals.durationSeconds ?? 0,
+        // Same reasoning as the manual save this replaced: `worst_severity` is required, and
+        // 'clear' would persist an affirmative all-clear we do not have.
+        worst_severity: totals.worstSeverity ?? SEVERITY_FALLBACK,
         waypoints: toWaypoints(this.stops()),
       });
-      // ADR-0037: only the SAVE direction is an activation signal (un-starring isn't), and only
-      // after the server accepted it. No place names — the star state is the whole payload.
-      if (this.trips.isSaved(origin, destination)) this.analytics.capture('trip_saved');
-    } catch (e) {
-      if (e instanceof AccountRequiredError) this.router.navigate(['/login']);
-      else this.error.set('Could not update the saved trip. Please try again.');
+      // So My Trips is current the moment it is opened — including the id and legs the server just
+      // assigned, which a locally-appended row would not have.
+      await this.trips.refresh();
+    } catch {
+      // Deliberately silent, including the 401. The trip is still on screen and still plannable.
     }
   }
 
@@ -1426,6 +1441,10 @@ export class Plan implements OnInit {
       this.showResult(result, { keepDay: true });
       if (briefing) this.showBriefing(briefing, baselineKey);
       this.plannedWaypointsKey = waypointsKey(waypoints);
+      // An edit is still a plan of this trip, and the saved row should be the trip as it now
+      // stands. This is the path the debounce exists for: the departure scrubber re-plans on
+      // every nudge.
+      this.scheduleAutoSave();
     } catch (e) {
       // A re-plan can also hit the entitlement gate; surface the paywall / sign-in, else keep the
       // current plan on a transient failure.
@@ -1631,15 +1650,9 @@ export class Plan implements OnInit {
       this.plannedContext.set({ origin, destination });
       this.plannedBase.set(base);
       this.plannedWaypointsKey = waypointsKey(waypoints);
-      // My Trips → Recent (local history): remember every trip you plan.
-      this.trips.recordRecent({
-        origin,
-        destination,
-        departureAt,
-        distanceMeters: totals.distanceMeters,
-        worstSeverity: totals.worstSeverity,
-        waypoints,
-      });
+      // My Trips: every trip you plan, on every device. Covers both shapes — `showResult` has
+      // already taken whichever of the two the server sent.
+      this.scheduleAutoSave();
     } catch (e) {
       if (e instanceof AccountRequiredError) {
         // ADR-0025 auth wall: Show Weather requires a signed-in account -> go to the sign-in page.

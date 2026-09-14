@@ -7,7 +7,7 @@ import { AuthService } from './auth.service';
 
 /**
  * ADR-0025 §1: anyone may browse and enter a trip (/app allows the silent ANONYMOUS session), but
- * Recent / Saved / Settings are LOGIN-ONLY — they need a real (non-anonymous) account. Guests get
+ * My Trips / Settings are LOGIN-ONLY — they need a real (non-anonymous) account. Guests get
  * bounced to /login, not shown the page.
  */
 class FakeAuth {
