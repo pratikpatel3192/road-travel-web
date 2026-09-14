@@ -84,21 +84,27 @@ describe('StopList (F-006 stop editor)', () => {
 
   it('updates dwell for the edited row only', () => {
     const fixture = render([newStop(HARRIS, 0), newStop(KETTLEMAN, 0)]);
-    fixture.componentInstance.setDwell(1, 45);
+    fixture.componentInstance.setStay(1, 'm45');
     expect(fixture.componentInstance.stops().map((s) => s.dwellMinutes)).toEqual([0, 45]);
   });
 
-  it('offers exactly the product dwell presets, 0 rendered as "Pass through"', () => {
+  it('offers pauses and stays on ONE ordered list', () => {
+    // This was two controls — a nights box and a dwell select — and at zero they both read as
+    // passing through, so a row asked the same question twice in two shapes.
     const fixture = render([newStop(HARRIS)]);
     const el = fixture.nativeElement as HTMLElement;
     const options = [...el.querySelectorAll('select option')].map((o) => o.textContent?.trim());
-    expect(options).toEqual(['Pass through', '15 min', '30 min', '45 min', '60 min']);
+    expect(options.slice(0, 5)).toEqual(['Pass through', '15 min', '30 min', '45 min', '60 min']);
+    expect(options).toContain('1 night');
+    expect(options).toContain('3 nights');
+    // One word for passing through, not two controls that each say it.
+    expect(options.filter((o) => o === 'Pass through')).toHaveLength(1);
   });
 });
 
 /**
- * The multi-day row: nights decides which question the row asks. "How long?" is the wrong question
- * about a three-night stay, so the dwell picker is gone — not disabled — once one is entered.
+ * The multi-day row. One duration list covers pauses and stays; choosing a stay raises a SECOND
+ * question the list cannot answer — what time you set off the next morning — and only then.
  */
 describe('StopList (overnight stops)', () => {
   beforeEach(async () => {
@@ -125,24 +131,36 @@ describe('StopList (overnight stops)', () => {
     expect(departAt(el)).toBeNull();
   });
 
-  it('swaps the dwell picker for a departure time once the stop has a night', () => {
+  it('raises the departure-time question only once the stop has a night', () => {
     const fixture = render([newStop(HARRIS, 30)]);
     const el = fixture.nativeElement as HTMLElement;
-    fixture.componentInstance.setNights(0, 2);
+    expect(departAt(el)).toBeNull();
+    fixture.componentInstance.setStay(0, 'n2');
     fixture.detectChanges();
-    expect(dwell(el)).toBeNull();
+    // The duration list stays — it is one control now — and the time appears beside it.
+    expect(dwell(el)).not.toBeNull();
     expect(departAt(el)).not.toBeNull();
   });
 
-  it('clamps what the number input hands back and edits only its own row', () => {
+  it('edits only its own row', () => {
+    // A single list of durations replaced the number box, so there is nothing to clamp: an option
+    // nobody offered cannot be chosen. What still matters is that it touches one row.
     const fixture = render([newStop(HARRIS), newStop(KETTLEMAN)]);
-    fixture.componentInstance.setNights(1, 2.7);
+    fixture.componentInstance.setStay(1, 'n2');
     expect(fixture.componentInstance.stops().map((s) => s.nights)).toEqual([0, 2]);
+  });
+
+  it('a stop is a pause or a stay, never both — the server rejects the pair', () => {
+    const fixture = render([newStop(HARRIS, 45)]);
+    fixture.componentInstance.setStay(0, 'n3');
+    const stop = fixture.componentInstance.stops()[0];
+    expect(stop.nights).toBe(3);
+    expect(stop.dwellMinutes).toBe(0);
   });
 
   it('drops the departure time when the stay goes — a time to leave nowhere means nothing', () => {
     const fixture = render([newStop(HARRIS, 0, 2, '09:30')]);
-    fixture.componentInstance.setNights(0, 0);
+    fixture.componentInstance.setStay(0, 'pass');
     expect(fixture.componentInstance.stops()[0].departureTime).toBeNull();
     // The dwell the traveller had set is untouched, so flipping back restores their stop.
     expect(fixture.componentInstance.stops()[0].dwellMinutes).toBe(0);

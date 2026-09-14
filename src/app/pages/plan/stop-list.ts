@@ -1,17 +1,10 @@
 import { Component, input, model } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
+import { STOP_STAY_OPTIONS, stayById, stayIdFor } from '../../core/stop-stay';
 import { IconComponent } from '../../ui/icon';
 import { PlaceField, type PlaceValue } from './place-field';
-import {
-  DWELL_PRESETS,
-  type DwellMinutes,
-  MAX_NIGHTS,
-  MAX_STOPS,
-  type StopDraft,
-  newStop,
-  normalizeNights,
-} from './waypoints';
+import { type DwellMinutes, MAX_STOPS, type StopDraft, newStop } from './waypoints';
 
 /**
  * F-006: the ordered stop rows between the origin and destination fields — up to {@link MAX_STOPS}
@@ -45,23 +38,26 @@ import {
         </div>
         <div class="stop-tools">
           <div class="stay">
-            <label class="nights">
-              <span>Nights</span>
-              <input
-                type="number"
-                min="0"
-                [max]="maxNights"
-                step="1"
-                [ngModel]="s.nights"
-                (ngModelChange)="setNights(i, $event)"
-                [name]="'nights-' + s.id"
-                [attr.aria-label]="'Nights at stop ' + (i + 1)"
-              />
+            <!-- ONE duration control. This was a nights box beside a "Stop for" select, and at
+                 zero they both read as passing through — the same question asked twice, in two
+                 different shapes. A pause and a stay are the same thought at different lengths. -->
+            <label class="dwell">
+              <span>Stop for</span>
+              <select
+                [ngModel]="stayIdFor(s.dwellMinutes, s.nights)"
+                (ngModelChange)="setStay(i, $event)"
+                [name]="'stay-' + s.id"
+                [attr.aria-label]="'Stop ' + (i + 1) + ' duration'"
+              >
+                @for (o of stayOptions; track o.id) {
+                  <option [ngValue]="o.id">{{ o.label }}</option>
+                }
+              </select>
             </label>
             @if (s.nights > 0) {
-              <!-- An overnight stop is described by when you LEAVE it. Asking "how long?" about a
-                   three-night stay is the wrong question, so the dwell picker is gone, not
-                   disabled. -->
+              <!-- A second question, and only a stay raises it. Blank stays blank: "sometime that
+                   day" is a real answer, and a guessed hour would date that leg's forecast off
+                   something nobody chose. -->
               <label class="depart">
                 <span>Leave at</span>
                 <input
@@ -72,20 +68,6 @@ import {
                   [attr.aria-label]="'Departure time from stop ' + (i + 1)"
                   title="Blank is fine — we'll treat it as sometime that day rather than guess an hour."
                 />
-              </label>
-            } @else {
-              <label class="dwell">
-                <span>Stop for</span>
-                <select
-                  [ngModel]="s.dwellMinutes"
-                  (ngModelChange)="setDwell(i, $event)"
-                  [name]="'dwell-' + s.id"
-                  [attr.aria-label]="'Stop ' + (i + 1) + ' dwell time'"
-                >
-                  @for (m of presets; track m) {
-                    <option [ngValue]="m">{{ m === 0 ? 'Pass through' : m + ' min' }}</option>
-                  }
-                </select>
               </label>
             }
           </div>
@@ -232,9 +214,13 @@ export class StopList {
   /** Proximity bias for stop autocomplete — the route midpoint, so suggestions stay near the trip. */
   readonly near = input<{ latitude: number; longitude: number } | null>(null);
 
-  readonly presets = DWELL_PRESETS;
+  readonly stayOptions = STOP_STAY_OPTIONS;
   readonly max = MAX_STOPS;
-  readonly maxNights = MAX_NIGHTS;
+
+  /** Template helper: which option the two stored fields currently mean. */
+  stayIdFor(dwellMinutes: number, nights: number): string {
+    return stayIdFor(dwellMinutes, nights);
+  }
 
   add(): void {
     if (this.stops().length >= MAX_STOPS) return;
@@ -257,22 +243,24 @@ export class StopList {
     this.stops.set(this.stops().map((s, i) => (i === index ? { ...s, place } : s)));
   }
 
-  setDwell(index: number, dwellMinutes: DwellMinutes): void {
-    this.stops.set(this.stops().map((s, i) => (i === index ? { ...s, dwellMinutes } : s)));
-  }
-
   /**
-   * Dropping to a pass-through clears the morning's departure time with it: a time to leave a
-   * place nobody sleeps at describes nothing, and the server rejects the pair. The dwell is left
-   * alone in the draft so flipping nights back to 0 restores the stop the traveller had set up —
-   * it is already omitted from the wire while the stay lasts (see `toWaypoints`).
+   * One selection sets both stored fields, which is what keeps them mutually exclusive: the server
+   * rejects a stop carrying a dwell AND nights, and picking from a single list cannot produce one.
+   *
+   * Choosing a pause clears the morning's departure time with it — a time to leave a place nobody
+   * sleeps at describes nothing.
    */
-  setNights(index: number, nights: number): void {
-    const value = normalizeNights(nights);
+  setStay(index: number, id: string): void {
+    const option = stayById(id);
     this.stops.set(
       this.stops().map((s, i) =>
         i === index
-          ? { ...s, nights: value, departureTime: value > 0 ? s.departureTime : null }
+          ? {
+              ...s,
+              dwellMinutes: option.dwellMinutes as DwellMinutes,
+              nights: option.nights,
+              departureTime: option.nights > 0 ? s.departureTime : null,
+            }
           : s,
       ),
     );
