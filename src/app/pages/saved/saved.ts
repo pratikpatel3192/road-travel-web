@@ -3,10 +3,18 @@ import { Router, RouterLink } from '@angular/router';
 import type { SavedTripModel } from '@road-travel/sdk';
 
 import { SettingsService } from '../../core/settings.service';
-import { type RecentTrip, TripsService } from '../../core/trips.service';
+import { TripsService } from '../../core/trips.service';
 import { SEVERITY_COLOR, formatDistance, severityOrFallback } from '../plan/severity';
+import { savedTripSubtext } from './trip-subtext';
 
-/** "My trips" — the server-authoritative saved list (ADR-0029; no recents). Tap one to reopen. */
+/**
+ * "My trips" — the server-authoritative list (ADR-0029; no recents). Tap one to reopen.
+ *
+ * It is the whole history now, not a shortlist somebody curated: planning a trip saves it, so the
+ * list a traveller sees here is the same one their phone sees. It used to sit above a device-local
+ * "Recent" section that never left this browser, which is how a trip planned on the laptop could be
+ * missing from the phone while both screens looked like a synced list.
+ */
 @Component({
   selector: 'app-saved',
   imports: [RouterLink],
@@ -17,39 +25,21 @@ import { SEVERITY_COLOR, formatDistance, severityOrFallback } from '../plan/seve
         <h1>My trips</h1>
       </header>
 
-      @if (trips.recent().length) {
-        <h2>Recent</h2>
-        @for (t of trips.recent(); track key(t)) {
-          <div class="row">
-            <button class="open" (click)="openRecent(t)">
-              <span class="badge" [style.background]="color(t.worstSeverity)"></span>
-              <span class="names"
-                >{{ short(t.origin.name) }} → {{ short(t.destination.name) }}</span
-              >
-              @if (t.waypoints?.length; as n) {
-                <span class="sub">{{ n }} {{ n === 1 ? 'stop' : 'stops' }}</span>
-              }
-              @if (t.distanceMeters) {
-                <span class="sub">{{ dist(t.distanceMeters) }}</span>
-              }
-            </button>
-            <button class="del" (click)="removeRecent(t)" aria-label="Remove recent trip">✕</button>
-          </div>
-        }
-      }
-
-      <h2>Saved</h2>
       @if (trips.saved().length) {
         @for (t of trips.saved(); track t.id) {
           <div class="row">
             <button class="open" (click)="open(t)">
               <span class="badge" [style.background]="color(t.worst_severity)"></span>
-              <span class="names"
-                >{{ short(t.origin_name) }} → {{ short(t.destination_name) }}</span
-              >
-              @if (t.waypoints?.length; as n) {
-                <span class="sub">{{ n }} {{ n === 1 ? 'stop' : 'stops' }}</span>
-              }
+              <!-- One row is the whole trip, origin to destination; the line under it is what the
+                   trip turned out to be, so a parks tour is legible without opening it. -->
+              <span class="names">
+                <span class="endpoints"
+                  >{{ short(t.origin_name) }} → {{ short(t.destination_name) }}</span
+                >
+                @if (subtext(t)) {
+                  <span class="sub">{{ subtext(t) }}</span>
+                }
+              </span>
               @if (t.distance_meters) {
                 <span class="sub">{{ dist(t.distance_meters) }}</span>
               }
@@ -67,7 +57,7 @@ import { SEVERITY_COLOR, formatDistance, severityOrFallback } from '../plan/seve
       } @else if (trips.loading()) {
         <p class="empty">Loading your trips…</p>
       } @else {
-        <p class="empty">No saved trips yet. Plan a drive and tap the star to save it.</p>
+        <p class="empty">No trips yet. Plan a drive and it'll show up here, on every device.</p>
       }
     </div>
   `,
@@ -102,13 +92,6 @@ import { SEVERITY_COLOR, formatDistance, severityOrFallback } from '../plan/seve
         font-size: 22px;
         margin: 0;
       }
-      h2 {
-        font-size: 13px;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        color: var(--muted);
-        margin: 18px 0 8px;
-      }
       .row {
         display: flex;
         align-items: stretch;
@@ -138,8 +121,15 @@ import { SEVERITY_COLOR, formatDistance, severityOrFallback } from '../plan/seve
         height: 10px;
         border-radius: 50%;
       }
+      /* Endpoints on top, what the trip is underneath — stacked rather than strung along one line,
+         because the subtext is about the trip and the distance beside it is a measurement. */
       .names {
         flex: 1;
+        display: grid;
+        gap: 2px;
+        min-width: 0;
+      }
+      .endpoints {
         font-weight: 600;
         font-size: 15px;
       }
@@ -219,25 +209,14 @@ export class Saved {
     this.router.navigate(['/plan']);
   }
 
+  /** Deleting is still deliberate: planning saves a trip, only this removes one. */
   remove(id: string): void {
     void this.trips.remove(id);
   }
 
-  /** Recent trips (local): re-open by staging the stored endpoints + re-planning. */
-  key(t: RecentTrip): string {
-    return `${t.origin.name}→${t.destination.name}`;
-  }
-  openRecent(t: RecentTrip): void {
-    this.trips.stage({
-      origin: t.origin,
-      destination: t.destination,
-      departureAt: t.departureAt,
-      waypoints: t.waypoints,
-    });
-    this.router.navigate(['/plan']);
-  }
-  removeRecent(t: RecentTrip): void {
-    this.trips.removeRecent(this.key(t));
+  /** "5 stops · 15 days"; a plain A → B drive says just "1 day" rather than counting no stops. */
+  subtext(t: SavedTripModel): string {
+    return savedTripSubtext(t);
   }
 
   short(name: string): string {

@@ -40,11 +40,18 @@ describe('Plan — days derived from the stops', () => {
           provide: GeocodeService,
           useValue: { search: vi.fn(async () => []), reverse: vi.fn(async () => null) },
         },
-        { provide: ApiService, useValue: { planTrip: vi.fn(), createBriefing: vi.fn() } },
+        {
+          provide: ApiService,
+          useValue: {
+            planTrip: vi.fn(),
+            createBriefing: vi.fn(),
+            saveTrip: vi.fn(async () => ({ id: 't1' })),
+          },
+        },
         { provide: EntitlementService, useValue: { refresh: vi.fn(async () => undefined) } },
         {
           provide: TripsService,
-          useValue: { takeStaged: () => null, isSaved: () => false, recordRecent: vi.fn() },
+          useValue: { takeStaged: () => null, refresh: vi.fn(async () => undefined) },
         },
         { provide: AnalyticsService, useValue: { capture: vi.fn() } },
         { provide: PaywallService, useValue: { show: vi.fn() } },

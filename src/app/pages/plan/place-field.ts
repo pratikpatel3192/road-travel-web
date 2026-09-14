@@ -244,7 +244,7 @@ export class PlaceField {
     setTimeout(() => this.open.set(false), 120);
   }
 
-  /** Set the field from outside (used by swap / recents). */
+  /** Set the field from outside (used by swap / a trip re-opened from My Trips). */
   setPlace(value: PlaceValue | null): void {
     this.place.set(value);
     this.query.set(value?.name ?? '');

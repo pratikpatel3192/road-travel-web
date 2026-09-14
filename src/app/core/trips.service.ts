@@ -16,28 +16,10 @@ export interface StagedTrip {
   /**
    * F-012: the SERVER trip id, when this came from My Trips. Sent as `trip_id` on the briefing so
    * the server diffs against that trip's stored baseline — the half of the feature that survives a
-   * reload and crosses devices. Absent for local recents, which have no server row.
+   * reload and crosses devices. Absent until the trip's first auto-save comes back.
    */
   savedTripId?: string;
 }
-
-/**
- * A locally-remembered recently-planned trip (My Trips → Recent). Web has no turn-by-turn drive, so
- * "recent" = trips you've planned/opened. Kept per-user in localStorage (device history — NOT synced;
- * saved trips remain the server-authoritative list). Mirrors the iOS Recent section.
- */
-export interface RecentTrip {
-  origin: PlaceValue;
-  destination: PlaceValue;
-  departureAt?: string;
-  distanceMeters?: number;
-  worstSeverity?: string;
-  /** F-006: re-opening a recent multi-stop trip restores its stops + dwell. */
-  waypoints?: WaypointModel[];
-  recordedAt: string;
-}
-const RECENT_LIMIT = 15;
-const recentEndpointsKey = (o: PlaceValue, d: PlaceValue) => `${o.name}→${d.name}`;
 
 // Legacy localStorage keys (pre-ADR-0029). The saved list is migrated to the server once per
 // user; recents are removed outright.
@@ -53,14 +35,13 @@ interface LegacySavedTrip {
 
 const cacheKey = (userId: string) => `rt.savedTrips.v2.${userId}`;
 const migratedKey = (userId: string) => `rt.savedTripsMigrated.${userId}`;
-const recentKey = (userId: string) => `rt.recentTrips.v2.${userId}`;
 
 /**
  * Server-authoritative saved trips (ADR-0029). `public.trips` via GET/POST/DELETE `/v1/trips` is
  * the single source of truth; localStorage survives only as a per-user offline READ cache that is
- * refreshed from every server response and dropped on sign-out. Recents are gone — My Trips is
- * Saved only. Pre-ADR-0029 localStorage saves are pushed to the API once per user, then the
- * legacy keys are deleted.
+ * refreshed from every server response and dropped on sign-out. Recents are gone — My Trips is the
+ * whole history, because planning a trip now saves it. Pre-ADR-0029 localStorage saves are pushed
+ * to the API once per user, then the legacy keys are deleted.
  */
 @Injectable({ providedIn: 'root' })
 export class TripsService {
@@ -68,7 +49,6 @@ export class TripsService {
   private readonly auth = inject(AuthService);
 
   readonly saved = signal<SavedTripModel[]>([]);
-  readonly recent = signal<RecentTrip[]>([]);
   readonly loading = signal(false);
   readonly staged = signal<StagedTrip | null>(null);
 
@@ -88,13 +68,11 @@ export class TripsService {
         if (this.loadedFor !== userId) {
           this.loadedFor = userId;
           this.saved.set(this.readCache(userId));
-          this.recent.set(this.readRecent(userId));
           void this.refresh();
         }
       } else if (this.loadedFor !== null) {
         this.loadedFor = null;
         this.saved.set([]);
-        this.recent.set([]);
       }
     });
   }
@@ -210,7 +188,11 @@ export class TripsService {
 
   private async runMigration(userId: string, existing: SavedTripModel[]): Promise<boolean> {
     try {
-      localStorage.removeItem(LEGACY_RECENTS_KEY); // recents are simply gone (ADR-0029)
+      // Recents are simply gone (ADR-0029). Both generations of the key are dropped here, on every
+      // load rather than once: the per-user v2 key was still being written until planning itself
+      // started saving, so a device that last ran the old build has one sitting there.
+      localStorage.removeItem(LEGACY_RECENTS_KEY);
+      localStorage.removeItem(`rt.recentTrips.v2.${userId}`);
       if (localStorage.getItem(migratedKey(userId))) return false;
       const raw = localStorage.getItem(LEGACY_SAVED_KEY);
       const legacy: LegacySavedTrip[] = raw ? JSON.parse(raw) : [];
@@ -258,51 +240,5 @@ export class TripsService {
   private syncCache(): void {
     const userId = this.auth.userId;
     if (userId) this.writeCache(userId, this.saved());
-  }
-
-  // --- Recent trips (local, per-user; My Trips → Recent) --------------------------------------------
-
-  /** Remember a planned/opened trip in Recent — upsert by endpoints (moves it to the top), cap 15. */
-  recordRecent(trip: {
-    origin: PlaceValue;
-    destination: PlaceValue;
-    departureAt?: string;
-    distanceMeters?: number;
-    worstSeverity?: string;
-    waypoints?: WaypointModel[];
-  }): void {
-    const userId = this.auth.userId;
-    if (!userId) return;
-    const k = recentEndpointsKey(trip.origin, trip.destination);
-    const entry: RecentTrip = { ...trip, recordedAt: new Date().toISOString() };
-    const next = [
-      entry,
-      ...this.recent().filter((r) => recentEndpointsKey(r.origin, r.destination) !== k),
-    ].slice(0, RECENT_LIMIT);
-    this.recent.set(next);
-    this.writeRecent(userId, next);
-  }
-
-  removeRecent(key: string): void {
-    const next = this.recent().filter((r) => recentEndpointsKey(r.origin, r.destination) !== key);
-    this.recent.set(next);
-    const userId = this.auth.userId;
-    if (userId) this.writeRecent(userId, next);
-  }
-
-  private readRecent(userId: string): RecentTrip[] {
-    try {
-      const raw = localStorage.getItem(recentKey(userId));
-      return raw ? (JSON.parse(raw) as RecentTrip[]) : [];
-    } catch {
-      return [];
-    }
-  }
-  private writeRecent(userId: string, recents: RecentTrip[]): void {
-    try {
-      localStorage.setItem(recentKey(userId), JSON.stringify(recents));
-    } catch {
-      /* storage unavailable — recents just won't persist */
-    }
   }
 }
