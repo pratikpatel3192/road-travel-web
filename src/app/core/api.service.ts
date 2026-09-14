@@ -16,6 +16,8 @@ import {
   type MeStatsResponse,
   type OnboardingRequest,
   type PaywallResponse,
+  type PlanItineraryRequest,
+  type PlanItineraryResponse,
   type PlanTripRequest,
   type PlanTripResponse,
   type PortalSessionResponse,
@@ -46,6 +48,7 @@ import {
   getProfileV1MeProfileGet,
   getSurveyQuestionsV1SurveyQuestionsGet,
   getTripLegsV1TripsTripIdLegsGet,
+  planItineraryV1TripsPlanItineraryPost,
   planTripV1TripsPlanPost,
   replaceTripLegsV1TripsTripIdLegsPut,
   tripOutlookV1TripsOutlookPost,
@@ -165,6 +168,28 @@ export class ApiService {
     const { data, error, response } = await planTripV1TripsPlanPost({ ...this.options(), body });
     if (error || !data) this.raise(response, error);
     return data as PlanTripResponse;
+  }
+
+  /**
+   * The same trip, but one plan PER TRAVEL DAY — each routed and forecast on the instant that day
+   * actually sets off.
+   *
+   * Not a flag on {@link planTrip}, and not a loop of `planTrip` calls on the client. A flag would
+   * make one response mean two different things; a client-side loop would put the leg derivation
+   * and the per-day departure arithmetic in two places, and the whole point of this endpoint is
+   * that the server derives the days from the SAME body `/plan` is sent.
+   *
+   * A day past the forecast horizon comes back with `beyond_forecast` and no plan, and one
+   * unroutable day carries its own `error` while the rest still arrive — so callers must read each
+   * day's state rather than the presence of `plan` alone.
+   */
+  async planItinerary(body: PlanItineraryRequest): Promise<PlanItineraryResponse> {
+    const { data, error, response } = await planItineraryV1TripsPlanItineraryPost({
+      ...this.options(),
+      body,
+    });
+    if (error || !data) this.raise(response, error);
+    return data as PlanItineraryResponse;
   }
 
   /**

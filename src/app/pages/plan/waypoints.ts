@@ -1,6 +1,7 @@
 import type {
   BriefingFactsModel,
   BriefingRequest,
+  PlanItineraryRequest,
   PlanTripRequest,
   WaypointModel,
 } from '@road-travel/sdk';
@@ -156,6 +157,35 @@ export function buildPlanRequest(args: {
   };
   if (args.waypoints?.length) body.waypoints = [...args.waypoints];
   return body;
+}
+
+/**
+ * `/v1/trips/plan-itinerary` body — the SAME fields `/plan` is sent, plus the browser's zone.
+ *
+ * Built from `buildPlanRequest` rather than beside it, so the two bodies cannot drift: the server
+ * derives this trip's travel days from exactly the waypoints `/plan` would have routed as one
+ * drive, which is what lets the day list and the per-day plans agree.
+ *
+ * `timezone` rides along because a stop's `departure_time` is a wall clock — "9am" on day 4 in
+ * Arizona is not the same instant as "9am" on day 1 in Texas, and without the zone the server says
+ * so rather than pretending otherwise. `Intl` is the browser's own answer; an unavailable one sends
+ * nothing rather than a guess.
+ */
+export function buildItineraryRequest(args: {
+  origin: PlaceValue;
+  destination: PlaceValue;
+  departureAt: string;
+  waypoints?: readonly WaypointModel[];
+  timezone?: string | null;
+}): PlanItineraryRequest {
+  const body: PlanItineraryRequest = buildPlanRequest(args);
+  if (args.timezone) body.timezone = args.timezone;
+  return body;
+}
+
+/** The browser's IANA zone, or null where the runtime will not say. */
+export function localTimezone(): string | null {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
 }
 
 /**

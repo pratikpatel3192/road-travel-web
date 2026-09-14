@@ -5,7 +5,9 @@ import type {
   BriefingResponse,
   OutlookResponse,
   PlaceCardModel,
+  PlanItineraryResponse,
   PlanTripResponse,
+  WaypointModel,
 } from '@road-travel/sdk';
 
 import { OutlookPanel } from './outlook-panel';
@@ -14,7 +16,7 @@ import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { EntitlementService } from '../../core/entitlement.service';
 import { AccountRequiredError, PaywallError } from '../../core/errors';
-import { FORECAST_HORIZON_DAYS, isoDay, tierFor } from '../../core/forecast-horizon';
+import { FORECAST_HORIZON_DAYS, dayLabel, isoDay, tierFor } from '../../core/forecast-horizon';
 import { GeocodeService } from '../../core/geocode.service';
 import { deriveLegs } from '../../core/itinerary';
 import { PaywallService } from '../../core/paywall.service';
@@ -36,8 +38,10 @@ import {
   MAX_STOPS,
   type StopDraft,
   buildBriefingRequest,
+  buildItineraryRequest,
   buildPlanRequest,
   fromWaypoints,
+  localTimezone,
   newStop,
   toItineraryStops,
   toWaypoints,
@@ -71,7 +75,7 @@ import {
         <header class="top">
           <h1>Plan a drive</h1>
           <div class="actions">
-            @if (plan()) {
+            @if (planned()) {
               <button
                 class="icon"
                 [class.on]="isCurrentSaved()"
@@ -164,9 +168,20 @@ import {
 
         @if (travelDays().length > 1) {
           <!-- Derived, never typed: the stops above say this trip takes these days. Shown as soon
-               as a stop has nights, before anything is planned or saved. -->
+               as a stop has nights, before anything is planned or saved. Once planned, each day
+               also carries ITS OWN forecast, and picking one drives everything below. -->
           <h3 class="section">Your days</h3>
-          <app-travel-days [legs]="travelDays()" />
+          @if (itinerary()) {
+            <p class="days-hint">Pick a day to see its route and weather below.</p>
+          }
+          <app-travel-days
+            [legs]="travelDays()"
+            [days]="itinerary()?.days ?? null"
+            [longDayOrdinals]="itinerary()?.long_day_ordinals ?? []"
+            [units]="settings.units()"
+            [selectedDay]="selectedDay()"
+            (selectedDayChange)="onSelectDay($event)"
+          />
         }
 
         @if (error()) {
@@ -178,7 +193,14 @@ import {
           <h3 class="section">Typical conditions</h3>
           <app-outlook-panel [outlook]="o" [units]="settings.units()" />
         }
-        @if (plan(); as p) {
+        @if (shownDayNote(); as note) {
+          <!-- The selected day has no route to draw. Said here rather than left as a gap where the
+               timeline would be: both reasons are answers, and neither is the page's error state. -->
+          <h3 class="section">Along the way</h3>
+          <p class="day-of">{{ shownDayHeading() }}</p>
+          <p class="beyond-note">{{ note }}</p>
+        }
+        @if (shownPlan(); as p) {
           <app-ahead-banner [plan]="p" [units]="settings.units()" />
           <!-- F-006 trip summary: driving time + total dwell + arrival, all SERVER values
              (arrival_at already includes dwell; duration_seconds stays driving-only). -->
@@ -190,7 +212,10 @@ import {
           </div>
           <div class="scrubber card">
             <div class="scrub-head">
-              <span>Departure</span>
+              <!-- Named on a multi-day trip, because this control moves the TRIP's departure, and
+                   every later day that never stated its own hour follows it. Calling it just
+                   "Departure" next to a timeline showing day 3 would read as day 3's. -->
+              <span>{{ itinerary() ? 'Trip departure' : 'Departure' }}</span>
               <strong>{{ shiftedLabel() }}</strong>
               @if (replanning()) {
                 <span class="rescan">re-checking…</span>
@@ -214,6 +239,12 @@ import {
             </div>
           </div>
           <h3 class="section">Along the way</h3>
+          @if (shownDayHeading(); as heading) {
+            <!-- The timeline and map below are ONE day of this trip. Saying which one is the whole
+                 point: the same strip used to be shown as the whole drive while the day list above
+                 dated its legs days apart. -->
+            <p class="day-of">{{ heading }}</p>
+          }
           @if (hasBeyondForecast()) {
             <!-- A grey stretch on the map and an empty cell in the timeline read as a glitch. This
                reads as an answer: there is no forecast yet, and there will be. -->
@@ -236,7 +267,7 @@ import {
               >
               <span class="explore-sub">stops · food · fuel · scenic</span>
             </button>
-          } @else if (plannedContext(); as ctx) {
+          } @else if (exploreContext(); as ctx) {
             <app-explore-panel
               [origin]="ctx.origin"
               [destination]="ctx.destination"
@@ -265,7 +296,7 @@ import {
            shows the live-location home map; after planning, the severity-colored route. -->
       <aside class="map-pane">
         <app-route-map
-          [plan]="plan()"
+          [plan]="shownPlan()"
           [userLocation]="userLocation()"
           [selected]="selected()"
           (selectedChange)="selected.set($event)"
@@ -497,6 +528,18 @@ import {
         color: var(--muted);
         margin: 18px 0 8px;
       }
+      /* Which travel day everything below belongs to. Full-strength ink, unlike the muted notes
+         around it — it is the heading's other half, not an aside. */
+      .day-of {
+        margin: -4px 0 8px;
+        font: 700 13px var(--font-body);
+        color: var(--text);
+      }
+      .days-hint {
+        margin: -4px 0 8px;
+        font-size: 12px;
+        color: var(--muted);
+      }
       app-ahead-banner,
       app-route-map,
       .beyond-note {
@@ -662,7 +705,23 @@ export class Plan implements OnInit {
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
+  /** The ONE-day result. Null whenever the trip is driven over more than a day — see `itinerary`. */
   readonly plan = signal<PlanTripResponse | null>(null);
+  /**
+   * The multi-day result: one plan per travel day, each made at that day's own departure instant.
+   *
+   * A separate signal from `plan` rather than a superset of it, and never both at once. The planner
+   * used to route a fortnight as a single drive from a single departure, so the days card could say
+   * a leg was driven on the 8th while the timeline underneath showed the 1st's weather for it. Two
+   * signals make that state unrepresentable: whichever one is set is the whole answer.
+   */
+  readonly itinerary = signal<PlanItineraryResponse | null>(null);
+  /**
+   * Which travel day the timeline, map and Explore below are showing. An ordinal, matching the
+   * derived legs and the server's days — not an index, so it survives a response that came back
+   * with a different number of days than the stops now imply.
+   */
+  readonly selectedDay = signal(0);
   /** Set instead of `plan` for a date past the horizon. Never both — they are different answers. */
   readonly outlook = signal<OutlookResponse | null>(null);
   readonly briefing = signal<BriefingResponse | null>(null);
@@ -742,9 +801,13 @@ export class Plan implements OnInit {
    * The scrubber's condition band (kit option 1d): the track is a linear gradient of what the
    * trip will hit — clear / clouds / rain / heavy per sample, positioned by distance fraction.
    * Uses var(--cond-*) names so the band re-tints live when the theme flips. Presentation only.
+   *
+   * Reads the SHOWN plan, like everything else under the day list: the track sits directly above a
+   * timeline that is one day of the trip, and banding it from a different day's samples would be
+   * the contradiction back again in the one place nobody would think to look.
    */
   readonly scrubGradient = computed(() => {
-    const p = this.plan();
+    const p = this.shownPlan();
     const samples = p?.samples ?? [];
     const last = samples[samples.length - 1];
     const total = last?.distance_from_start_meters ?? 0;
@@ -805,13 +868,40 @@ export class Plan implements OnInit {
   readonly exploreCards = signal<PlaceCardModel[]>([]);
   /** Highlighted card/pin index, shared card-list ↔ map. */
   readonly exploreSelected = signal<number | null>(null);
-  /** The departure the SHOWN plan used — the planned base plus any scrubbed offset. */
+  /**
+   * The departure the SHOWN plan used — the planned base plus any scrubbed offset.
+   *
+   * On a multi-day trip it is the SERVER's `departure_at` for the selected day instead, because
+   * that day sets off from the stop it slept at, days after the trip did. Handing Explore the
+   * trip's own departure would rank "somewhere to eat" against the wrong day's conditions — the
+   * same substitution the day-by-day planning exists to remove, one surface further down.
+   */
   readonly exploreDepartureAt = computed(() => {
+    if (this.itinerary()) return this.shownPlan()?.departure_at ?? '';
     const base = this.plannedBase();
     return base ? new Date(base.getTime() + this.departureOffset() * 60_000).toISOString() : '';
   });
-  /** The current effective waypoints (same composition the plan/briefing requests use). */
-  readonly exploreWaypoints = computed(() => toWaypoints(this.stops()));
+  /**
+   * The waypoints of the corridor being explored: the whole trip's on a one-day trip, and the
+   * selected day's pass-through stops on a multi-day one.
+   *
+   * Matched back to the full waypoint rows by place rather than rebuilt from the leg, so each one
+   * keeps the dwell the traveller chose — a leg carries only the place.
+   */
+  readonly exploreWaypoints = computed(() => {
+    const all = toWaypoints(this.stops());
+    const leg = this.shownLeg();
+    if (!leg) return all;
+    const key = (p: { name: string; latitude: number; longitude: number }) =>
+      `${p.name}@${p.latitude},${p.longitude}`;
+    const onThisDay = new Set(leg.waypoints.map(key));
+    return all.filter((w) => onThisDay.has(key(w)));
+  });
+  /** The endpoints Explore searches between — the selected day's, on a multi-day trip. */
+  readonly exploreContext = computed(() => {
+    const leg = this.shownLeg();
+    return leg ? { origin: leg.origin, destination: leg.destination } : this.plannedContext();
+  });
 
   /**
    * The travel days the current stops imply — derived locally, from the same waypoints the plan
@@ -835,6 +925,67 @@ export class Plan implements OnInit {
       departureDate: day || null,
       departureTime: time || null,
     });
+  });
+
+  /** Anything planned at all — a one-day plan or a multi-day itinerary. */
+  readonly planned = computed(() => !!this.plan() || !!this.itinerary());
+
+  /** The selected travel day's record, when this is a multi-day trip. */
+  readonly shownDay = computed(() => {
+    const itinerary = this.itinerary();
+    if (!itinerary) return null;
+    return itinerary.days.find((d) => d.ordinal === this.selectedDay()) ?? null;
+  });
+
+  /**
+   * The plan the timeline, map, summary and Explore are all reading from.
+   *
+   * ONE plan, whichever kind of trip this is: a one-day trip's whole route, or the selected day's.
+   * Every surface below the day list binds to this rather than to `plan` directly, which is what
+   * stops the map and the day list from describing different drives.
+   *
+   * Null on a multi-day trip whose selected day has no plan — beyond the forecast, or unroutable.
+   * Those are answers, not empty states, and {@link shownDayNote} is what says which one it is.
+   */
+  readonly shownPlan = computed<PlanTripResponse | null>(() => {
+    if (!this.itinerary()) return this.plan();
+    return this.shownDay()?.plan ?? null;
+  });
+
+  /** The derived leg behind the selected day — where that day starts, ends and passes through. */
+  readonly shownLeg = computed(() => {
+    if (!this.itinerary()) return null;
+    return this.travelDays().find((leg) => leg.ordinal === this.selectedDay()) ?? null;
+  });
+
+  /** "Day 2 · Thu 4 Oct · Albuquerque, NM → Phoenix, AZ" — what the surfaces below belong to. */
+  readonly shownDayHeading = computed(() => {
+    const leg = this.shownLeg();
+    if (!leg) return '';
+    const when = leg.travelDate ? dayLabel(leg.travelDate) : 'no date yet';
+    return `Day ${leg.ordinal + 1} · ${when} · ${leg.origin.name} → ${leg.destination.name}`;
+  });
+
+  /**
+   * Why the selected day has no route below it — never left as a blank space.
+   *
+   * The two reasons are different things and are said differently: past the horizon nobody HAS a
+   * forecast (and will nearer the day), while an unroutable day is a failure confined to that day.
+   */
+  readonly shownDayNote = computed(() => {
+    const day = this.shownDay();
+    if (!day || day.plan) return null;
+    const n = day.ordinal + 1;
+    if (day.beyond_forecast) {
+      return (
+        `Day ${n} is past the ${FORECAST_HORIZON_DAYS}-day forecast — nobody has one for it yet. ` +
+        `We'll have it closer to the day.`
+      );
+    }
+    if (day.error) {
+      return `We couldn't work out a route for day ${n}: ${day.error} The other days are unaffected.`;
+    }
+    return `There's no plan for day ${n}.`;
   });
 
   /** Whether the currently-shown trip is in the saved list (reacts to saves + endpoint changes). */
@@ -958,11 +1109,28 @@ export class Plan implements OnInit {
     this.destination.set(place);
   }
 
+  /**
+   * Show another travel day. Selection only — nothing is re-fetched, because every day's plan
+   * already arrived in the one `plan-itinerary` response.
+   */
+  onSelectDay(ordinal: number): void {
+    if (ordinal === this.selectedDay()) return;
+    this.selectedDay.set(ordinal);
+    // The sample index is an index INTO the shown day's route; carrying it across would highlight
+    // an unrelated point on a different drive.
+    this.selected.set(null);
+    // Same reason, one surface further out: the Explore results were ranked for the day (and the
+    // corridor) that is no longer on screen.
+    this.closeExplore();
+  }
+
   async saveTrip(): Promise<void> {
     const origin = this.origin();
     const destination = this.destination();
     if (!origin || !destination) return;
-    const p = this.plan();
+    // The star is on the TRIP, so a multi-day trip saves its whole-trip totals rather than the day
+    // that happens to be on screen — reopening it from My Trips re-plans the whole thing.
+    const totals = this.tripTotals();
     try {
       // Server-authoritative save/unsave (ADR-0029); the star reflects the server list.
       // F-006: stops + dwell persist with the trip and are restored on re-open (ADR-0030).
@@ -970,11 +1138,11 @@ export class Plan implements OnInit {
         origin,
         destination,
         departureAt: new Date(this.departureAt()).toISOString(),
-        distanceMeters: p?.distance_meters,
-        durationSeconds: p?.duration_seconds,
+        distanceMeters: totals.distanceMeters,
+        durationSeconds: totals.durationSeconds,
         // No `as Severity` here: the SDK already types this as the severity union, and the cast
         // only ever served to silence the compiler at exactly the place a new level slips past.
-        worstSeverity: p?.worst_severity,
+        worstSeverity: totals.worstSeverity,
         waypoints: toWaypoints(this.stops()),
       });
       // ADR-0037: only the SAVE direction is an activation signal (un-starring isn't), and only
@@ -1047,7 +1215,7 @@ export class Plan implements OnInit {
    */
   async addStopFromMap(loc: { latitude: number; longitude: number }): Promise<void> {
     if (this.stops().length >= MAX_STOPS) return;
-    if (!this.plan() && !this.loading() && !this.canSubmit()) return;
+    if (!this.planned() && !this.loading() && !this.canSubmit()) return;
     const found = await this.geocode.reverse(loc.latitude, loc.longitude);
     const name =
       found?.name ??
@@ -1106,6 +1274,30 @@ export class Plan implements OnInit {
     return saved.id;
   }
 
+  /**
+   * The right planning call for this trip: `/plan-itinerary` once the stops make it more than one
+   * travel day, `/plan` otherwise.
+   *
+   * A one-day trip is not merely allowed to keep using `/plan` — it MUST, and with no extra call.
+   * It is the overwhelmingly common trip, `/plan-itinerary` would answer it with a single day
+   * wrapped in an envelope, and paying a second round trip (or a bigger one) to learn what the
+   * derived legs already say would be a tax on every ordinary drive.
+   *
+   * The count comes from the same local derivation the day list is drawn from, so the screen and
+   * the request can never disagree about how many days this is.
+   */
+  private planRequestFor(args: {
+    origin: PlaceValue;
+    destination: PlaceValue;
+    departureAt: string;
+    waypoints: WaypointModel[];
+  }): Promise<PlanTripResponse | PlanItineraryResponse> {
+    if (this.travelDays().length > 1) {
+      return this.api.planItinerary(buildItineraryRequest({ ...args, timezone: localTimezone() }));
+    }
+    return this.api.planTrip(buildPlanRequest(args));
+  }
+
   private async replan(opts: { refreshBriefing?: boolean } = {}): Promise<void> {
     const base = this.plannedBase();
     const ctx = this.plannedContext();
@@ -1121,8 +1313,8 @@ export class Plan implements OnInit {
     const previousFacts = this.briefingMemory.previousFactsFor(baselineKey);
     this.replanning.set(true);
     try {
-      const [plan, briefing] = await Promise.all([
-        this.api.planTrip(buildPlanRequest({ ...ctx, departureAt, waypoints })),
+      const [result, briefing] = await Promise.all([
+        this.planRequestFor({ ...ctx, departureAt, waypoints }),
         opts.refreshBriefing
           ? this.api.createBriefing(
               buildBriefingRequest({
@@ -1136,13 +1328,12 @@ export class Plan implements OnInit {
             )
           : Promise.resolve(null),
       ]);
-      this.plan.set(plan);
+      this.showResult(result, { keepDay: true });
       if (briefing) {
         this.briefing.set(briefing);
         this.briefingMemory.remember(baselineKey, briefing.facts);
       }
       this.plannedWaypointsKey = waypointsKey(waypoints);
-      this.selected.set(null);
     } catch (e) {
       // A re-plan can also hit the entitlement gate; surface the paywall / sign-in, else keep the
       // current plan on a transient failure.
@@ -1178,10 +1369,72 @@ export class Plan implements OnInit {
   static readonly tierFor = tierFor;
   static readonly isoDay = isoDay;
 
-  /** True when any sampled point is further out than the forecast reaches. */
+  /** True when any sampled point of the SHOWN day is further out than the forecast reaches. */
   readonly hasBeyondForecast = computed(() =>
-    (this.plan()?.samples ?? []).some((s) => s.beyond_forecast === true),
+    (this.shownPlan()?.samples ?? []).some((s) => s.beyond_forecast === true),
   );
+
+  /**
+   * The whole trip's figures, however it was planned — what gets saved and recorded.
+   *
+   * A multi-day trip adds up the days that HAVE plans; days past the horizon or with a failed route
+   * contribute nothing rather than a zero pretending to be a measurement, so the total is honestly
+   * a floor. The worst severity is the server's own across the whole itinerary.
+   */
+  private tripTotals(): {
+    distanceMeters?: number;
+    durationSeconds?: number;
+    worstSeverity?: string;
+  } {
+    const itinerary = this.itinerary();
+    if (itinerary) {
+      const plans = itinerary.days.flatMap((d) => (d.plan ? [d.plan] : []));
+      return {
+        distanceMeters: plans.reduce((sum, p) => sum + p.distance_meters, 0),
+        durationSeconds: plans.reduce((sum, p) => sum + p.duration_seconds, 0),
+        worstSeverity: itinerary.worst_severity ?? undefined,
+      };
+    }
+    const p = this.plan();
+    return {
+      distanceMeters: p?.distance_meters,
+      durationSeconds: p?.duration_seconds,
+      worstSeverity: p?.worst_severity,
+    };
+  }
+
+  /**
+   * Show a planning result, whichever kind came back.
+   *
+   * The two results are told apart by the shape the server sent (`days`), not by re-deriving the
+   * leg count here — a client that decided for itself could show a one-day plan while believing it
+   * asked for an itinerary, which is the disagreement this change exists to end. Setting one signal
+   * always clears the other.
+   */
+  private showResult(
+    result: PlanTripResponse | PlanItineraryResponse,
+    opts: { keepDay?: boolean } = {},
+  ): void {
+    if ('days' in result) {
+      this.plan.set(null);
+      this.itinerary.set(result);
+      // A re-plan keeps the day the traveller was reading, as long as it is still a day of this
+      // trip; a fresh submit opens on the first day there is something to show for. Opening on a
+      // blank day would read as the whole plan having failed.
+      const keep = opts.keepDay && result.days.some((d) => d.ordinal === this.selectedDay());
+      if (!keep) this.selectedDay.set(Plan.firstShowableDay(result));
+    } else {
+      this.itinerary.set(null);
+      this.plan.set(result);
+      this.selectedDay.set(0);
+    }
+    this.selected.set(null);
+  }
+
+  private static firstShowableDay(itinerary: PlanItineraryResponse): number {
+    const day = itinerary.days.find((d) => d.plan) ?? itinerary.days[0];
+    return day?.ordinal ?? 0;
+  }
 
   private defaultDeparture(): string {
     return this.toLocalInput(new Date(Date.now() + 3_600_000));
@@ -1201,6 +1454,7 @@ export class Plan implements OnInit {
     this.error.set(null);
     this.loading.set(true);
     this.plan.set(null);
+    this.itinerary.set(null);
     this.outlook.set(null);
     this.briefing.set(null);
     this.selected.set(null);
@@ -1251,8 +1505,14 @@ export class Plan implements OnInit {
     const baselineKey = tripBaselineKey({ origin, destination, savedTripId });
     const previousFacts = this.briefingMemory.previousFactsFor(baselineKey);
     try {
-      const [plan, briefing] = await Promise.all([
-        this.api.planTrip(buildPlanRequest({ origin, destination, departureAt, waypoints })),
+      const [result, briefing] = await Promise.all([
+        this.planRequestFor({ origin, destination, departureAt, waypoints }),
+        // F-012 NOTE: the briefing is still written for the trip's OWN departure, so on a
+        // multi-day trip it narrates every leg off day one's weather — the same substitution this
+        // change removes from the day list, map and timeline. Fixing it needs the briefing
+        // endpoint to accept a day (or an itinerary), which is a contract change, not a client
+        // one. Left as it was rather than quietly re-pointed at the selected day, which would make
+        // the narration and the trip summary disagree instead.
         this.api.createBriefing(
           buildBriefingRequest({
             origin,
@@ -1265,12 +1525,14 @@ export class Plan implements OnInit {
           }),
         ),
       ]);
+      this.showResult(result);
+      const totals = this.tripTotals();
       // ADR-0037 activation event, matching the iOS `trip_planned` (same name, same `distance_mi`
-      // property). Whole miles only — never the endpoints.
+      // property). Whole miles only — never the endpoints. A multi-day trip reports the whole
+      // trip's distance, not the day that happens to be on screen.
       this.analytics.capture('trip_planned', {
-        distance_mi: Math.round(plan.distance_meters / 1609.344),
+        distance_mi: Math.round((totals.distanceMeters ?? 0) / 1609.344),
       });
-      this.plan.set(plan);
       this.briefing.set(briefing);
       this.briefingMemory.remember(baselineKey, briefing.facts);
       this.plannedContext.set({ origin, destination });
@@ -1281,8 +1543,8 @@ export class Plan implements OnInit {
         origin,
         destination,
         departureAt,
-        distanceMeters: plan.distance_meters,
-        worstSeverity: plan.worst_severity,
+        distanceMeters: totals.distanceMeters,
+        worstSeverity: totals.worstSeverity,
         waypoints,
       });
     } catch (e) {

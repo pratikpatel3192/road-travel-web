@@ -17,6 +17,24 @@ export const planTripV1TripsPlanPost = (options) => (options.client ?? client).p
     }
 });
 /**
+ * Plan a multi-day trip — every travel day forecast for the day it is driven
+ *
+ * One origin, one destination, ordered stops. A stop carrying `nights` ends a travel day, and the next day departs from it — so this returns a plan PER DAY, each one routed and forecast on its own departure instant.
+ *
+ * Planning a fifteen-day trip as a single drive reads the last leg's weather off the first day's forecast. That is the substitution this product exists to prevent, and it is invisible unless the days are planned apart.
+ *
+ * A day past the forecast horizon comes back with `beyond_forecast` and no plan — NOT an error. `POST /v1/trips/outlook` answers those days with typical conditions.
+ */
+export const planItineraryV1TripsPlanItineraryPost = (options) => (options.client ?? client).post({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/trips/plan-itinerary',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
  * The caller's saved trips, newest first (login-only; ADR-0029 My Trips)
  */
 export const listTripsV1TripsGet = (options) => (options?.client ?? client).get({
