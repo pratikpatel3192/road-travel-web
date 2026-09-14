@@ -1274,6 +1274,154 @@ export type HistoryRow = {
     replied?: boolean;
 };
 /**
+ * ItineraryBriefingResponse
+ *
+ * A briefing for a whole trip: every day's facts, the rollup, and prose grounded in both.
+ */
+export type ItineraryBriefingResponse = {
+    /**
+     * Text
+     *
+     * Grounded natural-language whole-trip briefing.
+     */
+    text: string;
+    /**
+     * Model
+     *
+     * 'template' for the deterministic narrator, or an LLM id.
+     */
+    model: string;
+    /**
+     * Generated At
+     */
+    generated_at: string;
+    /**
+     * Days
+     *
+     * Every travel day in order, including the ones with no facts.
+     */
+    days: Array<ItineraryDayFactsModel>;
+    rollup: ItineraryRollupModel;
+};
+/**
+ * ItineraryDayFactsModel
+ *
+ * One travel day of the trip, and what is actually known about it.
+ *
+ * `facts` is null in two different situations and they are NOT interchangeable: `beyond_forecast`
+ * means nobody has looked at this day yet, `error` means this day has no route. Neither is a calm
+ * day, and a client that draws them the same way has invented a verdict for both.
+ */
+export type ItineraryDayFactsModel = {
+    /**
+     * Ordinal
+     */
+    ordinal: number;
+    /**
+     * Origin Name
+     */
+    origin_name: string;
+    /**
+     * Destination Name
+     */
+    destination_name: string;
+    /**
+     * Travel Date
+     *
+     * Null when the trip is undated — never a guessed day.
+     */
+    travel_date?: string | null;
+    /**
+     * Nights At Destination
+     */
+    nights_at_destination?: number;
+    /**
+     * Beyond Forecast
+     *
+     * Further out than anyone forecasts. NOT a failure and NOT a clear day — `POST /v1/trips/outlook` answers these days with typical conditions.
+     */
+    beyond_forecast?: boolean;
+    /**
+     * Error
+     *
+     * Why this day has no facts, when the reason is not the horizon.
+     */
+    error?: string | null;
+    /**
+     * This day's own grounded facts, on its own departure instant.
+     */
+    facts?: BriefingFactsModel | null;
+    /**
+     * Severity
+     *
+     * This day's worst. Null — never `clear` — when nobody has looked at the day.
+     */
+    severity?: 'clear' | 'caution' | 'high' | 'severe' | 'extreme' | null;
+};
+/**
+ * ItineraryRollupModel
+ *
+ * The few things that are true of the WHOLE trip rather than of one day.
+ */
+export type ItineraryRollupModel = {
+    /**
+     * Total Days
+     *
+     * Calendar span: the first day out through the last.
+     */
+    total_days: number;
+    /**
+     * Total Nights
+     */
+    total_nights: number;
+    /**
+     * Total Distance Meters
+     */
+    total_distance_meters: number;
+    /**
+     * Overall Severity
+     *
+     * Worst across the days that HAVE a forecast — a floor, not a measurement, whenever `days_beyond_forecast` or `days_failed` is non-zero. Null when no day is forecast at all, because nothing has been looked at.
+     */
+    overall_severity?: 'clear' | 'caution' | 'high' | 'severe' | 'extreme' | null;
+    /**
+     * Worst Day Ordinal
+     *
+     * The day carrying that severity, earliest on a tie: of two equally bad days the first is the one a traveller can still do something about.
+     */
+    worst_day_ordinal?: number | null;
+    /**
+     * Days With Forecast
+     */
+    days_with_forecast: number;
+    /**
+     * Days Beyond Forecast
+     */
+    days_beyond_forecast: number;
+    /**
+     * Days Failed
+     */
+    days_failed: number;
+    /**
+     * Clear Day Ordinals
+     *
+     * Forecast days that came out clear — what 'the rest is fine' may mean, and nothing else. An unforecast day never appears here.
+     */
+    clear_day_ordinals?: Array<number>;
+    /**
+     * Rough Day Ordinals
+     *
+     * Forecast days above clear, worst-first then earliest.
+     */
+    rough_day_ordinals?: Array<number>;
+    /**
+     * Partly Unknown
+     *
+     * Some of the trip has no forecast. When true the prose MUST say so, and a client must not render the trip as a settled verdict.
+     */
+    partly_unknown: boolean;
+};
+/**
  * LaneModel
  */
 export type LaneModel = {
@@ -3751,6 +3899,30 @@ export type CreateBriefingV1BriefingsPostResponses = {
     200: BriefingResponse;
 };
 export type CreateBriefingV1BriefingsPostResponse = CreateBriefingV1BriefingsPostResponses[keyof CreateBriefingV1BriefingsPostResponses];
+export type CreateItineraryBriefingV1BriefingsItineraryPostData = {
+    body: PlanItineraryRequest;
+    path?: never;
+    query?: never;
+    url: '/v1/briefings/itinerary';
+};
+export type CreateItineraryBriefingV1BriefingsItineraryPostErrors = {
+    /**
+     * Free-tier cap reached (paywall).
+     */
+    402: PaywallResponse;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+export type CreateItineraryBriefingV1BriefingsItineraryPostError = CreateItineraryBriefingV1BriefingsItineraryPostErrors[keyof CreateItineraryBriefingV1BriefingsItineraryPostErrors];
+export type CreateItineraryBriefingV1BriefingsItineraryPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: ItineraryBriefingResponse;
+};
+export type CreateItineraryBriefingV1BriefingsItineraryPostResponse = CreateItineraryBriefingV1BriefingsItineraryPostResponses[keyof CreateItineraryBriefingV1BriefingsItineraryPostResponses];
 export type GuidanceRouteV1GuidanceRoutePostData = {
     body: GuidanceRouteRequest;
     path?: never;

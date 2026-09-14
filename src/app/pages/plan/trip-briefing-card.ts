@@ -1,0 +1,438 @@
+import { Component, computed, input, output } from '@angular/core';
+import type { ItineraryBriefingResponse, ItineraryDayFactsModel } from '@road-travel/sdk';
+
+import { FORECAST_HORIZON_DAYS, dayLabel } from '../../core/forecast-horizon';
+import { IconComponent } from '../../ui/icon';
+import {
+  SEVERITY_COLOR,
+  SEVERITY_LABEL,
+  type Severity,
+  UNKNOWN_COLOR,
+  UNKNOWN_LABEL,
+  formatDistance,
+  severityOrFallback,
+} from './severity';
+
+/**
+ * The briefing for a trip driven over several days — every day judged on ITS OWN date's forecast.
+ *
+ * Its sibling {@link BriefingCard} narrates one drive from one departure instant, which is the right
+ * answer for the overwhelmingly common trip and the wrong one for a trip with overnight stops: it
+ * describes day five using day one's weather. This card renders `POST /v1/briefings/itinerary`
+ * instead, where each day was planned and forecast on the day it is actually driven.
+ *
+ * Two things the card exists to keep straight, and neither is decoration:
+ *
+ * **Scope.** The prose is about the WHOLE trip, while the timeline and map above it are about ONE
+ * day. A trip-level paragraph sitting silently under a day-level strip is the same contradiction the
+ * day-by-day planning just removed, rewritten in sentences — so the scope line says what this covers
+ * and which day is on screen above it, and the day rows below are how you move between them.
+ *
+ * **A day nobody has forecast is not a clear day.** It gets the grey `UNKNOWN_COLOR` /
+ * `UNKNOWN_LABEL` this app uses everywhere else for "nobody knows yet", never the calm sage of
+ * `clear`. On a trip booked a fortnight out that is most of the days, and drawing them calm would
+ * tell a traveller their trip is fine when almost none of it has been looked at.
+ */
+@Component({
+  selector: 'app-trip-briefing-card',
+  imports: [IconComponent],
+  template: `
+    @if (briefing(); as b) {
+      <section class="briefing">
+        <header>
+          <span class="ai-disc" aria-hidden="true"><app-icon name="sparkles" [size]="14" /></span>
+          <h2>Your trip briefing</h2>
+          <span class="scope-chip">whole trip</span>
+        </header>
+
+        <!-- The sentence that stops this paragraph being read as the day above it. -->
+        <p class="scope">{{ scope() }}</p>
+
+        <p class="coverage" [class.unknown]="b.rollup.partly_unknown">
+          @if (b.rollup.partly_unknown) {
+            <span class="sev" [style.background]="UNKNOWN_COLOR"></span>
+          }
+          {{ coverage() }}
+        </p>
+
+        <!-- plain-text only: bound via interpolation, never innerHTML -->
+        <p class="prose">{{ b.text }}</p>
+
+        <ol class="days">
+          @for (day of b.days; track day.ordinal) {
+            <li class="day" [class.sel]="day.ordinal === selectedDay()">
+              <button
+                class="body"
+                type="button"
+                [attr.aria-pressed]="day.ordinal === selectedDay()"
+                (click)="selectedDayChange.emit(day.ordinal)"
+              >
+                <div class="head">
+                  <span class="num">Day {{ day.ordinal + 1 }}</span>
+                  <span class="date" [class.undated]="!day.travel_date">{{ date(day) }}</span>
+                  @if (day.ordinal === worstOrdinal()) {
+                    <span class="watch">the one to watch</span>
+                  }
+                </div>
+                <p class="route">
+                  {{ day.origin_name }} <span class="arrow">→</span> {{ day.destination_name }}
+                </p>
+
+                @if (forecast(day); as sev) {
+                  <p class="cond">
+                    <span class="sev" [style.background]="SEVERITY_COLOR[sev]"></span>
+                    <span class="sev-label">{{ SEVERITY_LABEL[sev] }}</span>
+                    @if (day.facts; as f) {
+                      <span class="drive">{{ dist(f.total_distance_meters) }}</span>
+                    }
+                  </p>
+                  @if (hazards(day); as line) {
+                    <p class="hazards">{{ line }}</p>
+                  }
+                } @else {
+                  <!-- The honesty rule, in the markup: no severity word, no severity colour, and
+                       the same grey and the same sentence the day list and the timeline use for a
+                       day the forecast does not reach. -->
+                  <p class="cond">
+                    <span class="sev" [style.background]="UNKNOWN_COLOR"></span>
+                    <span class="sev-label muted">{{ UNKNOWN_LABEL }}</span>
+                  </p>
+                  <p class="why">{{ why(day) }}</p>
+                }
+
+                @if (day.ordinal === selectedDay()) {
+                  <p class="shown">The day selected above</p>
+                }
+              </button>
+            </li>
+          }
+        </ol>
+
+        <footer>
+          <span class="model">generated by {{ b.model }}</span>
+          <a
+            class="attribution"
+            href="https://weatherkit.apple.com/legal-attribution.html"
+            target="_blank"
+            rel="noopener"
+          >
+            Weather</a
+          >
+        </footer>
+      </section>
+    }
+  `,
+  styles: [
+    `
+      /* The sage AI card, shared with the single-day briefing (mock 3a) — this is the same kind of
+         statement about a bigger thing, so it is not given a look of its own. */
+      .briefing {
+        border-radius: var(--radius-md);
+        padding: 16px 18px;
+        background: var(--accent-2-100);
+        color: var(--accent-2-900);
+        box-shadow: var(--shadow-sm);
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+      .ai-disc {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--accent-2);
+        color: #ffffff;
+      }
+      h2 {
+        font-size: 16px;
+        margin: 0;
+      }
+      .scope-chip {
+        margin-left: auto;
+        font: 700 11px var(--font-body);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        background: var(--accent-2-200);
+        color: var(--accent-2-800);
+        padding: 3px 10px;
+        border-radius: var(--radius-pill);
+        white-space: nowrap;
+      }
+      /* Full-strength ink: which days this paragraph is about is part of the claim, not an aside. */
+      .scope {
+        margin: 0 0 6px;
+        font: 700 12.5px var(--font-body);
+      }
+      .coverage {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 0 0 10px;
+        font-size: 12px;
+        opacity: 0.75;
+      }
+      .coverage.unknown {
+        opacity: 1;
+        font-weight: 600;
+      }
+      .prose {
+        font-size: 13.5px;
+        line-height: 1.45;
+        margin: 0 0 10px;
+      }
+      .days {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 6px;
+      }
+      .day {
+        border-radius: 12px;
+        background: color-mix(in srgb, currentColor 6%, transparent);
+      }
+      .day.sel {
+        outline: 2px solid var(--accent-2-700);
+        outline-offset: -2px;
+      }
+      /* The button is the whole row — picking which day the surfaces above show IS an action, and
+         it should be reachable from the keyboard like one. */
+      .body {
+        display: block;
+        width: 100%;
+        margin: 0;
+        padding: 8px 11px;
+        border: none;
+        border-radius: inherit;
+        background: none;
+        font: inherit;
+        color: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+      .head {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+      }
+      .num {
+        font: 800 10.5px var(--font-body);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        opacity: 0.7;
+      }
+      .date {
+        font: 700 12.5px var(--font-body);
+      }
+      .date.undated {
+        font-weight: 600;
+        opacity: 0.7;
+      }
+      .watch {
+        margin-left: auto;
+        font: 700 11px var(--font-body);
+        white-space: nowrap;
+        opacity: 0.8;
+      }
+      .route {
+        margin: 3px 0 0;
+        font: 600 13px var(--font-body);
+      }
+      .arrow {
+        opacity: 0.6;
+      }
+      .cond {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 5px 0 0;
+        font-size: 12px;
+      }
+      .sev {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        flex: 0 0 auto;
+      }
+      .sev-label {
+        font-weight: 700;
+      }
+      .sev-label.muted {
+        font-weight: 600;
+        opacity: 0.75;
+      }
+      .drive {
+        margin-left: auto;
+        opacity: 0.7;
+        white-space: nowrap;
+      }
+      .hazards,
+      .why,
+      .shown {
+        margin: 3px 0 0;
+        font-size: 12px;
+        opacity: 0.75;
+      }
+      .shown {
+        font-weight: 700;
+        opacity: 0.9;
+      }
+      footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 12px;
+        border-top: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+        padding-top: 8px;
+        font-size: 11px;
+        opacity: 0.6;
+      }
+      .attribution {
+        color: inherit;
+        text-decoration: none;
+      }
+      /* Night flip — the sage card inverts to the deep end, as on the single-day briefing. */
+      :host-context([data-theme='dark']) .briefing {
+        background: var(--accent-2-900);
+        color: var(--accent-2-100);
+      }
+      :host-context([data-theme='dark']) .day.sel {
+        outline-color: var(--accent-2-300);
+      }
+      @media (prefers-color-scheme: dark) {
+        :host-context(:root:not([data-theme])) .briefing {
+          background: var(--accent-2-900);
+          color: var(--accent-2-100);
+        }
+        :host-context(:root:not([data-theme])) .day.sel {
+          outline-color: var(--accent-2-300);
+        }
+      }
+    `,
+  ],
+})
+export class TripBriefingCard {
+  readonly briefing = input.required<ItineraryBriefingResponse>();
+  readonly units = input<'imperial' | 'metric'>('imperial');
+
+  /** Which travel day the map and timeline above are showing — marked, and switchable from here. */
+  readonly selectedDay = input<number | null>(null);
+  readonly selectedDayChange = output<number>();
+
+  readonly SEVERITY_COLOR = SEVERITY_COLOR;
+  readonly SEVERITY_LABEL = SEVERITY_LABEL;
+  readonly UNKNOWN_COLOR = UNKNOWN_COLOR;
+  readonly UNKNOWN_LABEL = UNKNOWN_LABEL;
+
+  /**
+   * What this briefing is about, and what the surfaces above it are about — said in one sentence
+   * rather than left to be inferred from a heading three screens up.
+   */
+  readonly scope = computed(() => {
+    const days = this.briefing().days;
+    const count = `all ${days.length} driving ${days.length === 1 ? 'day' : 'days'}`;
+    const shown = days.find((d) => d.ordinal === this.selectedDay());
+    if (!shown) return `The whole trip — ${count}.`;
+    const n = shown.ordinal + 1;
+    // A day with no forecast has no route drawn above either, so the sentence claims only what is
+    // actually on screen: the selection, not a timeline that is not there.
+    return this.forecast(shown) == null
+      ? `The whole trip — ${count}. Day ${n} is the day selected above.`
+      : `The whole trip — ${count}. The map and timeline above show Day ${n} only.`;
+  });
+
+  /**
+   * How much of the trip has actually been looked at.
+   *
+   * Stated even when the answer is "all of it", because the count is what makes the paragraph above
+   * readable as a verdict on a KNOWN trip rather than on the whole calendar. The unforecast days are
+   * split by reason: past the horizon and unroutable are different facts with different remedies.
+   */
+  readonly coverage = computed(() => {
+    const { rollup, days } = this.briefing();
+    const bits = [`${rollup.days_with_forecast} of ${days.length} days forecast`];
+    if (rollup.days_beyond_forecast) {
+      bits.push(`${rollup.days_beyond_forecast} past the ${FORECAST_HORIZON_DAYS}-day forecast`);
+    }
+    if (rollup.days_failed) {
+      bits.push(`${rollup.days_failed} couldn't be routed`);
+    }
+    return bits.join(' · ');
+  });
+
+  /**
+   * The day the server called the worst — but only when there is a hazard to be worst AT.
+   *
+   * On an all-clear trip the rollup still names a day, and tagging it "the one to watch" would
+   * invent a concern out of an ordinal. And on a partly-unknown trip the tag is deliberately still
+   * shown: it is the worst of what is KNOWN, which is what the rollup says it is and what the
+   * coverage line above has already qualified.
+   */
+  readonly worstOrdinal = computed(() => {
+    const { rollup } = this.briefing();
+    if (rollup.overall_severity == null || rollup.overall_severity === 'clear') return null;
+    return rollup.worst_day_ordinal ?? null;
+  });
+
+  /**
+   * The severity to DRAW for a day, or null when there is nothing to draw.
+   *
+   * All three guards are required, and each rules out a different way a severity could be a lie.
+   * `beyond_forecast` and `error` are the server's two reasons a day has no reading; a severity
+   * arriving alongside either is a server bug, and rendering it would put a calm green dot on a day
+   * nobody has looked at — the exact substitution this endpoint exists to prevent. Reading
+   * `severity != null` alone would do precisely that.
+   *
+   * An unrecognised LEVEL is the opposite case and is not treated as unknown: a scale that grew grew
+   * at the bad end, so it goes through the shared fail-safe to caution rather than to grey.
+   *
+   * `severity` is taken as a plain string for the same reason {@link BriefingCard.color} does: the
+   * SDK's union is a snapshot of the scale on the day it was generated, and a server that added a
+   * sixth level must still come out as a colour and a word here.
+   */
+  forecast(
+    day: Pick<ItineraryDayFactsModel, 'beyond_forecast' | 'error'> & {
+      severity?: string | null;
+    },
+  ): Severity | null {
+    if (day.beyond_forecast || day.error || day.severity == null) return null;
+    return severityOrFallback(day.severity);
+  }
+
+  /** "rain, then wind" — the day's own hazards, in the order the day meets them. */
+  hazards(day: ItineraryDayFactsModel): string | null {
+    const types = [...new Set((day.facts?.hazards ?? []).map((h) => h.type))];
+    return types.length ? types.join(', ') : null;
+  }
+
+  /**
+   * Why a day has no conditions. The two reasons are said differently on purpose: past the horizon
+   * nobody HAS a forecast yet and will nearer the day, while a failed route is a failure confined to
+   * this one day and the rest of the trip still stands.
+   */
+  why(day: ItineraryDayFactsModel): string {
+    if (day.beyond_forecast) {
+      return `Past the ${FORECAST_HORIZON_DAYS}-day forecast. We'll have it closer to the day.`;
+    }
+    if (day.error) {
+      return `We couldn't work out a route for this day: ${day.error} The other days are unaffected.`;
+    }
+    return 'Nobody has looked at this day yet.';
+  }
+
+  /** An undated day says so rather than showing a blank where every other row has a date. */
+  date(day: ItineraryDayFactsModel): string {
+    return day.travel_date ? dayLabel(day.travel_date) : 'No date yet';
+  }
+
+  dist(meters: number): string {
+    return formatDistance(meters, this.units());
+  }
+}

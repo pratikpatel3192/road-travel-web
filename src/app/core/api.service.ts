@@ -10,6 +10,7 @@ import {
   type ExploreFeedbackRequest,
   type ExploreRequest,
   type ExploreResponse,
+  type ItineraryBriefingResponse,
   type MeResponse,
   type OutlookRequest,
   type OutlookResponse,
@@ -34,6 +35,7 @@ import {
   addStopPreviewV1TripsExploreAddStopPreviewPost,
   claimTrialV1MeTrialClaimPost,
   createBriefingV1BriefingsPost,
+  createItineraryBriefingV1BriefingsItineraryPost,
   deleteTripV1TripsTripIdDelete,
   exploreFeedbackV1TripsExploreFeedbackPost,
   exploreV1TripsExplorePost,
@@ -244,6 +246,29 @@ export class ApiService {
     });
     if (error || !data) this.raise(response, error);
     return data as BriefingResponse;
+  }
+
+  /**
+   * The same briefing, but for a trip driven over several days — each day narrated from ITS OWN
+   * date's forecast.
+   *
+   * Takes the body {@link planItinerary} takes, not the body {@link createBriefing} takes, and that
+   * is the whole difference: `/v1/briefings` has one `departure_at` to reason from, so on a trip
+   * with overnight stops it describes the last day using the first day's weather — the substitution
+   * the day-by-day planning removed from the map and the timeline, left standing in the most
+   * confidently-worded box on the screen.
+   *
+   * The response carries every travel day's own facts, a whole-trip rollup, and prose covering all
+   * of them. Days nobody forecasts yet come back counted and named rather than omitted, so a caller
+   * must read each day's state instead of assuming a day without facts is a calm one.
+   */
+  async createItineraryBriefing(body: PlanItineraryRequest): Promise<ItineraryBriefingResponse> {
+    const { data, error, response } = await createItineraryBriefingV1BriefingsItineraryPost({
+      ...this.options(),
+      body,
+    });
+    if (error || !data) this.raise(response, error);
+    return data as ItineraryBriefingResponse;
   }
 
   /** The caller's entitlement + usage snapshot — drives gating and the paywall (F-002). */

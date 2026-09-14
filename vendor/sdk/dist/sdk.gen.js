@@ -153,6 +153,24 @@ export const createBriefingV1BriefingsPost = (options) => (options.client ?? cli
     }
 });
 /**
+ * Brief a WHOLE trip — every travel day judged on its own day's forecast
+ *
+ * The endpoint above takes one `departure_at` and narrates from it. On a multi-day trip that describes day 5 using day 1's weather — the exact substitution this product exists to prevent, sitting in the most confidently-worded box on the screen.
+ *
+ * This derives the trip's travel days (a stop carrying `nights` ends one), plans each on its own departure instant, builds that day's facts, and narrates the trip from all of them.
+ *
+ * Days with no forecast are returned, counted, and named in the prose. A day past the forecast horizon is NOT a clear day and is never described as one — it is a day nobody has looked at, and on a trip booked weeks out that is most of them. One unroutable day costs its own day's facts and nothing else.
+ */
+export const createItineraryBriefingV1BriefingsItineraryPost = (options) => (options.client ?? client).post({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/briefings/itinerary',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
  * Turn-by-turn maneuvers for a route
  *
  * Returns the route polyline plus per-step maneuvers in a closed vocabulary shared by every client. Clients drive their own guidance loop from this — the server states what the turns are, never when to speak them.
