@@ -1880,6 +1880,74 @@ export type PlaceRef = {
 };
 
 /**
+ * PlanItineraryRequest
+ *
+ * Plan a multi-day trip: one origin, one destination, stops that may carry nights.
+ */
+export type PlanItineraryRequest = {
+    origin: PlaceModel;
+    destination: PlaceModel;
+    /**
+     * Departure At
+     *
+     * When the FIRST day sets off. Later days take their time from the stop they depart from, and 'sometime that day' where none is given.
+     */
+    departure_at: string;
+    /**
+     * Waypoints
+     */
+    waypoints?: Array<WaypointModel>;
+    /**
+     * Timezone
+     *
+     * IANA zone the stops' `departure_time` values are written in. A trip crossing zones means '9am' is a different instant on day 1 than on day 4; without this the server reads every one in the departure's own offset, which is the best it can do and is stated rather than hidden.
+     */
+    timezone?: string | null;
+    /**
+     * Step Meters
+     */
+    step_meters?: number | null;
+};
+
+/**
+ * PlanItineraryResponse
+ *
+ * Every travel day of a trip, each forecast for the day it is actually driven.
+ *
+ * The whole point. Planning a fifteen-day trip as one drive from one departure reads the last
+ * leg's weather off the first day's forecast — which is the substitution this product exists to
+ * prevent, and it is invisible unless the days are planned apart.
+ */
+export type PlanItineraryResponse = {
+    /**
+     * Days
+     */
+    days: Array<PlannedDayModel>;
+    /**
+     * Total Days
+     *
+     * Calendar span: the first day out through the last.
+     */
+    total_days: number;
+    /**
+     * Total Nights
+     */
+    total_nights?: number;
+    /**
+     * Worst Severity
+     *
+     * Worst condition across every day that HAS a forecast. Null when none does.
+     */
+    worst_severity?: 'clear' | 'caution' | 'high' | 'severe' | 'extreme' | null;
+    /**
+     * Long Day Ordinals
+     *
+     * Days whose drive is too long to be one day's driving. Reported, never acted on: where a break belongs is the traveller's call, and inserting a night would date the rest of the itinerary around a stop nobody chose.
+     */
+    long_day_ordinals?: Array<number>;
+};
+
+/**
  * PlanMeta
  */
 export type PlanMeta = {
@@ -2034,6 +2102,46 @@ export type PlanTripResponse = {
      */
     segments: Array<SegmentModel>;
     meta: PlanMeta;
+};
+
+/**
+ * PlannedDayModel
+ *
+ * One travel day, planned on ITS OWN departure instant.
+ */
+export type PlannedDayModel = {
+    /**
+     * Ordinal
+     */
+    ordinal: number;
+    /**
+     * Travel Date
+     *
+     * Null when the trip is undated — never a guessed day.
+     */
+    travel_date?: string | null;
+    /**
+     * Nights At Destination
+     *
+     * Nights spent at this day's destination before the next sets off.
+     */
+    nights_at_destination?: number;
+    /**
+     * Beyond Forecast
+     *
+     * This day is further out than anyone forecasts, so `plan` is null. It is NOT a failure and must not be drawn as one — `POST /v1/trips/outlook` answers these days with typical conditions from the climate record.
+     */
+    beyond_forecast?: boolean;
+    /**
+     * Null when the day is beyond the forecast, or when its route could not be planned. `error` says which.
+     */
+    plan?: PlanTripResponse | null;
+    /**
+     * Error
+     *
+     * Why this day has no plan, when the reason is not the horizon.
+     */
+    error?: string | null;
 };
 
 /**
@@ -3512,6 +3620,35 @@ export type PlanTripV1TripsPlanPostResponses = {
 };
 
 export type PlanTripV1TripsPlanPostResponse = PlanTripV1TripsPlanPostResponses[keyof PlanTripV1TripsPlanPostResponses];
+
+export type PlanItineraryV1TripsPlanItineraryPostData = {
+    body: PlanItineraryRequest;
+    path?: never;
+    query?: never;
+    url: '/v1/trips/plan-itinerary';
+};
+
+export type PlanItineraryV1TripsPlanItineraryPostErrors = {
+    /**
+     * Trial paywall (not yet entitled).
+     */
+    402: PaywallResponse;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PlanItineraryV1TripsPlanItineraryPostError = PlanItineraryV1TripsPlanItineraryPostErrors[keyof PlanItineraryV1TripsPlanItineraryPostErrors];
+
+export type PlanItineraryV1TripsPlanItineraryPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: PlanItineraryResponse;
+};
+
+export type PlanItineraryV1TripsPlanItineraryPostResponse = PlanItineraryV1TripsPlanItineraryPostResponses[keyof PlanItineraryV1TripsPlanItineraryPostResponses];
 
 export type ListTripsV1TripsGetData = {
     body?: never;
