@@ -75,6 +75,15 @@ describe('Plan — a multi-day trip is planned a day at a time', () => {
             planTrip,
             planItinerary,
             createBriefing: vi.fn(async () => ({ facts: {}, claims: [] })),
+            // A multi-day trip briefs through the itinerary endpoint (see
+            // plan-trip-briefing.spec.ts); these cases are about the PLAN, so it answers with the
+            // thinnest response that is still the right shape.
+            createItineraryBriefing: vi.fn(async () => ({
+              text: '',
+              model: 'template',
+              days: [],
+              rollup: { days_with_forecast: 0, partly_unknown: false },
+            })),
           },
         },
         { provide: EntitlementService, useValue: { refresh: vi.fn(async () => undefined) } },

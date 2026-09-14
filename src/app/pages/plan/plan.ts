@@ -2,7 +2,9 @@ import { Component, type OnInit, computed, inject, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import type {
+  BriefingFactsModel,
   BriefingResponse,
+  ItineraryBriefingResponse,
   OutlookResponse,
   PlaceCardModel,
   PlanItineraryResponse,
@@ -33,6 +35,7 @@ import { SEVERITY_RANK, formatDuration, severityOrFallback } from './severity';
 import { StopList } from './stop-list';
 import { Timeline } from './timeline';
 import { TravelDays } from './travel-days';
+import { TripBriefingCard } from './trip-briefing-card';
 import {
   type DwellMinutes,
   MAX_STOPS,
@@ -63,6 +66,7 @@ import {
     RouteMap,
     Timeline,
     BriefingCard,
+    TripBriefingCard,
     AheadBanner,
     ExplorePanel,
     OutlookPanel,
@@ -288,6 +292,18 @@ import {
             [briefing]="b"
             [units]="settings.units()"
             (claimSelect)="selected.set($event)"
+          />
+        }
+        @if (tripBriefing(); as tb) {
+          <!-- The whole-trip briefing, which is a different SCOPE from everything above it: the
+               timeline and map are one day, this is every day. The card says so itself and marks
+               the day that is on screen, and its day rows move the selection — so the two can be
+               read against each other instead of quietly disagreeing. -->
+          <app-trip-briefing-card
+            [briefing]="tb"
+            [units]="settings.units()"
+            [selectedDay]="selectedDay()"
+            (selectedDayChange)="onSelectDay($event)"
           />
         }
       </section>
@@ -725,6 +741,16 @@ export class Plan implements OnInit {
   /** Set instead of `plan` for a date past the horizon. Never both — they are different answers. */
   readonly outlook = signal<OutlookResponse | null>(null);
   readonly briefing = signal<BriefingResponse | null>(null);
+  /**
+   * The whole-trip briefing: one paragraph over every travel day, each narrated from its own date.
+   *
+   * A second signal rather than a widened `briefing`, and never both at once — the same shape the
+   * plan/itinerary pair takes, for the same reason. `/v1/briefings` answers one departure instant
+   * and `/v1/briefings/itinerary` answers a trip; letting one field hold either would leave the
+   * card below deciding which kind of statement it was rendering, which is how a day-scoped
+   * sentence ends up captioned as a trip.
+   */
+  readonly tripBriefing = signal<ItineraryBriefingResponse | null>(null);
   /** Selected route-sample index, shared between the map and the timeline. */
   readonly selected = signal<number | null>(null);
 
@@ -1283,19 +1309,76 @@ export class Plan implements OnInit {
    * wrapped in an envelope, and paying a second round trip (or a bigger one) to learn what the
    * derived legs already say would be a tax on every ordinary drive.
    *
-   * The count comes from the same local derivation the day list is drawn from, so the screen and
-   * the request can never disagree about how many days this is.
+   * `multiDay` is asked ONCE per submit (from the same local derivation the day list is drawn from)
+   * and handed to this and to {@link briefingRequestFor} together, rather than re-derived inside
+   * each. The plan and the briefing must be about the same kind of trip: a one-day plan underneath
+   * a whole-trip briefing would put the contradiction back with both halves believing they were
+   * right, and a single answer reaching both is the only way that cannot happen.
    */
   private planRequestFor(args: {
     origin: PlaceValue;
     destination: PlaceValue;
     departureAt: string;
     waypoints: WaypointModel[];
+    multiDay: boolean;
   }): Promise<PlanTripResponse | PlanItineraryResponse> {
-    if (this.travelDays().length > 1) {
+    if (args.multiDay) {
       return this.api.planItinerary(buildItineraryRequest({ ...args, timezone: localTimezone() }));
     }
     return this.api.planTrip(buildPlanRequest(args));
+  }
+
+  /**
+   * The right briefing call for this trip: `/v1/briefings/itinerary` once the stops make it more
+   * than one travel day, `/v1/briefings` otherwise.
+   *
+   * The single-day path is untouched, down to the body it sends: the ordinary drive is the common
+   * case, it is the one the re-brief diff (F-012) is built around, and the itinerary endpoint would
+   * answer it with a one-row rollup and no diff at all.
+   *
+   * The multi-day path deliberately sends neither `previous_facts` nor `trip_id` — the itinerary
+   * endpoint takes the planning body and has no baseline to diff against. That loses the "Updated"
+   * badge on multi-day trips, which is a real loss and a smaller one than the alternative: a
+   * briefing that narrates day five off day one's weather is wrong about the thing it is most
+   * confident about, and a diff would only tell you how it changed.
+   */
+  private briefingRequestFor(args: {
+    origin: PlaceValue;
+    destination: PlaceValue;
+    departureAt: string;
+    waypoints: WaypointModel[];
+    units: 'imperial' | 'metric';
+    previousFacts?: BriefingFactsModel;
+    savedTripId?: string;
+    multiDay: boolean;
+  }): Promise<BriefingResponse | ItineraryBriefingResponse> {
+    if (args.multiDay) {
+      return this.api.createItineraryBriefing(
+        buildItineraryRequest({ ...args, timezone: localTimezone() }),
+      );
+    }
+    return this.api.createBriefing(buildBriefingRequest(args));
+  }
+
+  /**
+   * Show a briefing, whichever kind came back — told apart by the shape the server sent, never by
+   * re-deriving the day count here. Setting one signal always clears the other.
+   *
+   * Only the single-day response is remembered as the next re-brief baseline: it is the only one
+   * carrying `facts`, and the only endpoint that accepts them back.
+   */
+  private showBriefing(
+    result: BriefingResponse | ItineraryBriefingResponse,
+    baselineKey: string,
+  ): void {
+    if ('rollup' in result) {
+      this.briefing.set(null);
+      this.tripBriefing.set(result);
+      return;
+    }
+    this.tripBriefing.set(null);
+    this.briefing.set(result);
+    this.briefingMemory.remember(baselineKey, result.facts);
   }
 
   private async replan(opts: { refreshBriefing?: boolean } = {}): Promise<void> {
@@ -1311,28 +1394,26 @@ export class Plan implements OnInit {
     const savedTripId = this.savedTripIdFor(ctx.origin, ctx.destination);
     const baselineKey = tripBaselineKey({ ...ctx, savedTripId });
     const previousFacts = this.briefingMemory.previousFactsFor(baselineKey);
+    // Asked before either request goes out, so the plan and the briefing are about the same trip.
+    const multiDay = this.travelDays().length > 1;
     this.replanning.set(true);
     try {
       const [result, briefing] = await Promise.all([
-        this.planRequestFor({ ...ctx, departureAt, waypoints }),
+        this.planRequestFor({ ...ctx, departureAt, waypoints, multiDay }),
         opts.refreshBriefing
-          ? this.api.createBriefing(
-              buildBriefingRequest({
-                ...ctx,
-                departureAt,
-                waypoints,
-                units: this.settings.units(),
-                previousFacts,
-                savedTripId,
-              }),
-            )
+          ? this.briefingRequestFor({
+              ...ctx,
+              departureAt,
+              waypoints,
+              units: this.settings.units(),
+              previousFacts,
+              savedTripId,
+              multiDay,
+            })
           : Promise.resolve(null),
       ]);
       this.showResult(result, { keepDay: true });
-      if (briefing) {
-        this.briefing.set(briefing);
-        this.briefingMemory.remember(baselineKey, briefing.facts);
-      }
+      if (briefing) this.showBriefing(briefing, baselineKey);
       this.plannedWaypointsKey = waypointsKey(waypoints);
     } catch (e) {
       // A re-plan can also hit the entitlement gate; surface the paywall / sign-in, else keep the
@@ -1457,6 +1538,7 @@ export class Plan implements OnInit {
     this.itinerary.set(null);
     this.outlook.set(null);
     this.briefing.set(null);
+    this.tripBriefing.set(null);
     this.selected.set(null);
     this.departureOffset.set(0);
     // A new plan is a new trip — any open Explore session (results, pins) is for the old one.
@@ -1504,26 +1586,22 @@ export class Plan implements OnInit {
     const savedTripId = this.savedTripIdFor(origin, destination);
     const baselineKey = tripBaselineKey({ origin, destination, savedTripId });
     const previousFacts = this.briefingMemory.previousFactsFor(baselineKey);
+    // One answer, both requests: this trip is either a sequence of dated days or a single drive,
+    // and the plan and the briefing have to be about the same one.
+    const multiDay = this.travelDays().length > 1;
     try {
       const [result, briefing] = await Promise.all([
-        this.planRequestFor({ origin, destination, departureAt, waypoints }),
-        // F-012 NOTE: the briefing is still written for the trip's OWN departure, so on a
-        // multi-day trip it narrates every leg off day one's weather — the same substitution this
-        // change removes from the day list, map and timeline. Fixing it needs the briefing
-        // endpoint to accept a day (or an itinerary), which is a contract change, not a client
-        // one. Left as it was rather than quietly re-pointed at the selected day, which would make
-        // the narration and the trip summary disagree instead.
-        this.api.createBriefing(
-          buildBriefingRequest({
-            origin,
-            destination,
-            departureAt,
-            waypoints,
-            units: this.settings.units(),
-            previousFacts,
-            savedTripId,
-          }),
-        ),
+        this.planRequestFor({ origin, destination, departureAt, waypoints, multiDay }),
+        this.briefingRequestFor({
+          origin,
+          destination,
+          departureAt,
+          waypoints,
+          units: this.settings.units(),
+          previousFacts,
+          savedTripId,
+          multiDay,
+        }),
       ]);
       this.showResult(result);
       const totals = this.tripTotals();
@@ -1533,8 +1611,7 @@ export class Plan implements OnInit {
       this.analytics.capture('trip_planned', {
         distance_mi: Math.round((totals.distanceMeters ?? 0) / 1609.344),
       });
-      this.briefing.set(briefing);
-      this.briefingMemory.remember(baselineKey, briefing.facts);
+      this.showBriefing(briefing, baselineKey);
       this.plannedContext.set({ origin, destination });
       this.plannedBase.set(base);
       this.plannedWaypointsKey = waypointsKey(waypoints);
