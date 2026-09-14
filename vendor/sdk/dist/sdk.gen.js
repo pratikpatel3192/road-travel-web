@@ -160,6 +160,8 @@ export const createBriefingV1BriefingsPost = (options) => (options.client ?? cli
  * This derives the trip's travel days (a stop carrying `nights` ends one), plans each on its own departure instant, builds that day's facts, and narrates the trip from all of them.
  *
  * Days with no forecast are returned, counted, and named in the prose. A day past the forecast horizon is NOT a clear day and is never described as one — it is a day nobody has looked at, and on a trip booked weeks out that is most of them. One unroutable day costs its own day's facts and nothing else.
+ *
+ * Send the previous briefing's `snapshot` back as `previous_snapshot` to re-brief: the response then carries a `diff` a client can draw an 'Updated' badge from, and the prose leads with what changed. A day that crossed INTO the forecast leads even when another day worsened more — on a trip booked a month out it is the only change the traveller could not have anticipated. Nothing changed means no diff entries and no announcement.
  */
 export const createItineraryBriefingV1BriefingsItineraryPost = (options) => (options.client ?? client).post({
     security: [{ scheme: 'bearer', type: 'http' }],

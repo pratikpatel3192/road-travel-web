@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import type {
   BriefingFactsModel,
   BriefingResponse,
+  DaySnapshotModel,
   ItineraryBriefingResponse,
   OutlookResponse,
   PlaceCardModel,
@@ -41,6 +42,7 @@ import {
   MAX_STOPS,
   type StopDraft,
   buildBriefingRequest,
+  buildItineraryBriefingRequest,
   buildItineraryRequest,
   buildPlanRequest,
   fromWaypoints,
@@ -816,9 +818,10 @@ export class Plan implements OnInit {
   // waypoints + dwell (ADR-0031 §3), so stop edits know when to re-plan + refresh the briefing.
   private plannedWaypointsKey = '';
   private stopsTimer: ReturnType<typeof setTimeout> | undefined;
-  // F-001 v2 (US-11): the last briefing's facts, keyed by full trip identity (endpoints +
-  // departure + waypoints/dwell). Re-briefing the SAME trip sends them as `previous_facts` so the
-  // server returns a grounded diff; any identity change means a different trip — nothing is sent.
+  // F-001 v2 (US-11): the last briefing's baseline for this TRIP, keyed by `tripBaselineKey`.
+  // Re-briefing the same trip sends it back — `previous_facts` on the single-day path, and (since
+  // multi-day trips brief through `/v1/briefings/itinerary`) `previous_snapshot` on the whole-trip
+  // one — so the server returns a grounded diff. A different trip keys to nothing and sends nothing.
   private readonly briefingMemory = new BriefingMemory();
 
   readonly canSubmit = computed(() => !!this.origin() && !!this.destination());
@@ -1336,11 +1339,11 @@ export class Plan implements OnInit {
    * case, it is the one the re-brief diff (F-012) is built around, and the itinerary endpoint would
    * answer it with a one-row rollup and no diff at all.
    *
-   * The multi-day path deliberately sends neither `previous_facts` nor `trip_id` — the itinerary
-   * endpoint takes the planning body and has no baseline to diff against. That loses the "Updated"
-   * badge on multi-day trips, which is a real loss and a smaller one than the alternative: a
-   * briefing that narrates day five off day one's weather is wrong about the thing it is most
-   * confident about, and a diff would only tell you how it changed.
+   * Each path sends its OWN baseline and never the other's: `previous_facts` (+ `trip_id`, whose
+   * server-stored baseline supersedes it) on the single-day call, `previous_snapshot` on the
+   * itinerary call. They are not interchangeable — one is a day's facts, the other is three fields
+   * per travel day — and the itinerary endpoint takes no `trip_id`, so its baseline is only ever
+   * the one this session remembered.
    */
   private briefingRequestFor(args: {
     origin: PlaceValue;
@@ -1349,12 +1352,13 @@ export class Plan implements OnInit {
     waypoints: WaypointModel[];
     units: 'imperial' | 'metric';
     previousFacts?: BriefingFactsModel;
+    previousSnapshot?: DaySnapshotModel[];
     savedTripId?: string;
     multiDay: boolean;
   }): Promise<BriefingResponse | ItineraryBriefingResponse> {
     if (args.multiDay) {
       return this.api.createItineraryBriefing(
-        buildItineraryRequest({ ...args, timezone: localTimezone() }),
+        buildItineraryBriefingRequest({ ...args, timezone: localTimezone() }),
       );
     }
     return this.api.createBriefing(buildBriefingRequest(args));
@@ -1364,8 +1368,10 @@ export class Plan implements OnInit {
    * Show a briefing, whichever kind came back — told apart by the shape the server sent, never by
    * re-deriving the day count here. Setting one signal always clears the other.
    *
-   * Only the single-day response is remembered as the next re-brief baseline: it is the only one
-   * carrying `facts`, and the only endpoint that accepts them back.
+   * Either response is remembered as the next re-brief baseline, in the form its OWN endpoint takes
+   * back: the single-day `facts`, or the whole-trip `snapshot`. The itinerary `snapshot` comes back
+   * on every briefing including the first — that first one is what gives the second look something
+   * to compare against, so it is stored even though this response showed no badge.
    */
   private showBriefing(
     result: BriefingResponse | ItineraryBriefingResponse,
@@ -1374,6 +1380,7 @@ export class Plan implements OnInit {
     if ('rollup' in result) {
       this.briefing.set(null);
       this.tripBriefing.set(result);
+      this.briefingMemory.rememberSnapshot(baselineKey, result.snapshot ?? []);
       return;
     }
     this.tripBriefing.set(null);
@@ -1394,6 +1401,9 @@ export class Plan implements OnInit {
     const savedTripId = this.savedTripIdFor(ctx.origin, ctx.destination);
     const baselineKey = tripBaselineKey({ ...ctx, savedTripId });
     const previousFacts = this.briefingMemory.previousFactsFor(baselineKey);
+    // The whole-trip baseline, under the same key: a re-plan of the same trip is exactly the case
+    // worth diffing, and a key that matched nothing is a trip that was never briefed here.
+    const previousSnapshot = this.briefingMemory.previousSnapshotFor(baselineKey);
     // Asked before either request goes out, so the plan and the briefing are about the same trip.
     const multiDay = this.travelDays().length > 1;
     this.replanning.set(true);
@@ -1407,6 +1417,7 @@ export class Plan implements OnInit {
               waypoints,
               units: this.settings.units(),
               previousFacts,
+              previousSnapshot,
               savedTripId,
               multiDay,
             })
@@ -1586,6 +1597,10 @@ export class Plan implements OnInit {
     const savedTripId = this.savedTripIdFor(origin, destination);
     const baselineKey = tripBaselineKey({ origin, destination, savedTripId });
     const previousFacts = this.briefingMemory.previousFactsFor(baselineKey);
+    // The whole-trip half of the same thing (`snapshot` → `previous_snapshot`). Same key, so a
+    // snapshot can only ever go back to the trip it was taken from; re-target either endpoint and
+    // the key changes and nothing is sent, which is a first look and reads as one.
+    const previousSnapshot = this.briefingMemory.previousSnapshotFor(baselineKey);
     // One answer, both requests: this trip is either a sequence of dated days or a single drive,
     // and the plan and the briefing have to be about the same one.
     const multiDay = this.travelDays().length > 1;
@@ -1599,6 +1614,7 @@ export class Plan implements OnInit {
           waypoints,
           units: this.settings.units(),
           previousFacts,
+          previousSnapshot,
           savedTripId,
           multiDay,
         }),
