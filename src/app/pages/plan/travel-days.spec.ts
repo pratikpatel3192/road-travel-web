@@ -47,7 +47,7 @@ describe('TravelDays', () => {
   it('says where the days came from', () => {
     const el = render(dated('2026-10-01'));
     expect(el.querySelector('.caption')?.textContent).toContain('from your stops');
-    expect(el.querySelector('.caption')?.textContent).toContain('2 drives across 5 days');
+    expect(el.querySelector('.caption')?.textContent).toContain('2 drives across 4 days');
   });
 
   it('shows an undated trip undated rather than inventing dates', () => {

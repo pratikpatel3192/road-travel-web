@@ -92,8 +92,9 @@ describe('Plan — days derived from the stops', () => {
     expect(days[0].travelDate).toBe('2026-10-01');
     expect(days[0].departureTime).toBe('08:00'); // the trip's own departure
     expect(days[0].nightsAtDestination).toBe(3);
-    // One day to drive it plus three nights there.
-    expect(days[1].travelDate).toBe('2026-10-05');
+    // Three nights there — and no day charged for the drive. You reach Albuquerque on the 1st,
+    // sleep three nights, and set off again on the 4th.
+    expect(days[1].travelDate).toBe('2026-10-04');
     expect(days[1].departureTime).toBe('09:30'); // the stop's own morning
   });
 

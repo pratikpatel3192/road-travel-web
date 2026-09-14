@@ -90,7 +90,12 @@ export function deriveLegs<P>(input: ItineraryInput<P>): DerivedLeg<P>[] {
       departureTime: legs.length === 0 ? (input.departureTime ?? null) : legDepartureTime,
       nightsAtDestination: stop.nights,
     });
-    cursor = addDays(cursor, 1 + stop.nights);
+    // NIGHTS ONLY. You drive to Buffalo and you are there that evening — leaving Chicago on the
+    // 13th and staying one night means setting off again on the 14th, not the 15th. This said
+    // `1 + nights`, charging a calendar day for the drive on top of the nights, so every stay
+    // after the first slid a day further out and each leg's forecast was read for a day nobody
+    // was driving.
+    cursor = addDays(cursor, stop.nights);
     legOrigin = stop.place;
     legDepartureTime = stop.departureTime;
     pending = [];
@@ -114,7 +119,10 @@ export function deriveLegs<P>(input: ItineraryInput<P>): DerivedLeg<P>[] {
  * Dallas → Albuquerque (3) → Phoenix (2) → Los Angeles is 3 + 5 = 8.
  */
 export function totalDays<P>(legs: readonly DerivedLeg<P>[]): number {
-  return legs.length + legs.reduce((sum, leg) => sum + leg.nightsAtDestination, 0);
+  // The calendar SPAN — first day out through the last, inclusive. Not `legs + nights`, which
+  // counted each drive as a day of its own on top of the nights: the same double-count that
+  // pushed every date out.
+  return legs.length === 0 ? 0 : 1 + totalNights(legs);
 }
 
 /** The nights stayed across the whole trip — what separates "8 days" from "3 drives". */
