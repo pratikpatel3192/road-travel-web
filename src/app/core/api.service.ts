@@ -26,10 +26,12 @@ import {
   type ProfileResponse,
   type ProfileUpdate,
   type SaveTripRequest,
+  type SaveTripSnapshotRequest,
   type SavedTripModel,
   type SavedTripsResponse,
   type SurveyQuestionsResponse,
   type TrialClaimResponse,
+  type TripSnapshotResponse,
   type VehiclesResponse,
   addStopPreviewV1TripsExploreAddStopPreviewPost,
   claimTrialV1MeTrialClaimPost,
@@ -48,10 +50,12 @@ import {
   getMeV1MeGet,
   getProfileV1MeProfileGet,
   getSurveyQuestionsV1SurveyQuestionsGet,
+  getTripSnapshotV1TripsTripIdSnapshotGet,
   planItineraryV1TripsPlanItineraryPost,
   planTripV1TripsPlanPost,
   tripOutlookV1TripsOutlookPost,
   recordConsentsV1MeConsentsPost,
+  saveTripSnapshotV1TripsTripIdSnapshotPut,
   saveTripV1TripsPost,
   submitOnboardingV1MeOnboardingPost,
   updateProfileV1MeProfilePut,
@@ -104,7 +108,8 @@ export class ApiService {
       (error as { message?: string } | undefined)?.message ??
       (error as { detail?: string } | undefined)?.detail ??
       `Request failed (${status})`;
-    throw new ApiError(status, message);
+    const code = (error as { error?: { code?: string } } | undefined)?.error?.code;
+    throw new ApiError(status, message, code);
   }
 
   /**
@@ -306,6 +311,34 @@ export class ApiService {
     const { data, error, response } = await listTripsV1TripsGet(this.options());
     if (error || !data) this.raise(response, error);
     return data as SavedTripsResponse;
+  }
+
+  /**
+   * A saved trip's last planned result, exactly as a client stored it — one read, nothing routed or
+   * forecast. A 404 carries the reason in {@link ApiError.code}: `snapshot_not_found` (plan the trip)
+   * or `trip_not_found` (the trip itself is gone).
+   */
+  async getTripSnapshot(tripId: string): Promise<TripSnapshotResponse> {
+    const { data, error, response } = await getTripSnapshotV1TripsTripIdSnapshotGet({
+      ...this.options(),
+      path: { trip_id: tripId },
+    });
+    if (error || !data) this.raise(response, error);
+    return data as TripSnapshotResponse;
+  }
+
+  /**
+   * Store the result on screen as the trip's snapshot, so every device opens it without re-planning.
+   * 409 `trip_changed` means the trip moved on after this result was planned (another device
+   * changed its stops or departure); the caller drops it.
+   */
+  async saveTripSnapshot(tripId: string, body: SaveTripSnapshotRequest): Promise<void> {
+    const { error, response } = await saveTripSnapshotV1TripsTripIdSnapshotPut({
+      ...this.options(),
+      path: { trip_id: tripId },
+      body,
+    });
+    if (response && !response.ok) this.raise(response, error);
   }
 
   // --- F-007 P1: recorded drives + garage + stats (view-only on web; recording is iOS-only) ---

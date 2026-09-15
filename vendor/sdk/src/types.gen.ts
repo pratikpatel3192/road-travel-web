@@ -145,6 +145,8 @@ export type BriefingFactsModel = {
     samples_with_weather: number;
     /**
      * Overall Severity
+     *
+     * Worst across the route samples that HAVE weather. NOT a measurement when `samples_with_weather` is 0: the field is required, so a weatherless run still carries the legacy `clear` here, and a client must read the sample counts first and show 'no forecast' instead. A floor, not a verdict, when only some samples have weather.
      */
     overall_severity: 'clear' | 'caution' | 'high' | 'severe' | 'extreme';
     worst_stretch?: WorstStretchModel | null;
@@ -152,6 +154,12 @@ export type BriefingFactsModel = {
      * Hazards
      */
     hazards: Array<HazardModel>;
+    /**
+     * Samples Beyond Forecast
+     *
+     * Samples with no weather because the forecast stops short of their ETA, as opposed to a failed fetch. With `samples_with_weather == 0` this says WHY there is no forecast: non-zero means 'too far out yet', zero means 'the weather was unavailable'.
+     */
+    samples_beyond_forecast?: number;
 };
 
 /**
@@ -1382,7 +1390,7 @@ export type ItineraryBriefingRequest = {
     /**
      * Departure At
      *
-     * When the FIRST day sets off. Later days take their time from the stop they depart from, and 'sometime that day' where none is given.
+     * When the FIRST day sets off, exactly as sent. Later days take their time from the stop they depart from, and leave at 08:00 on that stop's clock where none is given — never at this instant's time of day, which is when the traveller left home.
      */
     departure_at: string;
     /**
@@ -1454,8 +1462,9 @@ export type ItineraryBriefingResponse = {
  * One travel day of the trip, and what is actually known about it.
  *
  * `facts` is null in two different situations and they are NOT interchangeable: `beyond_forecast`
- * means nobody has looked at this day yet, `error` means this day has no route. Neither is a calm
- * day, and a client that draws them the same way has invented a verdict for both.
+ * means nobody has looked at this day yet, `error` means this day has no route — or has one, and
+ * no weather came back for any of it. None of them is a calm day, and a client that draws them
+ * the same way has invented a verdict for all of them.
  */
 export type ItineraryDayFactsModel = {
     /**
@@ -1502,6 +1511,12 @@ export type ItineraryDayFactsModel = {
      * This day's worst. Null — never `clear` — when nobody has looked at the day.
      */
     severity?: 'clear' | 'caution' | 'high' | 'severe' | 'extreme' | null;
+    /**
+     * Partly Unknown
+     *
+     * Only part of this day's route has weather. `severity` is then a floor over that part, and the day must not be shown as clear without saying the rest is unknown.
+     */
+    partly_unknown?: boolean;
 };
 
 /**
@@ -1584,6 +1599,12 @@ export type ItineraryRollupModel = {
      * Forecast days above clear, worst-first then earliest.
      */
     rough_day_ordinals?: Array<number>;
+    /**
+     * Partly Unknown Day Ordinals
+     *
+     * Forecast days on which only part of the route has weather. Never also in `clear_day_ordinals`: clear so far is not clear.
+     */
+    partly_unknown_day_ordinals?: Array<number>;
     /**
      * Partly Unknown
      *
@@ -2164,7 +2185,7 @@ export type PlanItineraryRequest = {
     /**
      * Departure At
      *
-     * When the FIRST day sets off. Later days take their time from the stop they depart from, and 'sometime that day' where none is given.
+     * When the FIRST day sets off, exactly as sent. Later days take their time from the stop they depart from, and leave at 08:00 on that stop's clock where none is given — never at this instant's time of day, which is when the traveller left home.
      */
     departure_at: string;
     /**
@@ -2869,6 +2890,50 @@ export type SaveTripRequest = {
 };
 
 /**
+ * SaveTripSnapshotRequest
+ */
+export type SaveTripSnapshotRequest = {
+    /**
+     * Kind
+     *
+     * `single` for a one-day plan (`POST /v1/trips/plan`), `itinerary` for a multi-day one (`POST /v1/trips/plan-itinerary`).
+     */
+    kind: 'single' | 'itinerary';
+    /**
+     * Schema Version
+     *
+     * The CLIENT's version of the `payload` format. The server stores it and hands it back; a client that does not know a version should re-plan rather than guess.
+     */
+    schema_version: number;
+    /**
+     * Planned At
+     *
+     * When the forecast inside `payload` was fetched. Clients show the snapshot's age from this ("Forecast from 3 hours ago") and refresh automatically once it is more than two days old. A time more than a few minutes in the future is refused.
+     */
+    planned_at: string;
+    /**
+     * Departure At
+     *
+     * The departure the payload was planned for, so a client can say when it has already passed.
+     */
+    departure_at: string;
+    /**
+     * Trip Revision
+     *
+     * The `revision` of the saved trip this result was planned for, exactly as the save (`POST /v1/trips`) or the list (`GET /v1/trips`) returned it. When the trip has changed since — another device added a stop — the write is refused with 409 `trip_changed`: this result describes stops the trip no longer has.
+     */
+    trip_revision: string;
+    /**
+     * Payload
+     *
+     * The rendered plan response(s) and briefing response(s), as the client wants them back. Opaque to the server. The whole request body is capped (413 `snapshot_too_large`).
+     */
+    payload: {
+        [key: string]: unknown;
+    };
+};
+
+/**
  * SavedTripModel
  */
 export type SavedTripModel = {
@@ -2920,6 +2985,12 @@ export type SavedTripModel = {
      * Waypoints
      */
     waypoints?: Array<WaypointModel>;
+    /**
+     * Revision
+     *
+     * Opaque token for this trip's DEFINITION — its endpoints, stops and departure. It changes when any of those change and stays the same when the trip is re-saved unchanged. Send it back as `trip_revision` when storing the trip's snapshot (`PUT /v1/trips/{trip_id}/snapshot`), which is how the server knows the result describes the stops the trip has now. Always set by this server; optional only so a client built against it still reads an older one.
+     */
+    revision?: string | null;
     /**
      * Legs
      *
@@ -3282,7 +3353,7 @@ export type TripLegModel = {
     /**
      * Departure Time
      *
-     * Optional time of day. Null means 'sometime that day', which is a real answer — inventing an hour would have the ETA maths treat a fiction as fact. Requires a date.
+     * Optional time of day, on the clock of `timezone`. Null means 08:00 there — the same default a planned day with no stated time leaves at, so a stored day is checked against the same forecast hours the traveller was shown. Requires a date.
      */
     departure_time?: string | null;
     /**
@@ -3333,6 +3404,52 @@ export type TripLegsResponse = {
      * Advisory only. Dates that run backwards are warned about, never rejected: a driver mid-edit has a half-ordered itinerary, and refusing the save would lose their work.
      */
     warnings?: Array<string>;
+};
+
+/**
+ * TripSnapshotResponse
+ *
+ * The trip's last planned result, served only while it still matches the trip's stops.
+ */
+export type TripSnapshotResponse = {
+    /**
+     * Kind
+     *
+     * `single` for a one-day plan (`POST /v1/trips/plan`), `itinerary` for a multi-day one (`POST /v1/trips/plan-itinerary`).
+     */
+    kind: 'single' | 'itinerary';
+    /**
+     * Schema Version
+     *
+     * The CLIENT's version of the `payload` format. The server stores it and hands it back; a client that does not know a version should re-plan rather than guess.
+     */
+    schema_version: number;
+    /**
+     * Planned At
+     *
+     * When the forecast inside `payload` was fetched. Clients show the snapshot's age from this ("Forecast from 3 hours ago") and refresh automatically once it is more than two days old. A time more than a few minutes in the future is refused.
+     */
+    planned_at: string;
+    /**
+     * Departure At
+     *
+     * The departure the payload was planned for, so a client can say when it has already passed.
+     */
+    departure_at: string;
+    /**
+     * Updated At
+     *
+     * When the server stored this snapshot.
+     */
+    updated_at: string;
+    /**
+     * Payload
+     *
+     * Exactly the object that was stored.
+     */
+    payload: {
+        [key: string]: unknown;
+    };
 };
 
 /**
@@ -3675,7 +3792,7 @@ export type WaypointModel = {
      *
      * What time the traveller sets off FROM here, on the morning after their stay. Only meaningful with `nights` — a pass-through stop is described by how long it lasts (`dwell_minutes`), an overnight one by when you leave it.
      *
-     * Null means 'sometime that day', which is a real answer and the honest default: the hour someone will leave Albuquerque three days from now is a guess, and a guessed hour would have the ETA maths treat a fiction as fact.
+     * Null means the day leaves at 08:00 on THIS STOP's clock (see `timezone`). It used to mean the trip's own time of day, which read as honest and was not: that was when the traveller set off from home, often just when they pressed Plan, so a trip planned at 8:44 PM had every later day 'leave 8:44 PM' and forecast a night drive. Someone who stays the night somewhere is not leaving at that minute.
      */
     departure_time?: string | null;
     /**
@@ -4070,6 +4187,82 @@ export type ReplaceTripLegsV1TripsTripIdLegsPutResponses = {
 };
 
 export type ReplaceTripLegsV1TripsTripIdLegsPutResponse = ReplaceTripLegsV1TripsTripIdLegsPutResponses[keyof ReplaceTripLegsV1TripsTripIdLegsPutResponses];
+
+export type GetTripSnapshotV1TripsTripIdSnapshotGetData = {
+    body?: never;
+    path: {
+        /**
+         * Trip Id
+         */
+        trip_id: string;
+    };
+    query?: never;
+    url: '/v1/trips/{trip_id}/snapshot';
+};
+
+export type GetTripSnapshotV1TripsTripIdSnapshotGetErrors = {
+    /**
+     * `trip_not_found` (no such trip for this account) or `snapshot_not_found` (the trip exists; plan it).
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetTripSnapshotV1TripsTripIdSnapshotGetError = GetTripSnapshotV1TripsTripIdSnapshotGetErrors[keyof GetTripSnapshotV1TripsTripIdSnapshotGetErrors];
+
+export type GetTripSnapshotV1TripsTripIdSnapshotGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: TripSnapshotResponse;
+};
+
+export type GetTripSnapshotV1TripsTripIdSnapshotGetResponse = GetTripSnapshotV1TripsTripIdSnapshotGetResponses[keyof GetTripSnapshotV1TripsTripIdSnapshotGetResponses];
+
+export type SaveTripSnapshotV1TripsTripIdSnapshotPutData = {
+    body: SaveTripSnapshotRequest;
+    path: {
+        /**
+         * Trip Id
+         */
+        trip_id: string;
+    };
+    query?: never;
+    url: '/v1/trips/{trip_id}/snapshot';
+};
+
+export type SaveTripSnapshotV1TripsTripIdSnapshotPutErrors = {
+    /**
+     * `trip_not_found` — no such trip for this account.
+     */
+    404: unknown;
+    /**
+     * `trip_changed` — the trip's definition moved on; re-plan.
+     */
+    409: unknown;
+    /**
+     * `snapshot_too_large` — the request body is over the ceiling.
+     */
+    413: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SaveTripSnapshotV1TripsTripIdSnapshotPutError = SaveTripSnapshotV1TripsTripIdSnapshotPutErrors[keyof SaveTripSnapshotV1TripsTripIdSnapshotPutErrors];
+
+export type SaveTripSnapshotV1TripsTripIdSnapshotPutResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type SaveTripSnapshotV1TripsTripIdSnapshotPutResponse = SaveTripSnapshotV1TripsTripIdSnapshotPutResponses[keyof SaveTripSnapshotV1TripsTripIdSnapshotPutResponses];
 
 export type TripOutlookV1TripsOutlookPostData = {
     body: OutlookRequest;

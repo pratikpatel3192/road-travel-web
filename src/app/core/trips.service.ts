@@ -159,6 +159,20 @@ export class TripsService {
     this.syncCache();
   }
 
+  /**
+   * A one-shot message for My Trips — set when the planner is sent back there because the trip it
+   * was asked to open no longer exists (deleted on another device). Without it the traveller taps a
+   * trip and lands back on the list with no idea why.
+   */
+  readonly notice = signal<string | null>(null);
+
+  /** Read and clear the notice (shown once, by the My Trips page). */
+  takeNotice(): string | null {
+    const n = this.notice();
+    this.notice.set(null);
+    return n;
+  }
+
   stage(trip: StagedTrip): void {
     this.staged.set(trip);
   }
