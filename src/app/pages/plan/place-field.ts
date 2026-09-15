@@ -36,7 +36,7 @@ export interface PlaceValue {
         autocomplete="off"
         [attr.aria-label]="placeholder()"
       />
-      @if (query()) {
+      @if (clearable() && query()) {
         <button type="button" class="clear" (mousedown)="clear($event)" aria-label="Clear">
           <app-icon name="x" [size]="14" />
         </button>
@@ -181,6 +181,12 @@ export class PlaceField {
   /** 1-based stop number, rendered inside the badge (kind 'stop' only; F-006). */
   readonly index = input<number | null>(null);
   readonly placeholder = input('Search a place');
+  /**
+   * Whether the field offers its own ×. Off on a stop row, whose × removes the stop: two identical
+   * glyphs side by side, one clearing the text and one deleting the stop, is a mis-tap that loses a
+   * stop. A stop's place is changed by typing over it, which needs no clear.
+   */
+  readonly clearable = input(true);
   readonly place = model<PlaceValue | null>(null);
   /** Proximity bias for autocomplete — rank suggestions near this point first (e.g. the route). */
   readonly near = input<{ latitude: number; longitude: number } | null>(null);

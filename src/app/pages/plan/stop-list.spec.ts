@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 
 import { GeocodeService } from '../../core/geocode.service';
+import { PlaceField } from './place-field';
 import { StopList } from './stop-list';
 import { MAX_STOPS, type StopDraft, newStop } from './waypoints';
 
@@ -60,7 +61,7 @@ describe('StopList (F-006 stop editor)', () => {
   it('removes a row via its ✕ button', () => {
     const fixture = render([newStop(HARRIS, 15), newStop(KETTLEMAN, 30)]);
     const el = fixture.nativeElement as HTMLElement;
-    el.querySelector<HTMLButtonElement>('button[aria-label="Remove stop 1"]')!.click();
+    el.querySelector<HTMLButtonElement>(`button[aria-label="Remove stop ${HARRIS.name}"]`)!.click();
     fixture.detectChanges();
     expect(rows(el).length).toBe(1);
     expect(fixture.componentInstance.stops()[0].place?.name).toBe(KETTLEMAN.name);
@@ -245,5 +246,42 @@ describe('StopList (stay chip)', () => {
     // applies — the label and the plan cannot then disagree.
     expect(fixture.componentInstance.stops()[0].departureTime).toBeNull();
     expect(el.querySelector('.default')?.textContent).toContain('8 AM');
+  });
+});
+
+/**
+ * One × per stop row. The place field used to bring its own clear × beside the row's remove ×, so
+ * a row read "Joliet, IL × ×" — two identical glyphs, one clearing text and one deleting the stop.
+ */
+describe('StopList (one delete per row)', () => {
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [StopList],
+      providers: [{ provide: GeocodeService, useValue: { search: async () => [] } }],
+    }).compileComponents();
+  });
+
+  it('offers only the remove control, named for the stop it removes', () => {
+    const fixture = TestBed.createComponent(StopList);
+    fixture.componentRef.setInput('stops', [newStop(HARRIS), newStop(null)]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelector('button.clear')).toBeNull();
+    const rows = el.querySelectorAll('.stop-row');
+    expect(rows[0].querySelectorAll('app-icon[name="x"]')).toHaveLength(1);
+    const labels = [...el.querySelectorAll('button.remove')].map((b) =>
+      b.getAttribute('aria-label'),
+    );
+    // A row still being typed has no name yet, so it falls back to its number.
+    expect(labels).toEqual([`Remove stop ${HARRIS.name}`, 'Remove stop 2']);
+  });
+
+  it("leaves the planner's origin and destination fields their clear — their only way to empty", () => {
+    const fixture = TestBed.createComponent(PlaceField);
+    fixture.componentRef.setInput('kind', 'origin');
+    fixture.componentRef.setInput('place', HARRIS);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('button.clear')).not.toBeNull();
   });
 });

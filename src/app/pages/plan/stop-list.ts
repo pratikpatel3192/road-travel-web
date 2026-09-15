@@ -33,13 +33,14 @@ import { type DwellMinutes, MAX_STOPS, type StopDraft, newStop } from './waypoin
             [placeholder]="'Stop ' + (i + 1)"
             [place]="s.place"
             [near]="near()"
+            [clearable]="false"
             (placeChange)="setPlace(i, $event)"
           />
           <button
             class="tool remove"
             type="button"
             (click)="remove(i)"
-            [attr.aria-label]="'Remove stop ' + (i + 1)"
+            [attr.aria-label]="'Remove stop ' + (s.place?.name ?? i + 1)"
           >
             <app-icon name="x" [size]="14" />
           </button>
