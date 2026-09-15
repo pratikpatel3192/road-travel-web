@@ -251,6 +251,25 @@ describe('TripBriefingCard — scope', () => {
     ).not.toBeNull();
   });
 
+  it('reads like a person on a one-day trip, not like a loop', () => {
+    // "all 1 driving day" and "1 of 1 days forecast" — the same shape as "All 2 forecast days" and
+    // "across 1 days", which this card's server-side prose shipped and fixed earlier. The iOS card
+    // caught this one; the two must now read identically.
+    const el = render(
+      briefing({
+        days: [day(0, { facts: facts(), severity: 'clear' })],
+        rollup: rollup({ days_with_forecast: 1 }),
+      }),
+      0,
+    ).nativeElement as HTMLElement;
+    const scope = el.querySelector('.scope')?.textContent ?? '';
+    const coverage = el.querySelector('.coverage')?.textContent ?? '';
+    expect(scope).toContain('The whole trip — 1 driving day.');
+    expect(scope).not.toContain('all 1');
+    expect(coverage).toContain('1 of 1 day forecast');
+    expect(coverage).not.toContain('1 days');
+  });
+
   it('does not claim a timeline for a day that has no route drawn', () => {
     const fixture = render(
       briefing({
