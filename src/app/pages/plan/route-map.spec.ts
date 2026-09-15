@@ -186,3 +186,66 @@ describe('mapWeatherNotice', () => {
     expect(mapWeatherNotice(null, 2, true)?.kind).toBe('beyond');
   });
 });
+
+/**
+ * How a traveller zooms. On desktop the planner's trip panel floats over the left of the map and
+ * covered Leaflet's default top-left zoom buttons completely, while wheel zoom was switched off —
+ * so a desktop user had no way to zoom the map at all.
+ */
+describe('RouteMap — zoom controls', () => {
+  beforeAll(() => {
+    (globalThis as { ResizeObserver?: unknown }).ResizeObserver ??= class {
+      observe(): void {}
+      disconnect(): void {}
+    };
+  });
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [RouteMap] }).compileComponents();
+  });
+
+  async function mount(wheelZoom?: boolean) {
+    const fixture = TestBed.createComponent(RouteMap);
+    if (wheelZoom !== undefined) fixture.componentRef.setInput('wheelZoom', wheelZoom);
+    fixture.detectChanges();
+    await new Promise((r) => setTimeout(r, 0)); // the map is created a tick after the first render
+    fixture.detectChanges();
+    const map = () => (fixture.componentInstance as unknown as { map: { scrollWheelZoom: { enabled(): boolean } } }).map;
+    return { fixture, el: fixture.nativeElement as HTMLElement, wheel: () => map().scrollWheelZoom.enabled() };
+  }
+
+  it('puts the zoom buttons in the top-right corner, never the top-left the trip panel covers', async () => {
+    const { el } = await mount();
+    expect(el.querySelectorAll('.leaflet-control-zoom').length).toBe(1);
+    expect(el.querySelector('.leaflet-top.leaflet-right .leaflet-control-zoom')).toBeTruthy();
+    expect(el.querySelector('.leaflet-top.leaflet-left .leaflet-control-zoom')).toBeNull();
+    expect(el.querySelector('.leaflet-control-zoom-in')).toBeTruthy();
+    expect(el.querySelector('.leaflet-control-zoom-out')).toBeTruthy();
+  });
+
+  it('leaves the wheel to scroll the page unless the host says the map is a full-height pane', async () => {
+    const { fixture, wheel } = await mount();
+    expect(wheel()).toBe(false);
+    fixture.componentRef.setInput('wheelZoom', true);
+    fixture.detectChanges();
+    expect(wheel()).toBe(true);
+    fixture.componentRef.setInput('wheelZoom', false);
+    fixture.detectChanges();
+    expect(wheel()).toBe(false);
+  });
+
+  it('creates the map with wheel zoom already on when the host asks from the start', async () => {
+    const { wheel } = await mount(true);
+    expect(wheel()).toBe(true);
+  });
+
+  it('zooms on the wheel while expanded full-screen, and stops again on collapse', async () => {
+    const { fixture, wheel } = await mount(false);
+    fixture.componentInstance.toggleExpand();
+    fixture.detectChanges();
+    expect(wheel()).toBe(true);
+    fixture.componentInstance.onEscape();
+    fixture.detectChanges();
+    expect(wheel()).toBe(false);
+  });
+});
