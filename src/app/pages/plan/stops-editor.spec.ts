@@ -84,3 +84,95 @@ describe('StopsEditor', () => {
     expect(el.querySelectorAll('.forecast')).toHaveLength(0);
   });
 });
+
+/**
+ * Typing over a stop's name is how its place is changed, so "start retyping, tap Done before picking"
+ * is the ordinary path. It used to delete the stop — nights and all, re-dating every later day.
+ */
+describe('StopsEditor — retyping a stop', () => {
+  const PHOENIX_RESULT = { ...PHX };
+
+  beforeEach(async () => {
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [StopsEditor],
+      providers: [{ provide: GeocodeService, useValue: { search: async () => [PHOENIX_RESULT] } }],
+    }).compileComponents();
+  });
+
+  function render(stops: StopDraft[]) {
+    const fixture = TestBed.createComponent(StopsEditor);
+    fixture.componentRef.setInput('stops', stops);
+    fixture.componentRef.setInput('origin', DALLAS);
+    fixture.componentRef.setInput('destination', LA);
+    fixture.detectChanges();
+    const done: StopDraft[][] = [];
+    fixture.componentInstance.done.subscribe((s) => done.push(s));
+    return { fixture, el: fixture.nativeElement as HTMLElement, done };
+  }
+
+  const settle = async (fixture: { detectChanges(): void; whenStable(): Promise<unknown> }) => {
+    await new Promise((r) => setTimeout(r, 300)); // past the 250ms search debounce / 120ms blur
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  };
+
+  function typeInto(input: HTMLInputElement, text: string) {
+    input.value = text;
+    input.dispatchEvent(new Event('input'));
+  }
+
+  const stopInput = (el: HTMLElement) =>
+    el.querySelector<HTMLInputElement>('app-place-field input[aria-label="Stop 1"]')!;
+  const clickDone = (el: HTMLElement) =>
+    [...el.querySelectorAll<HTMLButtonElement>('button')]
+      .find((b) => b.textContent?.trim() === 'Done')!
+      .click();
+
+  it('keeps the original place and its nights when Done comes before a pick', async () => {
+    const { fixture, el, done } = render([newStop(ABQ, 0, 5, '09:30')]);
+    typeInto(stopInput(el), 'Phoe');
+    await settle(fixture);
+    clickDone(el);
+
+    expect(done).toHaveLength(1);
+    expect(done[0]).toHaveLength(1);
+    expect(done[0][0].place).toEqual(ABQ);
+    expect(done[0][0].nights).toBe(5);
+    expect(done[0][0].departureTime).toBe('09:30');
+  });
+
+  it('shows the kept name again once the field is left, so the half-typed text does not look saved', async () => {
+    const { fixture, el } = render([newStop(ABQ, 0, 5)]);
+    const input = stopInput(el);
+    typeInto(input, 'Phoe');
+    input.dispatchEvent(new Event('blur'));
+    await settle(fixture);
+    expect(stopInput(el).value).toBe(ABQ.name);
+  });
+
+  it('replaces the place on a pick and keeps the stay', async () => {
+    const { fixture, el, done } = render([newStop(ABQ, 0, 5, '09:30')]);
+    typeInto(stopInput(el), 'Phoe');
+    await settle(fixture);
+    const option = el.querySelector<HTMLLIElement>('li[role="option"]')!;
+    option.dispatchEvent(new Event('mousedown'));
+    fixture.detectChanges();
+    clickDone(el);
+
+    expect(done[0]).toHaveLength(1);
+    expect(done[0][0].place).toEqual(PHX);
+    expect(done[0][0].nights).toBe(5);
+    expect(done[0][0].departureTime).toBe('09:30');
+  });
+
+  it('drops a new row that never had a place — it loses nothing', () => {
+    const { fixture, el, done } = render([newStop(ABQ, 0, 5)]);
+    el.querySelector<HTMLButtonElement>('button.add')!.click();
+    fixture.detectChanges();
+    expect(el.querySelectorAll('.stop-row')).toHaveLength(2);
+    clickDone(el);
+    expect(done[0].map((s) => s.place?.name)).toEqual([ABQ.name]);
+  });
+});

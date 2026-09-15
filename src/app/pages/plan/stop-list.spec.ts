@@ -284,4 +284,18 @@ describe('StopList (one delete per row)', () => {
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).querySelector('button.clear')).not.toBeNull();
   });
+
+  it('still lets the planner origin be emptied by typing — only stop rows keep their place', () => {
+    const fixture = TestBed.createComponent(PlaceField);
+    fixture.componentRef.setInput('kind', 'origin');
+    fixture.componentRef.setInput('place', HARRIS);
+    fixture.detectChanges();
+    const input = (fixture.nativeElement as HTMLElement).querySelector('input')!;
+    input.value = 'Kett';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    // The planner blocks Get briefing on an empty endpoint; a stale one would plan the wrong trip.
+    expect(fixture.componentInstance.place()).toBeNull();
+    expect(input.value).toBe('Kett');
+  });
 });

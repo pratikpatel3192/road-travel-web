@@ -163,7 +163,10 @@ export class StopsEditor {
   readonly units = input<'imperial' | 'metric'>('imperial');
   readonly selectedDay = input<number | null>(null);
 
-  /** The complete stops on Done — rows still without a place are left behind. */
+  /**
+   * The stops on Done. Only a row that never had a place is left behind (an empty "Add stop" row
+   * loses nothing); a stop being retyped keeps its place until a new one is picked.
+   */
   readonly done = output<StopDraft[]>();
   readonly selectedDayChange = output<number>();
 

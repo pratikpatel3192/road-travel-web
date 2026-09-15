@@ -34,6 +34,7 @@ import { type DwellMinutes, MAX_STOPS, type StopDraft, newStop } from './waypoin
             [place]="s.place"
             [near]="near()"
             [clearable]="false"
+            [keepPlaceUntilPicked]="true"
             (placeChange)="setPlace(i, $event)"
           />
           <button
