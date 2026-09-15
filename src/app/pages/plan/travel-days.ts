@@ -13,6 +13,7 @@ import {
   formatDuration,
   severityOrFallback,
 } from './severity';
+import { DEFAULT_STOP_DEPARTURE, formatClock } from './stops-summary';
 import { formatNights } from './waypoints';
 
 /**
@@ -332,14 +333,16 @@ export class TravelDays {
   }
 
   /**
-   * "leaves 08:00" / "sometime that day" — the null case is spelled out rather than left blank,
-   * because a blank reads as a field nobody filled in instead of the answer it actually is.
+   * "leaves 9:30 AM". A day that leaves from an overnight stop with no chosen time says the
+   * server's 08:00 — the hour it is planned at — because the stop's chip in the editor says so too,
+   * and "sometime that day" beneath "2 nights · 8 AM" would be the same stop described two ways.
+   *
+   * The first day's time is the trip's own departure field; blank there is still spelled out
+   * rather than left empty, since no default applies to it.
    */
   leaves(leg: DerivedLeg<PlaceValue>): string {
-    const time = leg.departureTime;
-    if (!time) return 'sometime that day';
-    // Wire times may carry seconds (`HH:MM:SS`); nobody reads an itinerary to the second.
-    return `leaves ${time.slice(0, 5)}`;
+    const time = leg.departureTime ?? (leg.ordinal > 0 ? DEFAULT_STOP_DEPARTURE : null);
+    return time ? `leaves ${formatClock(time)}` : 'sometime that day';
   }
 
   via(leg: DerivedLeg<PlaceValue>): string {

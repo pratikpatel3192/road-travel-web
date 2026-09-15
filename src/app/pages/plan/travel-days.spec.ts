@@ -86,11 +86,25 @@ describe('TravelDays', () => {
     expect(el.textContent).not.toMatch(/\d{4}/);
   });
 
-  it('spells out an unanswered departure time instead of leaving a blank', () => {
+  it('says the 8 AM a day leaves an overnight stop at when nobody chose a time', () => {
     const el = render(dated('2026-10-01'));
     const leaves = [...el.querySelectorAll('.leaves')].map((n) => n.textContent?.trim());
-    expect(leaves[0]).toBe('leaves 08:00'); // the trip's own departure
-    expect(leaves[1]).toBe('sometime that day'); // nobody said when they leave Albuquerque
+    expect(leaves[0]).toBe('leaves 8 AM'); // the trip's own departure
+    // Nobody said when they leave Albuquerque, so the server plans it at 08:00 — and the stop's
+    // chip says "8 AM". "sometime that day" here would describe the same morning two ways.
+    expect(leaves[1]).toBe('leaves 8 AM');
+  });
+
+  it('still spells out a first day with no departure time rather than inventing one', () => {
+    const legs = deriveLegs<PlaceValue>({
+      origin: DALLAS,
+      destination: LA,
+      stops: [{ place: ABQ, nights: 1, departureTime: null }],
+      departureDate: '2026-10-01',
+      departureTime: null,
+    });
+    const leaves = [...render(legs).querySelectorAll('.leaves')].map((n) => n.textContent?.trim());
+    expect(leaves).toEqual(['sometime that day', 'leaves 8 AM']);
   });
 
   it('says nothing about weather until the trip has actually been planned', () => {
@@ -117,7 +131,7 @@ describe('TravelDays', () => {
     });
     const el = render(legs);
     expect(el.querySelectorAll('.day')[0].textContent).toContain('via Amarillo, TX');
-    expect(el.querySelectorAll('.day')[1].textContent).toContain('leaves 09:30');
+    expect(el.querySelectorAll('.day')[1].textContent).toContain('leaves 9:30 AM');
   });
 });
 

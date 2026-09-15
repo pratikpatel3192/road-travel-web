@@ -93,6 +93,8 @@ describe('StopList (F-006 stop editor)', () => {
     // passing through, so a row asked the same question twice in two shapes.
     const fixture = render([newStop(HARRIS)]);
     const el = fixture.nativeElement as HTMLElement;
+    el.querySelector<HTMLButtonElement>('button.stay-chip')!.click();
+    fixture.detectChanges();
     const options = [...el.querySelectorAll('select option')].map((o) => o.textContent?.trim());
     expect(options.slice(0, 5)).toEqual(['Pass through', '15 min', '30 min', '45 min', '60 min']);
     expect(options).toContain('1 night');
@@ -124,15 +126,24 @@ describe('StopList (overnight stops)', () => {
   const dwell = (el: HTMLElement) => el.querySelector('.dwell select');
   const departAt = (el: HTMLElement) =>
     el.querySelector<HTMLInputElement>('input[aria-label="Departure time from stop 1"]');
+  const openStay = (fixture: ReturnType<typeof render>) => {
+    (fixture.nativeElement as HTMLElement)
+      .querySelector<HTMLButtonElement>('button.stay-chip')!
+      .click();
+    fixture.detectChanges();
+  };
 
   it('asks how long a pass-through lasts, and says nothing about departure', () => {
-    const el = render([newStop(HARRIS, 30)]).nativeElement as HTMLElement;
+    const fixture = render([newStop(HARRIS, 30)]);
+    openStay(fixture);
+    const el = fixture.nativeElement as HTMLElement;
     expect(dwell(el)).not.toBeNull();
     expect(departAt(el)).toBeNull();
   });
 
   it('raises the departure-time question only once the stop has a night', () => {
     const fixture = render([newStop(HARRIS, 30)]);
+    openStay(fixture);
     const el = fixture.nativeElement as HTMLElement;
     expect(departAt(el)).toBeNull();
     fixture.componentInstance.setStay(0, 'n2');
@@ -166,9 +177,73 @@ describe('StopList (overnight stops)', () => {
     expect(fixture.componentInstance.stops()[0].dwellMinutes).toBe(0);
   });
 
-  it('keeps a blank departure time as null — "sometime that day" is the honest answer', () => {
+  it('keeps a cleared departure time as null, so the server default applies and nothing is sent', () => {
     const fixture = render([newStop(HARRIS, 0, 1, '09:30')]);
     fixture.componentInstance.setDepartureTime(0, '');
     expect(fixture.componentInstance.stops()[0].departureTime).toBeNull();
+  });
+});
+
+/**
+ * A row shows its stay as ONE chip and edits it on tap. Side by side, a duration picker and a time
+ * input truncated the time to "An…" on a phone and made every stop two controls tall.
+ */
+describe('StopList (stay chip)', () => {
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [StopList],
+      providers: [{ provide: GeocodeService, useValue: { search: async () => [] } }],
+    }).compileComponents();
+  });
+
+  function render(stops: StopDraft[]) {
+    const fixture = TestBed.createComponent(StopList);
+    fixture.componentRef.setInput('stops', stops);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  const chips = (el: HTMLElement) =>
+    [...el.querySelectorAll<HTMLButtonElement>('button.stay-chip')].map((c) =>
+      c.textContent?.trim(),
+    );
+
+  it('summarises each stay on its row, with no picker on screen until asked', () => {
+    const el = render([
+      newStop(HARRIS),
+      newStop(KETTLEMAN, 30),
+      newStop(HARRIS, 0, 2),
+      newStop(KETTLEMAN, 0, 1, '09:30'),
+    ]).nativeElement as HTMLElement;
+    expect(chips(el)).toEqual(['Pass', '30 min', '2 nights · 8 AM', '1 night · 9:30 AM']);
+    expect(el.querySelector('select')).toBeNull();
+    expect(el.querySelector('input[type="time"]')).toBeNull();
+  });
+
+  it('opens one stay at a time, and the chip follows the edit', () => {
+    const fixture = render([newStop(HARRIS), newStop(KETTLEMAN)]);
+    const el = fixture.nativeElement as HTMLElement;
+    const buttons = () => el.querySelectorAll<HTMLButtonElement>('button.stay-chip');
+    buttons()[0].click();
+    fixture.detectChanges();
+    buttons()[1].click();
+    fixture.detectChanges();
+    expect(el.querySelectorAll('.dwell select')).toHaveLength(1);
+    expect(buttons()[1].getAttribute('aria-expanded')).toBe('true');
+
+    fixture.componentInstance.setStay(1, 'n2');
+    fixture.detectChanges();
+    expect(chips(el)[1]).toBe('2 nights · 8 AM');
+  });
+
+  it('shows the 8 AM default in the time input without storing it', () => {
+    const fixture = render([newStop(HARRIS, 0, 2)]);
+    const el = fixture.nativeElement as HTMLElement;
+    el.querySelector<HTMLButtonElement>('button.stay-chip')!.click();
+    fixture.detectChanges();
+    // Stored as null so the waypoint goes out without `departure_time` and the server's default
+    // applies — the label and the plan cannot then disagree.
+    expect(fixture.componentInstance.stops()[0].departureTime).toBeNull();
+    expect(el.querySelector('.default')?.textContent).toContain('8 AM');
   });
 });

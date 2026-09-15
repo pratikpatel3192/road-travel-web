@@ -40,7 +40,8 @@ export interface StopDraft {
   dwellMinutes: DwellMinutes;
   /** Nights spent here. 0 is a pass-through; 1+ ends a travel day and starts the next one. */
   nights: number;
-  /** `HH:MM` set off time for the morning after the stay; null = "sometime that day". */
+  /** `HH:MM` set off time for the morning after the stay; null = not chosen, so not sent (the server
+   *  default, 08:00, applies). */
   departureTime: string | null;
 }
 
