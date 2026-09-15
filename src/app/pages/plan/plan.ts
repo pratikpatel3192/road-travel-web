@@ -1467,10 +1467,10 @@ export class Plan implements OnInit {
   /**
    * Where the forecast stops and history begins.
    *
-   * Both now live in `core/forecast-horizon`, because the itinerary screen asks the same question
-   * of every leg of a month-long trip and the same date must not be a forecast on one screen and
-   * history on the other. Re-exported as statics so the existing call sites and specs are
-   * unchanged.
+   * Both now live in `core/forecast-horizon`, because the per-day travel list and the trip briefing
+   * ask the same question of every day of a month-long trip and the same date must not be a
+   * forecast in one place and history in another. Re-exported as statics so the existing call
+   * sites and specs are unchanged.
    *
    * The picker is open-ended again: Phase 0 capped it because a later date produced a trip whose
    * every point showed the last available forecast hour as that day's weather, and that is no

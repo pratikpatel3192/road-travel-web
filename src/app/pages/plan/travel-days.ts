@@ -18,8 +18,8 @@ import { formatNights } from './waypoints';
 /**
  * The travel days the stops above add up to, each carrying ITS OWN forecast.
  *
- * The dates are read-only on purpose. Every other list of days in the product is editable — the
- * saved trip's itinerary screen lets you re-date a leg — but here the days are a RESULT: the
+ * The dates are read-only on purpose, and this is the only list of a trip's days in the product (the
+ * separate day-by-day leg editor that once sat behind My Trips is gone). The days are a RESULT: the
  * traveller said "three nights in Albuquerque", and this is what that means for when they drive.
  * Letting a date be typed here would make the two statements able to contradict each other, and the
  * stops are the one the traveller actually meant.

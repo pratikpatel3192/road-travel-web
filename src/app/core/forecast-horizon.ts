@@ -2,9 +2,9 @@
  * Where the forecast stops and history begins.
  *
  * Mirrors the server's `services/tiers.py` and iOS's `ForecastHorizon`. It lives in `core/` rather
- * than on the planner because two screens now ask the question — the planner, for one departure,
- * and the itinerary, for every leg of a month — and the same date must not be a forecast on one
- * screen and history on the other.
+ * than on the planner because more than one surface asks the question — the departure picker, the
+ * per-day travel list and the whole-trip briefing — and the same date must not be a forecast in one
+ * place and history in another.
  */
 
 /** One constant, quoted everywhere. A 10 repeated in four places is a 10 that drifts. */
@@ -23,18 +23,6 @@ const asDay = (d: Date): number => Date.UTC(d.getFullYear(), d.getMonth(), d.get
 export function tierFor(departure: Date, now = new Date()): Tier {
   const last = new Date(now.getTime() + FORECAST_HORIZON_DAYS * 86_400_000);
   return asDay(departure) <= asDay(last) ? 'forecast' : 'outlook';
-}
-
-/**
- * Same question for a wire date (`YYYY-MM-DD`), which is what a leg carries.
- *
- * Parsed as a LOCAL day rather than through `new Date('2026-10-03')` — that spelling is read as
- * UTC midnight, so west of Greenwich it lands on the 2nd and a leg can change tier by a day for
- * no reason the traveller could see.
- */
-export function tierForDay(isoDay: string, now = new Date()): Tier | null {
-  const parsed = parseIsoDay(isoDay);
-  return parsed ? tierFor(parsed, now) : null;
 }
 
 /** `YYYY-MM-DD` → a Date at local midnight. `null` for anything that is not a calendar day. */

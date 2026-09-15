@@ -41,17 +41,19 @@ import { savedTripSubtext } from './trip-subtext';
                 }
               </span>
               @if (t.distance_meters) {
-                <span class="sub">{{ dist(t.distance_meters) }}</span>
+                <span class="sub dist">{{ dist(t.distance_meters) }}</span>
               }
             </button>
-            <a
-              class="plan-days"
-              [routerLink]="['/saved', t.id]"
-              title="Plan this trip day by day"
-              aria-label="Plan this trip day by day"
-              >Days</a
+            <button
+              class="del"
+              (click)="remove(t.id)"
+              title="Delete trip"
+              [attr.aria-label]="
+                'Delete trip ' + short(t.origin_name) + ' to ' + short(t.destination_name)
+              "
             >
-            <button class="del" (click)="remove(t.id)" aria-label="Delete saved trip">✕</button>
+              ✕
+            </button>
           </div>
         }
       } @else if (trips.loading()) {
@@ -92,28 +94,37 @@ import { savedTripSubtext } from './trip-subtext';
         font-size: 22px;
         margin: 0;
       }
+      /* One card per trip: the trip itself (tap to reopen it in the planner) and a delete control.
+         The delete sits INSIDE the card, vertically centred, rather than as a second full-height
+         box beside it — on a phone a trip with a subtext wraps to two or three lines, and a
+         stretched sibling turned into a tall pill that read as a separate thing. */
       .row {
         display: flex;
-        align-items: stretch;
-        gap: 8px;
-        margin-bottom: 8px;
-      }
-      .open {
-        flex: 1;
-        display: flex;
         align-items: center;
-        gap: 10px;
-        padding: 12px 14px;
+        gap: 4px;
+        margin-bottom: 8px;
+        padding-right: 6px;
         border: 1px solid var(--border);
         border-radius: var(--radius);
         background: var(--surface);
+      }
+      .row:has(.open:hover) {
+        border-color: var(--accent);
+      }
+      .open {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 6px 12px 14px;
+        border: 0;
+        border-radius: var(--radius);
+        background: transparent;
         color: var(--text);
         font: inherit;
         text-align: left;
         cursor: pointer;
-      }
-      .open:hover {
-        border-color: var(--accent);
       }
       .badge {
         flex: 0 0 auto;
@@ -132,38 +143,36 @@ import { savedTripSubtext } from './trip-subtext';
       .endpoints {
         font-weight: 600;
         font-size: 15px;
+        overflow-wrap: anywhere;
       }
       .sub {
         color: var(--muted);
         font-size: 13px;
       }
-      /* The way into the itinerary. On the saved row rather than a screen of its own because a
-         month-long trip IS a saved trip — this is the same object, looked at by day. */
-      .plan-days {
-        padding: 5px 10px;
-        border-radius: 999px;
-        border: 1px solid var(--border);
-        background: var(--surface);
-        color: var(--text-secondary);
-        font-size: 12px;
-        font-weight: 700;
+      .dist {
+        flex: 0 0 auto;
+        white-space: nowrap;
       }
-      .plan-days:hover {
-        text-decoration: none;
-      }
+      /* 44px round target (the global button min-height): comfortably tappable, but quiet —
+         deleting is the rare action here. */
       .del {
         flex: 0 0 auto;
         width: 44px;
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        background: var(--surface);
+        height: 44px;
+        display: grid;
+        place-items: center;
+        padding: 0;
+        border: 0;
+        border-radius: 50%;
+        background: transparent;
         color: var(--muted);
         font-size: 15px;
+        line-height: 1;
         cursor: pointer;
       }
       .del:hover {
         color: var(--sev-severe);
-        border-color: var(--sev-severe);
+        background: var(--surface-2);
       }
       .empty {
         color: var(--muted);
