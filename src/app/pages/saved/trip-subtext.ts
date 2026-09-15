@@ -31,9 +31,9 @@ export function savedTripSubtext(trip: SavedTripModel): string {
  *
  * The nights that make a trip long live on its WAYPOINTS, not on its legs: `TripLegModel` carries a
  * date and no stay, so the server's leg list cannot answer this on its own. It still has the final
- * say on how many days are being driven, though — a trip whose itinerary was built in the leg
- * editor has legs the stop list never knew about, and a trip cannot span fewer days than it has
- * drives.
+ * say on how many days are being driven, though — a trip whose days were added in the old leg
+ * editor (since removed; the server now derives legs from the saved stops) can still carry legs the
+ * stop list never knew about, and a trip cannot span fewer days than it has drives.
  */
 export function savedTripDays(trip: SavedTripModel): number {
   const place = (name: string, latitude?: number | null, longitude?: number | null) => ({

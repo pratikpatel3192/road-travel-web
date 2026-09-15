@@ -47,14 +47,15 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/saved/saved').then((m) => m.Saved),
     canActivate: [realAccountGuard],
   },
-  // A trip's itinerary — its dated travel days. Nested under `saved` on purpose: nginx allowlists
-  // by first path segment (see docker/nginx.conf.template), so a sibling top-level path would 404
-  // on a hard refresh until that regex was changed too.
-  {
-    path: 'saved/:tripId',
-    loadComponent: () => import('./pages/saved/itinerary').then((m) => m.Itinerary),
-    canActivate: [realAccountGuard],
-  },
+  // `/saved/<id>` was a separate day-by-day leg editor. It is gone: the planner is the one place a
+  // trip's days are described (stops with nights, derived dates), and the server derives a saved
+  // trip's legs from what the planner saves. The path redirects so an old bookmark or history entry
+  // lands on My Trips rather than a NotFound. Nothing the server sends links here.
+  { path: 'saved/:tripId', redirectTo: 'saved' },
+  // The leg-upgrade email core sends ("Open the trip") links to `/trips`, which never had a route of
+  // its own. My Trips is where that trip is. Exact-match, and allowlisted in nginx like `app`,
+  // because it only ever arrives from outside.
+  { path: 'trips', redirectTo: 'saved', pathMatch: 'full' },
   // F-007 P1: view-only drives/garage/stats (recording is iOS-only for 3.0.0).
   {
     path: 'driving',

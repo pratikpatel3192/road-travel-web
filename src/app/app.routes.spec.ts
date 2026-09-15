@@ -45,6 +45,21 @@ describe('ADR-0038 routing: landing page at /, planner at /plan', () => {
     expect(callback!.pathMatch).toBe('full');
   });
 
+  it('sends the removed day editor path, /saved/<id>, to My Trips instead of a NotFound', () => {
+    const legacy = byPath('saved/:tripId');
+    expect(legacy).toBeTruthy();
+    expect(legacy!.redirectTo).toBe('saved');
+    // No page of its own any more — the planner is the one place a trip's days are described.
+    expect(legacy!.loadComponent).toBeUndefined();
+  });
+
+  it('lands the leg-upgrade email link, /trips, on My Trips', () => {
+    const trips = byPath('trips');
+    expect(trips).toBeTruthy();
+    expect(trips!.redirectTo).toBe('saved');
+    expect(trips!.pathMatch).toBe('full');
+  });
+
   it('answers an unknown path with a NotFound component, never a redirect to app content', () => {
     const wildcard = byPath('**');
     expect(wildcard).toBeTruthy();
@@ -69,6 +84,7 @@ describe('ADR-0038 routing: landing page at /, planner at /plan', () => {
       'login',
       'settings',
       'saved',
+      'trips',
       'driving',
       'privacy',
       'terms',

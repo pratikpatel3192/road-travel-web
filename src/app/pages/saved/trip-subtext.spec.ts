@@ -68,7 +68,7 @@ describe('My Trips row subtext', () => {
   });
 
   it('takes the server at its word when the itinerary has more days than the stops imply', () => {
-    // Days added in the leg editor are not stops and carry no nights, so the stop-based derivation
+    // Days added in the old (removed) leg editor are not stops and carry no nights, so the stop-based derivation
     // cannot see them — but a trip cannot span fewer days than it has drives.
     const t = trip({ legs: [leg(0), leg(1), leg(2), leg(3)] });
     expect(savedTripDays(t)).toBe(4);
