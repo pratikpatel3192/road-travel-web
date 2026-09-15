@@ -1,4 +1,13 @@
-import { Component, computed, effect, inject, input, model, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  model,
+  signal,
+  untracked,
+} from '@angular/core';
 
 import { type GeoResult, GeocodeService } from '../../core/geocode.service';
 import { IconComponent } from '../../ui/icon';
@@ -36,7 +45,7 @@ export interface PlaceValue {
         autocomplete="off"
         [attr.aria-label]="placeholder()"
       />
-      @if (query()) {
+      @if (clearable() && query()) {
         <button type="button" class="clear" (mousedown)="clear($event)" aria-label="Clear">
           <app-icon name="x" [size]="14" />
         </button>
@@ -181,6 +190,21 @@ export class PlaceField {
   /** 1-based stop number, rendered inside the badge (kind 'stop' only; F-006). */
   readonly index = input<number | null>(null);
   readonly placeholder = input('Search a place');
+  /**
+   * Whether the field offers its own ×. Off on a stop row, whose × removes the stop: two identical
+   * glyphs side by side, one clearing the text and one deleting the stop, is a mis-tap that loses a
+   * stop. A stop's place is changed by typing over it, which needs no clear.
+   */
+  readonly clearable = input(true);
+  /**
+   * Keep the current place while the traveller types, until a suggestion is actually picked.
+   *
+   * On for stop rows, where typing over the name is the way to change a stop. Clearing the place on
+   * the first keystroke meant a half-typed name followed by Done deleted the stop — and its nights
+   * with it, re-dating every later day of the trip. Leaving the field reverts the text to the kept
+   * name, so unpicked text never looks as if it took effect.
+   */
+  readonly keepPlaceUntilPicked = input(false);
   readonly place = model<PlaceValue | null>(null);
   /** Proximity bias for autocomplete — rank suggestions near this point first (e.g. the route). */
   readonly near = input<{ latitude: number; longitude: number } | null>(null);
@@ -196,18 +220,20 @@ export class PlaceField {
   readonly hasPlace = computed(() => !!this.place());
 
   constructor() {
-    // Reflect an externally-set place (prefill / swap) into the visible text. Skips while the user
-    // is typing (then `place` is null) and after a pick (name already equals the query).
+    // Reflect an externally-set place (prefill / swap) into the visible text. Only a PLACE change
+    // does this: tracking the query too would snap a kept place's name back over every keystroke.
     effect(() => {
       const p = this.place();
-      if (p && p.name !== this.query()) this.query.set(p.name);
+      if (p && p.name !== untracked(this.query)) this.query.set(p.name);
     });
   }
 
   onInput(value: string): void {
     this.query.set(value);
     this.open.set(true);
-    if (this.place() && this.place()!.name !== value) this.place.set(null);
+    if (!this.keepPlaceUntilPicked() && this.place() && this.place()!.name !== value) {
+      this.place.set(null);
+    }
     clearTimeout(this.timer);
     if (value.trim().length < 3) {
       this.suggestions.set([]);
@@ -241,7 +267,14 @@ export class PlaceField {
 
   onBlur(): void {
     // Delay so a suggestion click (mousedown) resolves before the menu closes.
-    setTimeout(() => this.open.set(false), 120);
+    setTimeout(() => {
+      this.open.set(false);
+      const kept = this.keepPlaceUntilPicked() ? this.place() : null;
+      if (kept && this.query() !== kept.name) {
+        this.query.set(kept.name);
+        this.suggestions.set([]);
+      }
+    }, 120);
   }
 
   /** Set the field from outside (used by swap / a trip re-opened from My Trips). */

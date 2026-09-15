@@ -21,7 +21,6 @@ import { EntitlementService } from '../../core/entitlement.service';
 import { AccountRequiredError, PaywallError } from '../../core/errors';
 import { FORECAST_HORIZON_DAYS, dayLabel, isoDay, tierFor } from '../../core/forecast-horizon';
 import { GeocodeService } from '../../core/geocode.service';
-import { deriveLegs } from '../../core/itinerary';
 import { PaywallService } from '../../core/paywall.service';
 import { SettingsService } from '../../core/settings.service';
 import { TripsService } from '../../core/trips.service';
@@ -33,9 +32,9 @@ import { PlaceField, type PlaceValue } from './place-field';
 import { BriefingMemory, tripBaselineKey } from './rebrief';
 import { RouteMap } from './route-map';
 import { SEVERITY_FALLBACK, SEVERITY_RANK, formatDuration, severityOrFallback } from './severity';
-import { StopList } from './stop-list';
+import { StopsEditor } from './stops-editor';
+import { StopsSummary, deriveTripDays } from './stops-summary';
 import { Timeline } from './timeline';
-import { TravelDays } from './travel-days';
 import { TripBriefingCard } from './trip-briefing-card';
 import {
   type DwellMinutes,
@@ -48,7 +47,6 @@ import {
   fromWaypoints,
   localTimezone,
   newStop,
-  toItineraryStops,
   toWaypoints,
   waypointsKey,
 } from './waypoints';
@@ -64,7 +62,8 @@ import {
     FormsModule,
     RouterLink,
     PlaceField,
-    StopList,
+    StopsSummary,
+    StopsEditor,
     RouteMap,
     Timeline,
     BriefingCard,
@@ -72,7 +71,6 @@ import {
     AheadBanner,
     ExplorePanel,
     OutlookPanel,
-    TravelDays,
     IconComponent,
   ],
   template: `
@@ -113,12 +111,10 @@ import {
               <app-icon name="arrow-up-down" [size]="14" />
             </button>
           </div>
-          <!-- F-006: up to 3 ordered stops between origin and destination; every edit re-plans. -->
-          <app-stop-list
-            [stops]="stops()"
-            [near]="searchBias()"
-            (stopsChange)="onStopsChange($event)"
-          />
+          <!-- Every stop, however many, is this one line. Listing them here pushed the map off
+               a phone screen at two overnight stops; they are edited in the stops editor. -->
+          <app-stops-summary [stops]="stops()" (edit)="stopsEditorOpen.set(true)" />
+          <div class="divider"></div>
           <app-place-field
             kind="destination"
             placeholder="Destination"
@@ -164,24 +160,6 @@ import {
             {{ loading() ? 'Planning…' : 'Get briefing' }}
           </button>
         </div>
-
-        @if (travelDays().length > 1) {
-          <!-- Derived, never typed: the stops above say this trip takes these days. Shown as soon
-               as a stop has nights, before anything is planned or saved. Once planned, each day
-               also carries ITS OWN forecast, and picking one drives everything below. -->
-          <h3 class="section">Your days</h3>
-          @if (itinerary()) {
-            <p class="days-hint">Pick a day to see its route and weather below.</p>
-          }
-          <app-travel-days
-            [legs]="travelDays()"
-            [days]="itinerary()?.days ?? null"
-            [longDayOrdinals]="itinerary()?.long_day_ordinals ?? []"
-            [units]="settings.units()"
-            [selectedDay]="selectedDay()"
-            (selectedDayChange)="onSelectDay($event)"
-          />
-        }
 
         @if (error()) {
           <p class="error" role="alert">{{ error() }}</p>
@@ -303,6 +281,23 @@ import {
         }
       </section>
 
+      @if (stopsEditorOpen()) {
+        <!-- The per-day list lives here now, beside the stops that produce it. -->
+        <app-stops-editor
+          [stops]="stops()"
+          [origin]="origin()"
+          [destination]="destination()"
+          [departureAt]="departureAt()"
+          [near]="searchBias()"
+          [days]="itinerary()?.days ?? null"
+          [longDayOrdinals]="itinerary()?.long_day_ordinals ?? []"
+          [units]="settings.units()"
+          [selectedDay]="itinerary() ? selectedDay() : null"
+          (selectedDayChange)="onSelectDay($event)"
+          (done)="onStopsEditorDone($event)"
+        />
+      }
+
       <!-- ADR-0026: the dominant map pane fills the remaining viewport. Always mounted — idle it
            shows the live-location home map; after planning, the severity-colored route. -->
       <aside class="map-pane">
@@ -352,25 +347,36 @@ import {
         z-index: 0;
         isolation: isolate;
       }
+      /* A phone reads top to bottom: the trip, then its map, then everything else. The map is one
+         Leaflet instance outside the panel, so rather than move it, the panel dissolves
+         (display: contents) and its children take places in the shell's order around the map.
+         The map's height is fixed, never what the panel leaves over, so no number of stops can
+         squeeze it. */
       @media (max-width: 959px) {
         .shell {
           display: flex;
           flex-direction: column;
           height: auto;
+          padding: 14px 14px 40px;
         }
         .panel {
-          position: static;
-          width: auto;
-          border-radius: 0;
-          box-shadow: none;
-          padding: 14px 14px 40px;
+          display: contents;
+        }
+        .panel > * {
+          order: 2;
+        }
+        .panel > .top,
+        .panel > .inputs,
+        .panel > .favs {
+          order: 0;
         }
         .map-pane {
           position: static;
-          order: -1;
-          height: 42vh;
-          min-height: 260px;
-          border-bottom: 1px solid var(--border);
+          order: 1;
+          height: 46vh;
+          min-height: 300px;
+          margin: 12px -14px 0;
+          border-block: 1px solid var(--border);
         }
       }
       .top {
@@ -542,11 +548,6 @@ import {
         font: 700 13px var(--font-body);
         color: var(--text);
       }
-      .days-hint {
-        margin: -4px 0 8px;
-        font-size: 12px;
-        color: var(--muted);
-      }
       app-ahead-banner,
       app-route-map,
       .beyond-note {
@@ -707,8 +708,9 @@ export class Plan implements OnInit {
    */
   readonly departureAt = signal(this.defaultDeparture());
 
-  /** F-006: the ordered stop rows (max 3). Incomplete rows (no place yet) don't plan. */
+  /** F-006: the ordered stop rows. Incomplete rows (no place yet) don't plan. */
   readonly stops = signal<StopDraft[]>([]);
+  readonly stopsEditorOpen = signal(false);
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
@@ -928,22 +930,14 @@ export class Plan implements OnInit {
    * Empty until both endpoints are picked: a day from an unnamed place to an unnamed place is not
    * something to show anyone.
    */
-  readonly travelDays = computed(() => {
-    const origin = this.origin();
-    const destination = this.destination();
-    if (!origin || !destination) return [];
-    // `datetime-local` is already the user's LOCAL wall clock in `YYYY-MM-DDTHH:MM` — split rather
-    // than round-tripped through Date, which would re-interpret it in UTC and shift the day west
-    // of Greenwich. An empty field derives undated days rather than today's.
-    const [day, time] = this.departureAt().split('T');
-    return deriveLegs<PlaceValue>({
-      origin,
-      destination,
-      stops: toItineraryStops(toWaypoints(this.stops())),
-      departureDate: day || null,
-      departureTime: time || null,
-    });
-  });
+  readonly travelDays = computed(() =>
+    deriveTripDays({
+      origin: this.origin(),
+      destination: this.destination(),
+      stops: this.stops(),
+      departureAt: this.departureAt(),
+    }),
+  );
 
   /** Anything planned at all — a one-day plan or a multi-day itinerary. */
   readonly planned = computed(() => !!this.plan() || !!this.itinerary());
@@ -1250,6 +1244,16 @@ export class Plan implements OnInit {
     if (waypointsKey(toWaypoints(next)) === this.plannedWaypointsKey) return;
     clearTimeout(this.stopsTimer);
     this.stopsTimer = setTimeout(() => void this.replan({ refreshBriefing: true }), 400);
+  }
+
+  /**
+   * Done in the stops editor: the whole set of edits arrives at once and goes through the same
+   * path a single edit always has, so it re-plans (and then auto-saves) only if the planned
+   * waypoints actually changed — opening the editor to look is not an edit.
+   */
+  onStopsEditorDone(next: StopDraft[]): void {
+    this.stopsEditorOpen.set(false);
+    this.onStopsChange(next);
   }
 
   /**
