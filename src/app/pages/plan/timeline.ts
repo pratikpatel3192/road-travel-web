@@ -6,6 +6,7 @@ import {
   SEVERITY_COLOR,
   SEVERITY_FALLBACK,
   UNKNOWN_COLOR,
+  UNKNOWN_LABEL,
   type Severity,
   formatTemp,
   formatWind,
@@ -51,10 +52,6 @@ import { formatDwell } from './waypoints';
             <div class="mi">{{ mi(s.distance_from_start_meters) }} mi</div>
             <div class="eta">{{ time(s.eta) }}</div>
           }
-          @if (!s.weather && s.beyond_forecast) {
-            <!-- Past the forecast horizon. An empty cell reads as a glitch; this reads as an answer. -->
-            <div class="cond no-forecast">No forecast yet</div>
-          }
           @if (s.weather; as w) {
             <div class="cond-row">
               <span class="wx" [title]="w.condition_text"><app-icon [name]="icon(w.condition_symbol, w.condition_text)" [size]="17" /></span>
@@ -66,8 +63,13 @@ import { formatDwell } from './waypoints';
               <span><app-icon name="wind" [size]="13" /> {{ wind(w.wind_speed_kph) }}</span>
             </div>
           } @else {
-            <div class="cond-row"><span class="temp muted">—</span></div>
-            <div class="cond muted">no data</div>
+            <!-- No weather for this sample. A beyond-forecast cell used to stack "No forecast yet"
+                 over a "—" and a "no data": three placeholders for one fact, on a card shaped like a
+                 reading with nothing in it, which looks like a glitch. Now one plain answer — and
+                 the two reasons stay different answers: past the horizon nobody HAS a forecast yet
+                 (UNKNOWN_LABEL, as the briefings say), while a failed fetch inside the horizon must
+                 not claim that; it says what the map's notice says. -->
+            <div class="cond no-forecast">{{ s.beyond_forecast ? unknownLabel : 'Weather unavailable' }}</div>
           }
         </div>
       }
@@ -244,6 +246,7 @@ export class Timeline {
   /** Selected sample index, shared with the map (null = none). */
   readonly selected = input<number | null>(null);
   readonly selectedChange = output<number | null>();
+  readonly unknownLabel = UNKNOWN_LABEL;
 
   private readonly host = inject(ElementRef<HTMLElement>);
 

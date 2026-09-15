@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import type { PlanTripResponse, RouteSampleModel, WeatherSnapshotModel } from '@road-travel/sdk';
 
-import { SEVERITY_COLOR, SEVERITY_LEVELS, UNKNOWN_COLOR, type Severity } from './severity';
+import { SEVERITY_COLOR, SEVERITY_LEVELS, UNKNOWN_COLOR, UNKNOWN_LABEL, type Severity } from './severity';
 import { Timeline } from './timeline';
 
 const weather = (over: Partial<WeatherSnapshotModel> = {}): WeatherSnapshotModel => ({
@@ -159,7 +159,21 @@ describe('Timeline — past the forecast horizon', () => {
     expect(text).toContain('No forecast yet');
   });
 
-  it('leaves a failed fetch blank rather than claiming the forecast does not exist', () => {
+  it('gives a no-weather card exactly one label, the shared UNKNOWN_LABEL — never a blank or a 0°', () => {
+    const beyond = plan();
+    beyond.samples = [sample(0, { weather: null, beyond_forecast: true })];
+    const fixture = TestBed.createComponent(Timeline);
+    fixture.componentRef.setInput('plan', beyond);
+    fixture.detectChanges();
+
+    const cell = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.cell')!;
+    expect(cell.querySelector('.no-forecast')?.textContent?.trim()).toBe(UNKNOWN_LABEL);
+    expect(cell.querySelectorAll('.cond').length).toBe(1);
+    expect(cell.querySelector('.temp')).toBeNull();
+    expect(cell.textContent).not.toMatch(/\d°|no data|—/);
+  });
+
+  it('labels a failed fetch without claiming the forecast does not exist', () => {
     // Two different silences: "we could not get it" and "nobody has it yet". Only the second is
     // something a driver can plan around, and only it earns the sentence.
     const failed = plan();
@@ -170,5 +184,8 @@ describe('Timeline — past the forecast horizon', () => {
     fixture.detectChanges();
 
     expect((fixture.nativeElement as HTMLElement).textContent ?? '').not.toContain('No forecast yet');
+    // ...but it is not left blank either.
+    const cells = (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.cell');
+    expect(cells[1].querySelector('.no-forecast')?.textContent?.trim()).toBe('Weather unavailable');
   });
 });

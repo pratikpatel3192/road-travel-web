@@ -58,6 +58,7 @@
   --cond-heavy: var(--accent-600);
   --route-line: #c67139;
   --route-casing: #ffffff;
+  --route-unknown: var(--neutral-600); /* no-forecast stretch: 4.3:1 on the white casing */
   --origin-dot: var(--accent-2);
   --destination-dot: #c67139;
 
@@ -123,6 +124,7 @@
   --cond-heavy: var(--accent-800);
   --route-line: #f6a06b;
   --route-casing: #2e2b25;
+  --route-unknown: var(--neutral-400); /* 7.0:1 on the charcoal casing */
   --origin-dot: var(--accent-2-400);
   --destination-dot: #f6a06b;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
@@ -165,6 +167,7 @@
     --cond-heavy: var(--accent-800);
     --route-line: #f6a06b;
     --route-casing: #2e2b25;
+    --route-unknown: var(--neutral-400);
     --origin-dot: var(--accent-2-400);
     --destination-dot: #f6a06b;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
@@ -284,6 +287,11 @@ button { font-family: inherit; }
 .rt-sev-high { stroke: var(--sev-high); }
 .rt-sev-severe { stroke: var(--accent-800); }
 .rt-sev-extreme { stroke: var(--sev-extreme); }
+/* No forecast reaches this stretch. It had NO class before, so it fell back to the stroke attribute
+   (neutral-500: 2.9:1 on the light casing, and not theme-live) — on satellite imagery a faint solid
+   line that read as a layer that failed to load. Now a darker/lighter neutral per theme, dashed by
+   route-map.ts ("tentative", not "broken"). The casing under it is what separates it from imagery. */
+.rt-sev-unknown { stroke: var(--route-unknown); }
 .rt-route-dim { stroke: var(--neutral-400); opacity: 0.45; }
 
 /* Map weather chip (Leaflet divIcon — renders outside components): white pill with the
