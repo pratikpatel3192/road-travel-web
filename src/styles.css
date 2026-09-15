@@ -377,6 +377,11 @@ button { font-family: inherit; }
   transition: background 150ms ease-out;
 }
 .leaflet-control-zoom.leaflet-bar a:hover { background: var(--surface-2); }
+/* route-map.ts puts the zoom stack top-right, where nothing on any layout covers it — but that corner
+   also holds the layer-chip row (.layers: top 10px, ~35px tall). Drop the stack below the row with the
+   same 10px gap Leaflet leaves around its own controls. Its default top-left sat under the desktop
+   planner's trip panel. */
+.leaflet-top.leaflet-right .leaflet-control-zoom { margin-top: 55px; }
 .leaflet-container .leaflet-control-attribution {
   background: rgba(255, 255, 255, 0.75);
   color: var(--neutral-600);
@@ -486,5 +491,11 @@ a:hover { color: var(--link-hover); text-decoration: underline; text-underline-o
   .leaflet-control-zoom-in::after,
   .leaflet-control-zoom-out::after {
     inset: -7px;
+  }
+  /* Those overhangs meet between the layer-chip row and the zoom stack under it: 3px more drop keeps
+     the chips' target (-6px) and zoom-in's (-7px) from overlapping, so a tap near the seam is never
+     ambiguous. */
+  .leaflet-top.leaflet-right .leaflet-control-zoom {
+    margin-top: 58px;
   }
 }

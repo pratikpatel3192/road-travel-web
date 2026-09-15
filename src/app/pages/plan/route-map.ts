@@ -278,6 +278,15 @@ export class RouteMap implements OnDestroy {
   /** The shown day's own `beyond_forecast` — such a day has no plan, so no samples to read it from. */
   readonly dayBeyondForecast = input(false);
   readonly notice = computed(() => mapWeatherNotice(this.plan(), this.day(), this.dayBeyondForecast()));
+  /**
+   * Whether the mouse wheel / trackpad scroll zooms the map. The host page decides, because only it
+   * knows whether the map is a full-height pane (the desktop planner, where a wheel over the map
+   * means "zoom" as on any web map) or a block inside a scrolling page (the stacked phone layout,
+   * where capturing the wheel would trap the page's scroll under the map). The expanded map is
+   * always full-screen, so it zooms on the wheel regardless. Touch pinch-zoom is unaffected either way.
+   */
+  readonly wheelZoom = input(false);
+  private readonly wheelZoomOn = computed(() => this.wheelZoom() || this.expanded());
   private readonly mapEl = viewChild.required<ElementRef<HTMLDivElement>>('mapEl');
 
   readonly settings = inject(SettingsService);
@@ -325,6 +334,12 @@ export class RouteMap implements OnDestroy {
       this.settings.mapStyle();
       if (this.map) this.applyLayers();
     });
+    effect(() => {
+      const on = this.wheelZoomOn();
+      if (!this.map) return; // render() reads the current value when it creates the map
+      if (on) this.map.scrollWheelZoom.enable();
+      else this.map.scrollWheelZoom.disable();
+    });
     // On expand/collapse the container resizes; the ResizeObserver refits, but nudge it too in case
     // the observer is coalesced.
     effect(() => {
@@ -342,7 +357,13 @@ export class RouteMap implements OnDestroy {
 
   private render(el: HTMLElement, plan: PlanTripResponse | null): void {
     if (!this.map) {
-      this.map = L.map(el, { scrollWheelZoom: false }).setView([37, -120], 6);
+      // Zoom buttons go top-right, UNDER the layer chips (styles.css offsets them). Leaflet's default
+      // top-left put them under the desktop planner's floating trip panel, which covers that corner
+      // completely — and with wheel zoom off too, a desktop user had no way to zoom at all. The
+      // bottom-right is no better on a phone: the no-forecast notice is bottom-centre and nearly
+      // full-width there. The top-right is covered by nothing on any layout, expanded or not.
+      this.map = L.map(el, { zoomControl: false, scrollWheelZoom: this.wheelZoomOn() }).setView([37, -120], 6);
+      L.control.zoom({ position: 'topright' }).addTo(this.map);
       this.applyLayers();
       this.resizeObserver = new ResizeObserver(() => this.fit());
       this.resizeObserver.observe(el);

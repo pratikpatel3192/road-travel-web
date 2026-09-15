@@ -1,4 +1,4 @@
-import { Component, type OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, type OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import type {
@@ -306,6 +306,7 @@ import {
           [day]="mapDay()"
           [dayBeyondForecast]="shownDay()?.beyond_forecast ?? false"
           [userLocation]="userLocation()"
+          [wheelZoom]="desktopLayout()"
           [selected]="selected()"
           (selectedChange)="selected.set($event)"
           (stopRequest)="addStopFromMap($event)"
@@ -1013,6 +1014,25 @@ export class Plan implements OnInit {
 
   /** Session-only geolocation fix for the home map + origin prefill (ADR-0026); never persisted. */
   readonly userLocation = signal<{ latitude: number; longitude: number } | null>(null);
+
+  /**
+   * True while the shell is the desktop one-canvas layout: the map IS the page body (only the short
+   * footer lies below, and the wheel still reaches it over the header or the trip panel), so a wheel
+   * over the map can zoom it. Below the breakpoint the map is one block in a long scrolling page and
+   * must let the wheel scroll past. MUST match the `@media (max-width: 959px)` stacking rule in this
+   * component's styles.
+   */
+  readonly desktopLayout = signal(false);
+
+  constructor() {
+    // No matchMedia (the unit-test DOM): stay on the safe side — the wheel scrolls the page.
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const query = window.matchMedia('(min-width: 960px)');
+    const sync = () => this.desktopLayout.set(query.matches);
+    sync();
+    query.addEventListener('change', sync);
+    inject(DestroyRef).onDestroy(() => query.removeEventListener('change', sync));
+  }
 
   ngOnInit(): void {
     // Know the entitlement/usage up front so gating is correct (server-authoritative; F-002).
