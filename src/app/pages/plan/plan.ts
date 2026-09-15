@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import type {
   BriefingFactsModel,
+  SavedTripModel,
   BriefingResponse,
   DaySnapshotModel,
   ItineraryBriefingResponse,
@@ -18,24 +19,32 @@ import { AnalyticsService } from '../../core/analytics.service';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { EntitlementService } from '../../core/entitlement.service';
-import { AccountRequiredError, PaywallError } from '../../core/errors';
+import { AccountRequiredError, ApiError, PaywallError } from '../../core/errors';
 import { FORECAST_HORIZON_DAYS, dayLabel, isoDay, tierFor } from '../../core/forecast-horizon';
 import { GeocodeService } from '../../core/geocode.service';
 import { PaywallService } from '../../core/paywall.service';
 import { SettingsService } from '../../core/settings.service';
-import { TripsService } from '../../core/trips.service';
+import { type StagedTrip, TripsService } from '../../core/trips.service';
 import { IconComponent } from '../../ui/icon';
 import { AheadBanner } from './ahead-banner';
 import { BriefingCard } from './briefing-card';
 import { ExplorePanel } from './explore-panel';
 import { PlaceField, type PlaceValue } from './place-field';
-import { BriefingMemory, tripBaselineKey } from './rebrief';
+import { BriefingMemory, tripBaselineKey, tripIdentityKey } from './rebrief';
 import { RouteMap } from './route-map';
+import { SnapshotLine } from './snapshot-line';
 import { SEVERITY_FALLBACK, SEVERITY_RANK, formatDuration, severityOrFallback } from './severity';
 import { StopsEditor } from './stops-editor';
 import { StopsSummary, deriveTripDays } from './stops-summary';
 import { Timeline } from './timeline';
 import { TripBriefingCard } from './trip-briefing-card';
+import {
+  type DecodedSnapshot,
+  type SnapshotSource,
+  buildSnapshotRequest,
+  decodeTripSnapshot,
+  isSnapshotExpired,
+} from './trip-snapshot';
 import {
   type DwellMinutes,
   MAX_STOPS,
@@ -71,6 +80,7 @@ import {
     AheadBanner,
     ExplorePanel,
     OutlookPanel,
+    SnapshotLine,
     IconComponent,
   ],
   template: `
@@ -157,12 +167,23 @@ import {
             </select>
           </label>
           <button class="go" (click)="submit()" [disabled]="loading() || !canSubmit()">
-            {{ loading() ? 'Planning…' : 'Get briefing' }}
+            {{ loading() ? (opening() ? 'Opening…' : 'Planning…') : 'Get briefing' }}
           </button>
         </div>
 
         @if (error()) {
           <p class="error" role="alert">{{ error() }}</p>
+        }
+
+        @if (snapshotShown(); as snap) {
+          <!-- The result below is the trip as it was last planned, not a fresh one. Said first,
+               above everything it dates, and gone the moment a fresh result replaces it. -->
+          <app-snapshot-line
+            [plannedAt]="snap.plannedAt"
+            [departureAt]="snap.departureAt"
+            [busy]="loading() || replanning()"
+            (refresh)="refresh()"
+          />
         }
 
         @if (outlook(); as o) {
@@ -807,6 +828,20 @@ export class Plan implements OnInit {
    * because the baseline belongs to that trip, not to whatever is in the form now.
    */
   private savedTrip: { id: string; endpointKey: string } | null = null;
+
+  /**
+   * Set while the result on screen came from the trip's stored snapshot rather than from planning
+   * it just now — the dated line reads it. Cleared by any fresh result.
+   */
+  readonly snapshotShown = signal<{ plannedAt: string; departureAt: string } | null>(null);
+  /** The one snapshot GET is in flight — the button says Opening, not Planning, because it isn't. */
+  readonly opening = signal(false);
+  /**
+   * The server's own bodies for the result on screen, exactly as they came back — the source of the
+   * snapshot PUT. Kept apart from the display signals because what is DISPLAYED can differ: a
+   * briefing opened from a snapshot is shown without its old diff, but stored with it.
+   */
+  private shownResult: SnapshotSource | null = null;
   private scrubTimer: ReturnType<typeof setTimeout> | undefined;
   // F-006: what the shown plan/briefing were generated with — trip identity now includes the
   // waypoints + dwell (ADR-0031 §3), so stop edits know when to re-plan + refresh the briefing.
@@ -1055,18 +1090,13 @@ export class Plan implements OnInit {
             }),
           }
         : null;
-      // A saved trip keeps the departure it was planned with, and that moment can already have
-      // passed. Planning it verbatim forecast a drive that left last night: the forecast only starts
-      // at the current hour, so every point matched nothing and the day read "past the 10-day
-      // forecast" on a trip the traveller was looking at today. A departure that has gone is
-      // replaced with the same default a fresh plan gets.
-      if (staged.departureAt) {
-        const saved = new Date(staged.departureAt);
-        this.departureAt.set(
-          saved.getTime() > Date.now() ? this.toLocalInput(saved) : this.defaultDeparture(),
-        );
+      // A trip opened from My Trips shows what it was last planned as — one GET, no planning.
+      // Only a real account has a stored trip to read; anything else plans as it always did.
+      if (staged.savedTripId && this.auth.hasRealAccount()) {
+        void this.openSaved(staged, staged.savedTripId);
+        return;
       }
-      void this.submit();
+      void this.planStaged(staged);
       return;
     }
     // ADR-0038: the landing-page form hands off as /plan?from=…&to=…. Absent params this is a no-op,
@@ -1080,6 +1110,124 @@ export class Plan implements OnInit {
       return;
     }
     this.locate();
+  }
+
+  /** Plan a staged trip the ordinary way — fields are already filled. */
+  private planStaged(staged: StagedTrip): Promise<void> {
+    // A saved trip keeps the departure it was planned with, and that moment can already have
+    // passed. Planning it verbatim forecast a drive that left last night: the forecast only starts
+    // at the current hour, so every point matched nothing and the day read "past the 10-day
+    // forecast" on a trip the traveller was looking at today. A departure that has gone is
+    // replaced with the same default a fresh plan gets.
+    if (staged.departureAt) {
+      const saved = new Date(staged.departureAt);
+      this.departureAt.set(
+        saved.getTime() > Date.now() ? this.toLocalInput(saved) : this.defaultDeparture(),
+      );
+    }
+    return this.submit();
+  }
+
+  /**
+   * Open a trip from My Trips: render its stored result, and plan it only when there is nothing
+   * usable to render.
+   *
+   * Re-planning on every open fetched a route, a forecast and a briefing just to look at a trip the
+   * traveller had already seen — and on a phone and a laptop the same trip could read differently
+   * depending on which one opened it last. The stored result is the same on every device.
+   *
+   * Exactly ONE network call on the happy path: the GET. Nothing is planned, briefed or saved —
+   * saving here would re-store the result it just read, and could bump the trip's revision for
+   * nothing. Every way this can fail except "the trip is gone" falls back to planning, because the
+   * traveller asked to see their trip and planning it is how they always did.
+   */
+  private async openSaved(staged: StagedTrip, tripId: string): Promise<void> {
+    this.opening.set(true);
+    this.loading.set(true);
+    let snapshot: DecodedSnapshot | null = null;
+    try {
+      snapshot = decodeTripSnapshot(await this.api.getTripSnapshot(tripId));
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404 && e.code === 'trip_not_found') {
+        // Deleted on another device while this list was on screen. Planning it would quietly
+        // re-create it (the save is an upsert) — the one outcome worse than saying so.
+        this.trips.notice.set(
+          "That trip isn't in My Trips any more — it may have been deleted on another device.",
+        );
+        this.opening.set(false);
+        this.loading.set(false);
+        void this.router.navigate(['/saved']);
+        return;
+      }
+      // `snapshot_not_found`, a network failure, an older server without the endpoint: plan it.
+    }
+    this.opening.set(false);
+    this.loading.set(false);
+    // More than two days old is not shown even dated: the traveller decided a forecast that old
+    // should not be on screen at all, so it is replaced before anyone reads it.
+    if (!snapshot || isSnapshotExpired(snapshot.plannedAt, Date.now())) {
+      await this.planStaged(staged);
+      return;
+    }
+    this.showSnapshot(snapshot, staged);
+  }
+
+  /**
+   * Put a stored result on screen as if it had just been planned — map, timeline, day selection and
+   * briefing — without planning anything.
+   */
+  private showSnapshot(snapshot: DecodedSnapshot, staged: StagedTrip): void {
+    const origin = staged.origin;
+    const destination = staged.destination;
+    // The field shows the trip as SAVED, even a departure that has gone: the dated line says it has,
+    // and Refresh is what moves it to now. Quietly rewriting it here would show a departure that
+    // nothing on screen was planned for.
+    const departure = new Date(staged.departureAt || snapshot.departureAt);
+    this.departureAt.set(this.toLocalInput(departure));
+    const waypoints = toWaypoints(this.stops());
+
+    this.showResult(snapshot.result);
+    if (snapshot.briefing) {
+      // Shown WITHOUT its diff. A stored briefing that was itself a re-brief carries the "Updated"
+      // badge of a comparison made when it was fetched; opening the snapshot asked the server
+      // nothing, so announcing a change now would be a claim about a look that did not happen. The
+      // facts/snapshot are still remembered as the baseline, so a Refresh diffs against what the
+      // traveller is looking at.
+      const shown = { ...snapshot.briefing, diff: null };
+      this.showBriefing(
+        shown,
+        tripBaselineKey({ origin, destination, savedTripId: this.savedTrip?.id }),
+      );
+    }
+    this.plannedContext.set({ origin, destination });
+    this.plannedBase.set(new Date(snapshot.departureAt));
+    this.departureOffset.set(0);
+    this.plannedWaypointsKey = waypointsKey(waypoints);
+    this.shownResult = {
+      result: snapshot.result,
+      briefing: snapshot.briefing,
+      plannedAt: snapshot.plannedAt,
+      departureAt: snapshot.departureAt,
+      definitionKey: this.definitionKey(origin, destination, waypoints),
+    };
+    this.snapshotShown.set({ plannedAt: snapshot.plannedAt, departureAt: snapshot.departureAt });
+  }
+
+  /**
+   * Refresh from the dated line: exactly what Get briefing does — including planning a departure
+   * that has passed from now — and the auto-save that follows stores the fresh result.
+   */
+  refresh(): void {
+    void this.submit();
+  }
+
+  /** The trip definition a result belongs to — see {@link SnapshotSource.definitionKey}. */
+  private definitionKey(
+    origin: PlaceValue,
+    destination: PlaceValue,
+    waypoints: WaypointModel[],
+  ): string {
+    return tripIdentityKey({ origin, destination, departureAt: this.departureAt(), waypoints });
   }
 
   /**
@@ -1213,8 +1361,14 @@ export class Plan implements OnInit {
     // The whole trip, not the day on screen: a multi-day itinerary's totals are summed across its
     // days, and its stops + dwell + nights ride along so re-opening it re-plans the same trip.
     const totals = this.tripTotals();
+    const waypoints = toWaypoints(this.stops());
+    // Read with the rest of the save body, not after it returns: the revision the save hands back
+    // describes the trip as it is being saved NOW, and the snapshot must be the result for that.
+    const source = this.shownResult;
+    const sourceMatches =
+      source?.definitionKey === this.definitionKey(origin, destination, waypoints);
     try {
-      await this.api.saveTrip({
+      const saved = await this.api.saveTrip({
         origin,
         destination,
         departure_at: new Date(this.departureAt()).toISOString(),
@@ -1223,13 +1377,35 @@ export class Plan implements OnInit {
         // Same reasoning as the manual save this replaced: `worst_severity` is required, and
         // 'clear' would persist an affirmative all-clear we do not have.
         worst_severity: totals.worstSeverity ?? SEVERITY_FALLBACK,
-        waypoints: toWaypoints(this.stops()),
+        waypoints,
       });
+      // Only when the result on screen was planned for exactly what was just saved. When the form
+      // has moved on (a re-plan in flight, an endpoint typed but not submitted) the payload would be
+      // stored under a revision it does not describe; the re-plan that follows saves again.
+      const stored = source && sourceMatches ? this.storeSnapshot(saved, source) : null;
       // So My Trips is current the moment it is opened — including the id and legs the server just
       // assigned, which a locally-appended row would not have.
-      await this.trips.refresh();
+      await Promise.all([stored, this.trips.refresh()]);
     } catch {
       // Deliberately silent, including the 401. The trip is still on screen and still plannable.
+    }
+  }
+
+  /**
+   * Store the result as the trip's snapshot, pinned to the revision the save just returned.
+   *
+   * Silent for the same reasons the save is. A 409 `trip_changed` means another device changed the
+   * trip after this save — this result describes stops the trip no longer has, so it is dropped, not
+   * retried (a retry with a fresher revision would store it under a definition it was not planned
+   * for). A 413 is a trip too big to keep; it simply opens by planning, as every trip used to.
+   */
+  private async storeSnapshot(saved: SavedTripModel, source: SnapshotSource): Promise<void> {
+    // An older server returns no revision, and has no snapshot endpoint to send one to.
+    if (!saved.id || !saved.revision) return;
+    try {
+      await this.api.saveTripSnapshot(saved.id, buildSnapshotRequest(source, saved.revision));
+    } catch {
+      // Deliberately silent — see above.
     }
   }
 
@@ -1453,7 +1629,15 @@ export class Plan implements OnInit {
     const ctx = this.plannedContext();
     if (!base || !ctx) return;
     const departureAt = new Date(base.getTime() + this.departureOffset() * 60_000).toISOString();
+    // A stored result can be for a departure that has gone. Editing it re-plans, and re-planning a
+    // departure behind the current hour gives a route with no forecast — so it goes through the
+    // same path Refresh does, which plans it from now.
+    if (this.snapshotShown() && Date.parse(departureAt) < Date.now()) {
+      await this.submit();
+      return;
+    }
     const waypoints = toWaypoints(this.stops());
+    const definitionKey = this.definitionKey(ctx.origin, ctx.destination, waypoints);
     // F-012: previous_facts now ride along across a PLAN edit of the same trip — the departure
     // scrubber and stop edits are exactly the cases worth diffing. The identity key still governs
     // whether the SHOWN briefing is stale (ADR-0031 §3); the baseline key governs what to diff
@@ -1486,6 +1670,16 @@ export class Plan implements OnInit {
       this.showResult(result, { keepDay: true });
       if (briefing) this.showBriefing(briefing, baselineKey);
       this.plannedWaypointsKey = waypointsKey(waypoints);
+      // Fresh now, so the date goes. A briefing that was not re-requested (the scrubber) stays the
+      // one already on screen, and is stored as such.
+      this.shownResult = {
+        result,
+        briefing: briefing ?? this.shownResult?.briefing ?? null,
+        plannedAt: new Date().toISOString(),
+        departureAt,
+        definitionKey,
+      };
+      this.snapshotShown.set(null);
       // An edit is still a plan of this trip, and the saved row should be the trip as it now
       // stands. This is the path the debounce exists for: the departure scrubber re-plans on
       // every nudge.
@@ -1618,6 +1812,9 @@ export class Plan implements OnInit {
     this.tripBriefing.set(null);
     this.selected.set(null);
     this.departureOffset.set(0);
+    // Whatever was on screen is gone, stored snapshot included — nothing is left to date or store.
+    this.shownResult = null;
+    this.snapshotShown.set(null);
     // A new plan is a new trip — any open Explore session (results, pins) is for the old one.
     this.closeExplore();
 
@@ -1677,9 +1874,16 @@ export class Plan implements OnInit {
     // One answer, both requests: this trip is either a sequence of dated days or a single drive,
     // and the plan and the briefing have to be about the same one.
     const multiDay = this.travelDays().length > 1;
+    const definitionKey = this.definitionKey(origin, destination, waypoints);
+    // When the PLAN arrived, which is what the forecast's age is measured from — not when the
+    // briefing beside it did.
+    let plannedAt = '';
     try {
       const [result, briefing] = await Promise.all([
-        this.planRequestFor({ origin, destination, departureAt, waypoints, multiDay }),
+        this.planRequestFor({ origin, destination, departureAt, waypoints, multiDay }).then((r) => {
+          plannedAt = new Date().toISOString();
+          return r;
+        }),
         this.briefingRequestFor({
           origin,
           destination,
@@ -1701,6 +1905,13 @@ export class Plan implements OnInit {
         distance_mi: Math.round((totals.distanceMeters ?? 0) / 1609.344),
       });
       this.showBriefing(briefing, baselineKey);
+      this.shownResult = {
+        result,
+        briefing,
+        plannedAt,
+        departureAt,
+        definitionKey,
+      };
       this.plannedContext.set({ origin, destination });
       this.plannedBase.set(base);
       this.plannedWaypointsKey = waypointsKey(waypoints);

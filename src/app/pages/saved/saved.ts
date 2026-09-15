@@ -25,6 +25,10 @@ import { savedTripSubtext } from './trip-subtext';
         <h1>My trips</h1>
       </header>
 
+      @if (notice) {
+        <p class="notice" role="status">{{ notice }}</p>
+      }
+
       @if (trips.saved().length) {
         @for (t of trips.saved(); track t.id) {
           <div class="row">
@@ -69,6 +73,15 @@ import { savedTripSubtext } from './trip-subtext';
         max-width: 560px;
         margin: 0 auto;
         padding: 18px 16px 64px;
+      }
+      .notice {
+        margin: 0 0 12px;
+        padding: 10px 14px;
+        border-radius: var(--radius-md);
+        background: var(--accent-100);
+        border: 1.5px solid var(--accent-300);
+        font-size: 14px;
+        font-weight: 600;
       }
       .top {
         display: flex;
@@ -186,6 +199,8 @@ export class Saved {
   readonly trips = inject(TripsService);
   private readonly settings = inject(SettingsService);
   private readonly router = inject(Router);
+  /** Why the planner sent the traveller back here, when it did. Taken once, so it does not linger. */
+  readonly notice = this.trips.takeNotice();
 
   constructor() {
     // Fresh server state whenever the page opens (deletes from other devices show up).
@@ -194,7 +209,8 @@ export class Saved {
 
   /**
    * Re-open a saved trip: stage its endpoints (server-provided coordinates) — stops + dwell
-   * included (F-006 US-4) — and re-plan.
+   * included (F-006 US-4). The planner opens the trip's stored result when it has one, and only
+   * re-plans when it does not (or it is more than two days old).
    */
   open(t: SavedTripModel): void {
     if (t.origin_latitude == null || t.destination_latitude == null) return;

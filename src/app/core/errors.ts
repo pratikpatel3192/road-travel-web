@@ -22,11 +22,18 @@ export class AccountRequiredError extends Error {
   }
 }
 
-/** A generic API failure with the HTTP status, for the plan page's error copy. */
+/**
+ * A generic API failure with the HTTP status, for the plan page's error copy.
+ *
+ * `code` is the server envelope's machine string (`{ error: { code, message } }`), when there was
+ * one. The status alone cannot tell two 404s apart that mean opposite things — a trip snapshot's
+ * `snapshot_not_found` (plan the trip) and `trip_not_found` (the trip is gone).
+ */
 export class ApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    readonly code?: string,
   ) {
     super(message);
     this.name = 'ApiError';
