@@ -42,23 +42,28 @@ import { departureHasPassed, forecastAgeLabel } from './trip-snapshot';
       :host {
         display: block;
       }
+      /* Theme tokens only. The planner's other notes lean on --well/--text-secondary, which no
+         theme defines, so they fall back to a cream strip on the dark map too; a line that dates
+         the whole result should not glare. */
       .line {
         display: flex;
         align-items: flex-start;
         gap: 7px;
         margin: 12px 0 0;
-        padding: 8px 10px;
+        padding: 8px 12px;
         border-radius: 10px;
-        background: var(--well, #f9f4ed);
-        color: var(--text-secondary, #82796a);
+        background: var(--surface);
+        box-shadow: var(--shadow-sm);
+        color: var(--muted);
         font-size: 13px;
-        font-weight: 500;
+        font-weight: 600;
       }
       .line.warn {
-        background: var(--accent-100);
-        border: 1.5px solid var(--accent-300);
+        border: 1.5px solid var(--sev-caution);
         color: var(--text);
-        font-weight: 600;
+      }
+      .line.warn .ic {
+        color: var(--sev-high);
       }
       .ic {
         display: inline-flex;
@@ -70,7 +75,7 @@ import { departureHasPassed, forecastAgeLabel } from './trip-snapshot';
         padding: 0;
         font: inherit;
         font-weight: 700;
-        color: var(--accent-700, var(--accent));
+        color: var(--link);
         text-decoration: underline;
         text-underline-offset: 2px;
         cursor: pointer;
