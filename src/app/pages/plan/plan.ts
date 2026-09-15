@@ -1035,7 +1035,17 @@ export class Plan implements OnInit {
             }),
           }
         : null;
-      if (staged.departureAt) this.departureAt.set(this.toLocalInput(new Date(staged.departureAt)));
+      // A saved trip keeps the departure it was planned with, and that moment can already have
+      // passed. Planning it verbatim forecast a drive that left last night: the forecast only starts
+      // at the current hour, so every point matched nothing and the day read "past the 10-day
+      // forecast" on a trip the traveller was looking at today. A departure that has gone is
+      // replaced with the same default a fresh plan gets.
+      if (staged.departureAt) {
+        const saved = new Date(staged.departureAt);
+        this.departureAt.set(
+          saved.getTime() > Date.now() ? this.toLocalInput(saved) : this.defaultDeparture(),
+        );
+      }
       void this.submit();
       return;
     }
