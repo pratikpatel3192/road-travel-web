@@ -1601,6 +1601,13 @@ export class Plan implements OnInit {
     // A new plan is a new trip — any open Explore session (results, pins) is for the old one.
     this.closeExplore();
 
+    // A departure that has already passed is planned from now. The field's default is "an hour after
+    // the page loaded", so a tab left open goes stale on its own — and a forecast only starts at the
+    // current hour, so a departure behind it gives the first day a route with no weather at all.
+    // Shown in the field, not just corrected on the wire, so the trip on screen is the one planned.
+    if (new Date(this.departureAt()).getTime() < Date.now()) {
+      this.departureAt.set(this.toLocalInput(new Date()));
+    }
     const base = new Date(this.departureAt());
     const departureAt = base.toISOString();
     // F-006: the plan AND the briefing carry the same waypoints (the briefing narrates the stops).

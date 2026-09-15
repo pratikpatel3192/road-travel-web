@@ -33,7 +33,7 @@ const DALLAS = { name: 'Dallas, TX', latitude: 32.7767, longitude: -96.797 };
  * forecast" with a dashed, weatherless route — on a trip the traveller was planning for today.
  */
 describe('Plan — reopening a saved trip whose departure has passed', () => {
-  function build(departureAt: string) {
+  function build(departureAt: string, staged = true) {
     const planTrip = vi.fn(async () => ({
       distance_meters: 1_600_000,
       duration_seconds: 57_600,
@@ -59,13 +59,16 @@ describe('Plan — reopening a saved trip whose departure has passed', () => {
         {
           provide: TripsService,
           useValue: {
-            takeStaged: () => ({
-              origin: CHICAGO,
-              destination: DALLAS,
-              departureAt,
-              waypoints: [],
-              savedTripId: 'saved-1',
-            }),
+            takeStaged: () =>
+              staged
+                ? {
+                    origin: CHICAGO,
+                    destination: DALLAS,
+                    departureAt,
+                    waypoints: [],
+                    savedTripId: 'saved-1',
+                  }
+                : null,
             refresh: vi.fn(async () => undefined),
           },
         },
@@ -78,7 +81,7 @@ describe('Plan — reopening a saved trip whose departure has passed', () => {
         },
       ],
     });
-    return TestBed.runInInjectionContext(() => new Plan());
+    return { plan: TestBed.runInInjectionContext(() => new Plan()), planTrip };
   }
 
   beforeEach(() => {
@@ -89,7 +92,7 @@ describe('Plan — reopening a saved trip whose departure has passed', () => {
 
   it('replaces a departure that has already gone with a future one', () => {
     const lastNight = new Date(Date.now() - 20 * 3_600_000).toISOString();
-    const plan = build(lastNight);
+    const { plan } = build(lastNight);
     plan.ngOnInit();
     expect(new Date(plan.departureAt()).getTime()).toBeGreaterThan(Date.now());
   });
@@ -97,8 +100,24 @@ describe('Plan — reopening a saved trip whose departure has passed', () => {
   it('keeps a departure that is still ahead, exactly as saved', () => {
     const nextWeek = new Date(Date.now() + 7 * 24 * 3_600_000);
     nextWeek.setSeconds(0, 0);
-    const plan = build(nextWeek.toISOString());
+    const { plan } = build(nextWeek.toISOString());
     plan.ngOnInit();
     expect(new Date(plan.departureAt()).getTime()).toBe(nextWeek.getTime());
+  });
+
+  it('plans a departure that went stale while the page sat open from now, and shows it', async () => {
+    // The field defaults to an hour after the page loaded; two hours later that is in the past.
+    const { plan, planTrip } = build('', false);
+    plan.ngOnInit();
+    plan.origin.set(CHICAGO);
+    plan.destination.set(DALLAS);
+    const twoHoursAgo = new Date(Date.now() - 2 * 3_600_000);
+    plan.departureAt.set(`${twoHoursAgo.getFullYear()}-${String(twoHoursAgo.getMonth() + 1).padStart(2, '0')}-${String(twoHoursAgo.getDate()).padStart(2, '0')}T${String(twoHoursAgo.getHours()).padStart(2, '0')}:${String(twoHoursAgo.getMinutes()).padStart(2, '0')}`);
+
+    await plan.submit();
+
+    const sent = new Date((planTrip.mock.calls as unknown as [{ departure_at: string }][])[0][0].departure_at);
+    expect(Date.now() - sent.getTime()).toBeLessThan(90_000);
+    expect(new Date(plan.departureAt()).getTime()).toBe(sent.getTime());
   });
 });
