@@ -229,6 +229,8 @@ describe('Plan — a multi-day trip is planned a day at a time', () => {
     expect(plan.error()).toBeNull(); // the page's error banner must stay empty
     expect(plan.shownDayNote()).toContain('past the 10-day forecast');
     expect(plan.shownDayNote()).toContain('closer to the day');
+    // The map is told which day it is showing, so its own notice can name it ("Day 2 is past…").
+    expect(plan.mapDay()).toBe(2);
   });
 
   it("says one day's route failed without claiming the trip did", async () => {

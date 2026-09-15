@@ -1,6 +1,7 @@
 import {
   Component,
   type ElementRef,
+  computed,
   type OnDestroy,
   effect,
   inject,
@@ -9,9 +10,10 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import type { PlanTripResponse } from '@road-travel/sdk';
+import type { PlanTripResponse, RouteSampleModel } from '@road-travel/sdk';
 import * as L from 'leaflet';
 
+import { FORECAST_HORIZON_DAYS } from '../../core/forecast-horizon';
 import { SettingsService } from '../../core/settings.service';
 import { IconComponent, LUCIDE } from '../../ui/icon';
 import {
@@ -34,6 +36,77 @@ const ESRI_TRANSPORT =
   'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}';
 const ESRI_LABELS =
   'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
+
+/**
+ * What marker, if any, a route sample puts on the map.
+ *
+ * A stop is a PLACE, so it keeps its numbered pin whether or not anyone has forecast it. A weather
+ * pill is a claim about the weather, so it exists only when there is weather to claim. Without this
+ * guard every sample with `weather: null` became a `.wx-pin` holding the thermometer fallback glyph
+ * and an empty temperature — a row of dark, blank pills along a day past the forecast horizon that
+ * a traveller reasonably read as the map being broken.
+ */
+export function pinKind(sample: Pick<RouteSampleModel, 'weather' | 'waypoint_index'>): 'stop' | 'weather' | null {
+  if (sample.waypoint_index != null) return 'stop';
+  return sample.weather ? 'weather' : null;
+}
+
+/** A note laid over the map when some or all of the route it shows has no weather. */
+export interface MapWeatherNotice {
+  /** `beyond`: nobody forecasts this far out. `unavailable`: we should have weather and don't. */
+  kind: 'beyond' | 'partial-beyond' | 'unavailable' | 'partial-unavailable';
+  /** Whole route without weather: said prominently, because the map has nothing else to say. */
+  prominent: boolean;
+  text: string;
+}
+
+/**
+ * Why the map shows less weather than a route normally carries — or null when it shows all of it.
+ *
+ * Once the empty pills are gone (see {@link pinKind}) a far-future day is a bare neutral line, and a
+ * bare line with no explanation reads as the same rendering failure the pills did. So the absence is
+ * always SAID, and said for the right reason: past the horizon is not a failure and will resolve on
+ * its own ("we'll have it closer to the day", the wording the trip briefing card uses for the same
+ * days), while missing weather inside the horizon is a provider failure and gets no verdict at all.
+ *
+ * @param day 1-based ordinal of the day on screen for a multi-day trip; null for a one-day trip.
+ * @param dayBeyondForecast the day record's own flag — a day past the horizon has no plan at all,
+ *   so it is the only evidence there is when `plan` is null.
+ */
+export function mapWeatherNotice(
+  plan: Pick<PlanTripResponse, 'samples'> | null,
+  day: number | null,
+  dayBeyondForecast = false,
+): MapWeatherNotice | null {
+  const subject = day != null ? `Day ${day}` : 'This trip';
+  const beyond: MapWeatherNotice = {
+    kind: 'beyond',
+    prominent: true,
+    text: `${subject} is past the ${FORECAST_HORIZON_DAYS}-day forecast — we'll have it closer to the day.`,
+  };
+  if (!plan) return dayBeyondForecast ? beyond : null;
+
+  const samples = plan.samples ?? [];
+  const missing = samples.filter((s) => !s.weather);
+  if (!missing.length) return null;
+  const all = missing.length === samples.length;
+  // Only claim "past the forecast" when EVERY missing sample says so. One failed fetch inside the
+  // horizon must not be explained away as "we'll have it closer to the day" — it won't fix itself.
+  const allBeyond = missing.every((s) => s.beyond_forecast === true);
+
+  if (allBeyond) {
+    return all
+      ? beyond
+      : {
+          kind: 'partial-beyond',
+          prominent: false,
+          text: `Part of ${day != null ? `day ${day}` : 'this trip'} is past the ${FORECAST_HORIZON_DAYS}-day forecast.`,
+        };
+  }
+  return all
+    ? { kind: 'unavailable', prominent: true, text: "Weather isn't available for this route." }
+    : { kind: 'partial-unavailable', prominent: false, text: "Weather isn't available for part of this route." };
+}
 
 /**
  * The route on an interactive map (Leaflet). Base style switches between Standard (OSM), Satellite and
@@ -77,6 +150,16 @@ const ESRI_LABELS =
           Hybrid
         </button>
       </div>
+      @if (notice(); as n) {
+        <!-- Said on the map itself: a neutral line with no pills is otherwise indistinguishable
+             from a map that failed to load its weather. -->
+        <p class="wx-notice" [class.prominent]="n.prominent" [attr.data-kind]="n.kind" role="status">
+          @if (n.prominent) {
+            <app-icon [name]="n.kind === 'beyond' ? 'calendar' : 'cloud'" [size]="16" />
+          }
+          <span>{{ n.text }}</span>
+        </p>
+      }
     </div>
   `,
   styles: [
@@ -138,6 +221,40 @@ const ESRI_LABELS =
       .sep {
         width: 2px;
       }
+      /* Bottom-centre, clear of the layer chips (top-right) and Leaflet's attribution (bottom-right).
+         Above the map panes (400) and below Leaflet's controls (800+). */
+      .wx-notice {
+        position: absolute;
+        left: 50%;
+        bottom: 26px;
+        transform: translateX(-50%);
+        z-index: 500;
+        max-width: min(92%, 420px);
+        width: max-content;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        padding: 5px 12px;
+        border-radius: var(--radius-pill);
+        background: var(--surface);
+        color: var(--muted);
+        box-shadow: var(--shadow-md);
+        font-size: 12.5px;
+        font-weight: 600;
+        line-height: 1.3;
+        pointer-events: none;
+      }
+      .wx-notice.prominent {
+        padding: 10px 16px;
+        border-radius: var(--radius-md);
+        color: var(--text);
+        font-size: 14px;
+      }
+      .wx-notice app-icon {
+        flex: 0 0 auto;
+        color: var(--muted);
+      }
     `,
   ],
 })
@@ -155,6 +272,12 @@ export class RouteMap implements OnDestroy {
   /** Highlighted explore-card index (two-way with the panel via the plan page). */
   readonly exploreSelected = input<number | null>(null);
   readonly exploreSelectedChange = output<number | null>();
+  /** 1-based ordinal of the day on screen for a multi-day trip; null for a one-day trip. Names the
+   *  day in the no-forecast notice ("Day 3 is past …" vs "This trip is past …"). */
+  readonly day = input<number | null>(null);
+  /** The shown day's own `beyond_forecast` — such a day has no plan, so no samples to read it from. */
+  readonly dayBeyondForecast = input(false);
+  readonly notice = computed(() => mapWeatherNotice(this.plan(), this.day(), this.dayBeyondForecast()));
   private readonly mapEl = viewChild.required<ElementRef<HTMLDivElement>>('mapEl');
 
   readonly settings = inject(SettingsService);
@@ -272,6 +395,11 @@ export class RouteMap implements OnDestroy {
       // unrecognised value degrades to caution rather than to "no forecast".
       const known: Severity | null =
         seg.severity == null ? null : toSeverity(seg.severity) ?? SEVERITY_FALLBACK;
+      //
+      // The no-forecast stretch is also DASHED. A solid muted line on satellite imagery is exactly
+      // what a failed or disabled layer looks like, and that is how users read it ("why is it
+      // grey?"). A dash is the cartographic "tentative" and reads as a deliberate state; the notice
+      // over the map says what that state is.
       L.polyline(segLatLngs[i], {
         className: known ? 'rt-sev-' + known : 'rt-sev-unknown',
         color: known ? SEVERITY_COLOR[known] : UNKNOWN_COLOR,
@@ -279,19 +407,23 @@ export class RouteMap implements OnDestroy {
         opacity: 1,
         lineCap: 'round',
         lineJoin: 'round',
+        ...(known ? {} : { dashArray: '9 11' }),
       }).addTo(layer);
     });
 
-    // A weather chip at every milestone: the condition glyph + temp on a .wx-pin pill (hazard
-    // tint at caution-or-worse; first = origin, last = destination). Stop-marked samples
-    // (F-006) get a numbered pin instead, above the weather pins. Click-to-select stays synced
-    // with the timeline.
+    // A weather chip at every milestone THAT HAS WEATHER: the condition glyph + temp on a .wx-pin
+    // pill (hazard tint at caution-or-worse; first = origin, last = destination). Stop-marked
+    // samples (F-006) get a numbered pin instead, above the weather pins, forecast or not.
+    // Click-to-select stays synced with the timeline.
     const units = this.settings.units();
     for (const s of plan.samples) {
-      // Null = this milestone has no forecast at all, which `pinIcon` renders untinted: we do not
-      // tint what nobody has looked at (the grey route segment underneath carries that). What we
-      // must NOT do is collapse an unrecognised severity into the same case — `severityOrFallback`
-      // keeps it a hazard, at caution, instead of letting it read as calm.
+      // No weather and not a stop: draw nothing. See `pinKind` — the placeholder pill this used to
+      // draw was a blank thermometer that looked like a rendering failure.
+      const kind = pinKind(s);
+      if (kind == null) continue;
+      // Null = a stop nobody has forecast. We do not tint what nobody has looked at (the dashed
+      // neutral segment underneath carries that). What we must NOT do is collapse an unrecognised
+      // severity into the same case — `severityOrFallback` keeps it a hazard, at caution.
       const sev: Severity | null = s.weather ? severityOrFallback(s.weather.severity) : null;
       const icon = weatherIcon(s.weather?.condition_symbol, s.weather?.condition_text);
       const temp = s.weather

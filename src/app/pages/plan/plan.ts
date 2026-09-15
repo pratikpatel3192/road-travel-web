@@ -226,7 +226,7 @@ import {
             <!-- A grey stretch on the map and an empty cell in the timeline read as a glitch. This
                reads as an answer: there is no forecast yet, and there will be. -->
             <p class="beyond-note">
-              Part of this trip is past the 10-day forecast. We'll have it closer to the day.
+              Part of this trip is past the {{ horizonDays }}-day forecast. We'll have it closer to the day.
             </p>
           }
           <app-timeline
@@ -303,6 +303,8 @@ import {
       <aside class="map-pane">
         <app-route-map
           [plan]="shownPlan()"
+          [day]="mapDay()"
+          [dayBeyondForecast]="shownDay()?.beyond_forecast ?? false"
           [userLocation]="userLocation()"
           [selected]="selected()"
           (selectedChange)="selected.set($event)"
@@ -964,6 +966,15 @@ export class Plan implements OnInit {
     return this.shownDay()?.plan ?? null;
   });
 
+  /**
+   * The day the map names in its no-forecast notice: "Day 3 is past the forecast", or null for a trip
+   * with only one day, which says "This trip" — "Day 1" of a one-day drive is not how anyone talks.
+   */
+  readonly mapDay = computed(() => {
+    const day = this.shownDay();
+    return day && (this.itinerary()?.days.length ?? 0) > 1 ? day.ordinal + 1 : null;
+  });
+
   /** The derived leg behind the selected day — where that day starts, ends and passes through. */
   readonly shownLeg = computed(() => {
     if (!this.itinerary()) return null;
@@ -1481,6 +1492,8 @@ export class Plan implements OnInit {
    * longer what happens.
    */
   static readonly FORECAST_HORIZON_DAYS = FORECAST_HORIZON_DAYS;
+  /** The same constant for the template, which cannot read statics. */
+  readonly horizonDays = FORECAST_HORIZON_DAYS;
   static readonly tierFor = tierFor;
   static readonly isoDay = isoDay;
 
