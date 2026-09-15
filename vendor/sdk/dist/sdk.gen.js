@@ -89,6 +89,38 @@ export const replaceTripLegsV1TripsTripIdLegsPut = (options) => (options.client 
     }
 });
 /**
+ * A trip's last planned result, as it was last stored — no re-planning
+ *
+ * One read. Nothing is routed or forecast: the payload is exactly what was stored, and `planned_at` says how old its forecast is. Clients show that age, warn when `departure_at` has passed, and refresh when it is more than two days old.
+ *
+ * 404 `snapshot_not_found` means the trip exists but has no result to show — never stored, evicted, or planned for stops the trip no longer has: plan it. 404 `trip_not_found` means the trip itself is gone (or was never this account's).
+ */
+export const getTripSnapshotV1TripsTripIdSnapshotGet = (options) => (options.client ?? client).get({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/trips/{trip_id}/snapshot',
+    ...options
+});
+/**
+ * Store a trip's last planned result, so every device opens it without re-planning
+ *
+ * Overwrites the trip's one snapshot with what the client rendered: the plan response(s) and briefing response(s), stored as opaque JSON.
+ *
+ * Send it right after saving the trip, with the `revision` that save returned. If the trip has changed since (another device changed its stops or departure) the write is refused with 409 `trip_changed`, because the result no longer describes the trip.
+ *
+ * Saving the trip with different stops or a different departure deletes its snapshot, and a snapshot is never served for a definition it was not planned for. Deleting the trip deletes its snapshot.
+ *
+ * The request body is capped at 8 MB (413 `snapshot_too_large`). An account's snapshots share a budget; past it, the least recently saved OTHER snapshots are evicted, and those trips answer 404 `snapshot_not_found` until they are planned again.
+ */
+export const saveTripSnapshotV1TripsTripIdSnapshotPut = (options) => (options.client ?? client).put({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/trips/{trip_id}/snapshot',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
  * Typical conditions along a route for a date beyond the forecast (never a forecast)
  *
  * For a leg dated past the forecast horizon, this returns what the route is USUALLY like in the 5-day period around that date, from a fixed climate baseline.
