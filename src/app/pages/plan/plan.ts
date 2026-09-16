@@ -1,4 +1,12 @@
-import { Component, DestroyRef, type OnInit, computed, inject, signal } from '@angular/core';
+import {
+  type AfterViewInit,
+  Component,
+  DestroyRef,
+  type OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import type {
@@ -25,6 +33,8 @@ import { GeocodeService } from '../../core/geocode.service';
 import { PaywallService } from '../../core/paywall.service';
 import { SettingsService } from '../../core/settings.service';
 import { type StagedTrip, TripsService } from '../../core/trips.service';
+import { hasForeignModal } from '../../tour/tour-targets';
+import { TourService } from '../../tour/tour.service';
 import { IconComponent } from '../../ui/icon';
 import { AheadBanner } from './ahead-banner';
 import { BriefingCard } from './briefing-card';
@@ -96,7 +106,7 @@ import {
             @if (!auth.configured() || auth.hasRealAccount()) {
               <!-- ADR-0025 §1: My Trips is LOGIN-ONLY — hidden from guests (the route is walled by
                  realAccountGuard). ADR-0029 removed Recents; this is the server's whole list. -->
-              <a class="icon" routerLink="/saved" aria-label="My trips" title="My trips"
+              <a class="icon" routerLink="/saved" aria-label="My trips" title="My trips" data-tour="my-trips"
                 ><app-icon name="bookmark" [size]="16"
               /></a>
             }
@@ -105,6 +115,7 @@ import {
 
         <div class="inputs card">
           <app-place-field
+            data-tour="places"
             kind="origin"
             placeholder="Origin"
             [place]="origin()"
@@ -123,9 +134,14 @@ import {
           </div>
           <!-- Every stop, however many, is this one line. Listing them here pushed the map off
                a phone screen at two overnight stops; they are edited in the stops editor. -->
-          <app-stops-summary [stops]="stops()" (edit)="stopsEditorOpen.set(true)" />
+          <app-stops-summary
+            data-tour="stops"
+            [stops]="stops()"
+            (edit)="stopsEditorOpen.set(true)"
+          />
           <div class="divider"></div>
           <app-place-field
+            data-tour="places"
             kind="destination"
             placeholder="Destination"
             [place]="destination()"
@@ -166,7 +182,12 @@ import {
               <option value="metric">km / °C</option>
             </select>
           </label>
-          <button class="go" (click)="submit()" [disabled]="loading() || !canSubmit()">
+          <button
+            class="go"
+            data-tour="plan"
+            (click)="submit()"
+            [disabled]="loading() || !canSubmit()"
+          >
             {{ loading() ? (opening() ? 'Opening…' : 'Planning…') : 'Get briefing' }}
           </button>
         </div>
@@ -707,7 +728,7 @@ import {
     `,
   ],
 })
-export class Plan implements OnInit {
+export class Plan implements OnInit, AfterViewInit {
   private readonly api = inject(ApiService);
   readonly auth = inject(AuthService);
   readonly settings = inject(SettingsService);
@@ -718,6 +739,23 @@ export class Plan implements OnInit {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly analytics = inject(AnalyticsService);
+  private readonly tour = inject(TourService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  /**
+   * How long the planner is left to settle before the first-run tour appears: the geolocation
+   * prefill, the header's signed-in links and the map tiles all land in the first moments, and a
+   * spotlight drawn before them would be drawn around a page that then moves.
+   */
+  static readonly TOUR_SETTLE_MS = 900;
+  /**
+   * Set by `ngOnInit` only on the plain, idle visit. A landing-page handoff or a trip opened from My
+   * Trips is someone in the middle of doing something; teaching them the empty form over the top of
+   * their own trip would be an interruption, not a welcome.
+   */
+  private tourEligible = false;
+  /** This visit came from Settings → "Show app tour". */
+  private tourReplay = false;
 
   // ADR-0038: no hardcoded demo route. A San Francisco → Los Angeles pair used to sit here as a
   // helpful demo when / WAS the planner; with a landing page in front, a stranger's first screen
@@ -1066,12 +1104,14 @@ export class Plan implements OnInit {
     const sync = () => this.desktopLayout.set(query.matches);
     sync();
     query.addEventListener('change', sync);
-    inject(DestroyRef).onDestroy(() => query.removeEventListener('change', sync));
+    this.destroyRef.onDestroy(() => query.removeEventListener('change', sync));
   }
 
   ngOnInit(): void {
     // Know the entitlement/usage up front so gating is correct (server-authoritative; F-002).
     void this.entitlement.refresh();
+    // Taken (and so cleared) on every init, so a replay request can't linger into a later visit.
+    this.tourReplay = this.tour.takeReplay();
     // A trip queued from My Trips: prefill the fields (stops included — a saved multi-stop
     // trip re-plans as a multi-stop trip, F-006 US-4) and plan it immediately.
     const staged = this.trips.takeStaged();
@@ -1110,6 +1150,40 @@ export class Plan implements OnInit {
       return;
     }
     this.locate();
+    this.tourEligible = true;
+  }
+
+  ngAfterViewInit(): void {
+    if (!this.tourEligible) return;
+    if (!this.tourReplay && !this.tour.shouldAutoStart()) return;
+    const replay = this.tourReplay;
+    const timer = setTimeout(() => this.startTour(replay), Plan.TOUR_SETTLE_MS);
+    this.destroyRef.onDestroy(() => {
+      clearTimeout(timer);
+      // Left the planner with the tour up — see TourService.abandon.
+      if (this.tour.active()) this.tour.abandon();
+    });
+  }
+
+  /**
+   * Start the tour unless the planner is busy. Not retried: an auto-start that finds the page busy
+   * simply waits for the next visit (completion was never recorded), and a replay the traveller
+   * asked for is one tap away in Settings.
+   */
+  startTour(replay: boolean): boolean {
+    if (this.tourBlocked()) return false;
+    return this.tour.start({ signedIn: this.auth.hasRealAccount(), force: replay });
+  }
+
+  /** The stops editor, any dialog (paywall, onboarding, force-update), or a plan in flight. */
+  private tourBlocked(): boolean {
+    return (
+      this.stopsEditorOpen() ||
+      this.loading() ||
+      this.replanning() ||
+      this.paywall.payload() !== null ||
+      (typeof document !== 'undefined' && hasForeignModal(document))
+    );
   }
 
   /** Plan a staged trip the ordinary way — fields are already filled. */

@@ -7,11 +7,12 @@ import { ProfileService } from './core/profile.service';
 import { SettingsService } from './core/settings.service';
 import { Onboarding } from './pages/onboarding/onboarding';
 import { Paywall } from './pages/plan/paywall';
+import { TourOverlay } from './tour/tour-overlay';
 import { FEEDBACK_MAILTO } from './version';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, Paywall, Onboarding],
+  imports: [RouterOutlet, RouterLink, Paywall, Onboarding, TourOverlay],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })

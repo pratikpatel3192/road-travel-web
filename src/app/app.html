@@ -30,12 +30,12 @@
            in looks like nothing happened, since guests get a silent anonymous session anyway.
            Shows the profile name when one is set (F-003), otherwise the account email. -->
       <a routerLink="/settings" class="nav-id" [title]="auth.email()">{{ profile.headerName() }}</a>
-      <a routerLink="/saved" class="nav-link">My trips</a>
+      <a routerLink="/saved" class="nav-link" data-tour="my-trips">My trips</a>
       <a routerLink="/driving" class="nav-link">Driving</a>
-      <a routerLink="/settings" class="nav-link">Settings</a>
+      <a routerLink="/settings" class="nav-link" data-tour="settings">Settings</a>
       <button type="button" class="nav-link" (click)="auth.signOut()">Sign out</button>
     } @else {
-      <a routerLink="/login" class="nav-link nav-cta">Sign in</a>
+      <a routerLink="/login" class="nav-link nav-cta" data-tour="account">Sign in</a>
     }
   </nav>
 </header>
@@ -71,6 +71,10 @@
 
 <!-- App-wide onboarding form (F-003): shown after sign-in when not yet onboarded. -->
 <app-onboarding />
+
+<!-- First-run planner tour. Lives in the shell, not the planner, because two of its targets are
+     in the header above. The planner decides when it starts. -->
+<app-tour-overlay />
 
 <footer class="site-footer">
   <p>&copy; 2026 Road Travel &nbsp;·&nbsp;
