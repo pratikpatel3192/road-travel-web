@@ -1,12 +1,14 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { EntitlementService } from '../../core/entitlement.service';
 import { PaywallService } from '../../core/paywall.service';
 import { SettingsService, type ThemeMode } from '../../core/settings.service';
+import { TOUR_LABELS } from '../../tour/tour-script';
+import { TourService } from '../../tour/tour.service';
 import { FEEDBACK_MAILTO } from '../../version';
 import { PlaceField } from '../plan/place-field';
 import { ProfileSettings } from './profile-settings';
@@ -200,6 +202,19 @@ const APPLE_SUBSCRIPTIONS_URL = 'https://account.apple.com/account/manage';
           }
         </section>
       }
+
+      <!-- The first-run tour's way back. Its last step points here, so it has to be easy to spot. -->
+      <section class="card">
+        <h2>Help</h2>
+        <div class="acct">
+          <div class="acct-who">
+            <p class="acct-note">A quick walk through the planner.</p>
+          </div>
+          <button type="button" class="acct-btn" (click)="replayTour()">
+            {{ tourLabel }}
+          </button>
+        </div>
+      </section>
 
       <section class="card links">
         <h2>About</h2>
@@ -492,6 +507,9 @@ export class Settings {
   private readonly api = inject(ApiService);
   private readonly entitlement = inject(EntitlementService);
   private readonly paywall = inject(PaywallService);
+  private readonly tour = inject(TourService);
+  private readonly router = inject(Router);
+  readonly tourLabel = TOUR_LABELS.replay;
 
   readonly appleSubscriptionsUrl = APPLE_SUBSCRIPTIONS_URL;
 
@@ -562,6 +580,15 @@ export class Settings {
         })
         .catch(() => this.driveConsent.set(false));
     }
+  }
+
+  /**
+   * Replay the planner tour from step 1. It runs ON the planner (it points at the planner's own
+   * controls), so this asks for it and goes there; the planner starts it once the page has settled.
+   */
+  replayTour(): void {
+    this.tour.requestReplay();
+    void this.router.navigate(['/plan']);
   }
 
   /** Every change is an append-only consent event; the server enforces it on upload anyway. */
