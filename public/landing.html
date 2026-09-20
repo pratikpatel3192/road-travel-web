@@ -22,6 +22,51 @@
 <meta name="theme-color" content="#f5ead8" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#2e2b25" media="(prefers-color-scheme: dark)" />
 
+<!-- ADR-0048 campaign capture. Same shape as the referral capture below, same reason: this page
+     is where campaign links land and it is static HTML outside Angular (ADR-0038), so it cannot
+     call an authenticated endpoint — it has no Supabase session at all. It parks the arrival in
+     localStorage and the Angular app posts it on its next bootstrap.
+
+     A QUEUE, not the single stored value `rt_ref` uses: a referral is decided once, a campaign
+     arrival is an event and a visitor may collect several before ever opening the planner. Capped
+     and deduped against the tail so a reload loop cannot grow it without bound. Keep the shape in
+     step with src/app/core/attribution.service.ts — both write `rt_utm_q`. -->
+<script>
+  (function () {
+    try {
+      var p = new URLSearchParams(location.search);
+      var touch = {
+        utm_source:   p.get('utm_source')   || undefined,
+        utm_medium:   p.get('utm_medium')   || undefined,
+        utm_campaign: p.get('utm_campaign') || undefined,
+        utm_term:     p.get('utm_term')     || undefined,
+        utm_content:  p.get('utm_content')  || undefined,
+        referrer:     document.referrer     || undefined,
+        // Path only. This page's own URL carries no place names, but the app's does
+        // (/plan?from=Chicago is one, ADR-0037), so both writers send the same narrow thing.
+        landing_path: location.pathname     || undefined
+      };
+      // Mirrors the server's touches_not_empty constraint: an arrival naming no source says only
+      // "somebody arrived", which is what analytics is for.
+      if (!touch.utm_source && !touch.utm_medium && !touch.utm_campaign) return;
+
+      var q = [];
+      try { q = JSON.parse(localStorage.getItem('rt_utm_q') || '[]') || []; } catch (e) { q = []; }
+      if (!Array.isArray(q)) q = [];
+      var last = q[q.length - 1];
+      var same = last
+        && last.utm_source === touch.utm_source
+        && last.utm_medium === touch.utm_medium
+        && last.utm_campaign === touch.utm_campaign
+        && last.utm_term === touch.utm_term
+        && last.utm_content === touch.utm_content;
+      if (same) return;   // a reload under the same campaign is not a new arrival
+      q.push(touch);
+      localStorage.setItem('rt_utm_q', JSON.stringify(q.slice(-10)));
+    } catch (e) { /* private mode / storage blocked — never break the landing page for this */ }
+  })();
+</script>
+
 <!-- ADR-0045 referral capture. This page is where a creator link lands (roadtravel.info/?ref=…),
      and it is static HTML served by nginx outside Angular (ADR-0038), so it cannot use
      ReferralService — these few lines are the duplicate, in the same spirit as the duplicated brand

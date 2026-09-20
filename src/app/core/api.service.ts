@@ -63,6 +63,7 @@ import {
 
 import { AuthService } from './auth.service';
 import { ConfigService } from './config';
+import type { CampaignTouch } from './attribution.service';
 import { DeviceService } from './device.service';
 import { AccountRequiredError, ApiError, PaywallError } from './errors';
 import { ReferralService } from './referral.service';
@@ -281,6 +282,32 @@ export class ApiService {
   }
 
   /** The caller's entitlement + usage snapshot — drives gating and the paywall (F-002). */
+  /**
+   * ADR-0048: report one campaign arrival. Fire-and-forget — resolves false instead of throwing.
+   *
+   * Raw `fetch` rather than the generated SDK, deliberately: `@road-travel/sdk` has no operation
+   * for this endpoint until the contract is regenerated, and blocking marketing capture on a
+   * cross-repo SDK round-trip would be the wrong dependency. Swap to the generated call when it
+   * exists — the shape is already identical, headers included.
+   *
+   * Never throws. A failed attribution post must not surface anywhere near the user, and there is
+   * nothing to retry against: the server dedupes by (visitor, campaign), so the next drain that
+   * succeeds reports the same arrival.
+   */
+  async recordAttributionTouch(touch: CampaignTouch): Promise<boolean> {
+    const { baseUrl, headers } = this.options();
+    try {
+      const res = await fetch(`${baseUrl}/v1/attribution/touch`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify(touch),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+
   /**
    * The entitlement + funnel snapshot, and — since ADR-0045 — where a referral is attributed.
    *
