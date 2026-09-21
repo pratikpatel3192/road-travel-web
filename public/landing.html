@@ -63,6 +63,14 @@
       if (same) return;   // a reload under the same campaign is not a new arrival
       q.push(touch);
       localStorage.setItem('rt_utm_q', JSON.stringify(q.slice(-10)));
+      // The queue is DRAINED and emptied; these two are what survive it, and they are what lets
+      // the app report the campaign once after sign-in. Without them an account that arrived
+      // here — the primary campaign entry point — is never attributed at all, because the
+      // commonest path produces no signed-in touch of its own. Shipped missing on 2026-09-21:
+      // AttributionService.enqueue() wrote them and this copy did not, so the fix worked only for
+      // people landing directly on /plan?utm_*, which is the rarer half.
+      localStorage.setItem('rt_utm_last', JSON.stringify(touch));
+      localStorage.removeItem('rt_utm_claimed');
     } catch (e) { /* private mode / storage blocked — never break the landing page for this */ }
   })();
 </script>
