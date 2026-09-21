@@ -89,3 +89,52 @@ describe('AttributionService', () => {
     expect(service.pending).toEqual([]);
   });
 });
+
+/**
+ * The claim path. Found by running the server against a real Postgres: the queue alone left the
+ * COMMONEST conversion path unattributed — arrive under a campaign anonymously, drain it, sign up
+ * later, never click another campaign link. The server never saw a signed-in touch, so it never
+ * claimed the earlier arrivals and the account never reached the ROI roll-up at all.
+ */
+describe('AttributionService — the signed-in re-report', () => {
+  let service: AttributionService;
+
+  beforeEach(() => {
+    localStorage.clear();
+    TestBed.configureTestingModule({});
+    service = TestBed.inject(AttributionService);
+  });
+
+  it('offers the last campaign for re-report until it is claimed', () => {
+    service.capture('?utm_source=reddit&utm_medium=social', '');
+    expect(service.unclaimed?.utm_source).toBe('reddit');
+    service.markClaimed();
+    expect(service.unclaimed).toBeNull();
+  });
+
+  it('offers nothing when no campaign was ever captured', () => {
+    expect(service.unclaimed).toBeNull();
+  });
+
+  it('survives the queue being drained — the last campaign is kept separately', () => {
+    service.capture('?utm_source=reddit', '');
+    service.clearSent(service.pending);
+    expect(service.pending).toEqual([]);
+    expect(service.unclaimed?.utm_source).toBe('reddit');
+  });
+
+  it('a NEW campaign re-opens the claim, so last_* follows the newest arrival', () => {
+    service.capture('?utm_source=reddit', '');
+    service.markClaimed();
+    expect(service.unclaimed).toBeNull();
+    service.capture('?utm_source=google&utm_medium=cpc', '');
+    expect(service.unclaimed?.utm_source).toBe('google');
+  });
+
+  it('a repeat of the SAME campaign does not re-open the claim', () => {
+    service.capture('?utm_source=reddit', '');
+    service.markClaimed();
+    service.capture('?utm_source=reddit', '');
+    expect(service.unclaimed).toBeNull();
+  });
+});

@@ -33,6 +33,19 @@ export interface CampaignTouch {
 @Injectable({ providedIn: 'root' })
 export class AttributionService {
   private static readonly KEY = 'rt_utm_q';
+  /**
+   * The most recent campaign, kept FOREVER and separately from the queue.
+   *
+   * The queue alone left the commonest conversion path unattributed: arrive under a campaign while
+   * anonymous, drain it, sign up later, never click another campaign link — and the server never
+   * sees a signed-in touch, so it never claims the earlier arrivals and never writes the account's
+   * campaign row. The account was simply absent from the ROI roll-up. Keeping the last campaign
+   * lets the client report it once, after signing in, which is what triggers the claim.
+   */
+  private static readonly LAST = 'rt_utm_last';
+  /** Set once the last campaign has been reported from a SIGNED-IN session. Without it the
+   *  re-report would fire on every launch and turn `touch_count` into a launch counter. */
+  private static readonly CLAIMED = 'rt_utm_claimed';
   /** Small on purpose: this is a hand-off buffer, not a log. The server keeps the history. */
   private static readonly MAX = 10;
 
@@ -60,6 +73,29 @@ export class AttributionService {
     // "somebody arrived", which is what analytics is for.
     if (!touch.utm_source && !touch.utm_medium && !touch.utm_campaign) return false;
     return this.enqueue(touch);
+  }
+
+  /**
+   * The campaign to re-report now that the session is signed in, or null when there is nothing to
+   * do — no campaign was ever captured, or it has already been reported while signed in.
+   */
+  get unclaimed(): CampaignTouch | null {
+    try {
+      if (localStorage.getItem(AttributionService.CLAIMED)) return null;
+      const raw = localStorage.getItem(AttributionService.LAST);
+      return raw ? (JSON.parse(raw) as CampaignTouch) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Remember that the account has been attributed, so this happens exactly once per browser. */
+  markClaimed(): void {
+    try {
+      localStorage.setItem(AttributionService.CLAIMED, '1');
+    } catch {
+      /* storage blocked — the worst case is re-reporting, which the server dedupes */
+    }
   }
 
   /** Everything waiting to be posted, oldest first. */
@@ -94,6 +130,14 @@ export class AttributionService {
     const last = queue[queue.length - 1];
     if (last && this.sameCampaign(last, touch)) return false;
     queue.push(touch);
+    // Kept outside the queue and never cleared — see LAST. A NEW campaign also re-opens the claim:
+    // the account's first touch cannot change, but its last_* should follow the newest arrival.
+    try {
+      localStorage.setItem(AttributionService.LAST, JSON.stringify(touch));
+      localStorage.removeItem(AttributionService.CLAIMED);
+    } catch {
+      /* storage blocked */
+    }
     // Drop from the FRONT when full: if a visitor really has collected more than ten campaigns
     // without ever opening the app, the recent ones are the ones still worth reporting.
     this.write(queue.slice(-AttributionService.MAX));
