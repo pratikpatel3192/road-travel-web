@@ -57,7 +57,7 @@ export const appConfig: ApplicationConfig = {
         // anonymous one, since most campaign traffic never signs up and that is exactly the
         // population a conversion rate is measured against. Deliberately NOT awaited: reporting a
         // campaign must never delay first paint, and it must never be able to fail startup.
-        void drainAttribution(api, attribution);
+        void drainAttribution(api, attribution, auth);
       } catch (err) {
         console.error('[startup] config/auth init failed; continuing degraded', err);
       }
@@ -73,13 +73,25 @@ export const appConfig: ApplicationConfig = {
  * for no gain. Stops at the first failure and leaves the rest queued — `clearSent` drops only the
  * prefix that succeeded, so a touch captured while this was in flight survives.
  */
-async function drainAttribution(api: ApiService, attribution: AttributionService): Promise<void> {
+async function drainAttribution(
+  api: ApiService,
+  attribution: AttributionService,
+  auth: AuthService,
+): Promise<void> {
   const pending = attribution.pending;
-  if (!pending.length) return;
   const sent: typeof pending = [];
   for (const touch of pending) {
     if (!(await api.recordAttributionTouch(touch))) break;
     sent.push(touch);
   }
   attribution.clearSent(sent);
+
+  // Then, exactly once per browser, re-report the most recent campaign from a SIGNED-IN session.
+  // Without this the commonest conversion path is invisible: arrive under a campaign anonymously,
+  // sign up later, never click another campaign link — the server never sees a signed-in touch,
+  // so it never claims the earlier arrivals and the account never reaches the ROI roll-up at all.
+  // The server dedupes, so the re-report costs a counter bump and buys the claim.
+  if (!auth.hasRealAccount()) return;
+  const unclaimed = attribution.unclaimed;
+  if (unclaimed && (await api.recordAttributionTouch(unclaimed))) attribution.markClaimed();
 }
