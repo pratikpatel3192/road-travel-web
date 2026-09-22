@@ -80,12 +80,21 @@ jobs:
             exit 1
           fi
 
-      # 460 of 480. The 20 excluded live in the two specs above.
+      # REMOVED, not --exclude'd. `ng test --exclude` stops a spec RUNNING, but the Angular
+      # compiler still typechecks every **/*.spec.ts in tsconfig.spec.json, so the unresolvable
+      # import fails the build before vitest ever filters anything. CI found that too.
+      #
+      # Deleting is also the safe version. The alternative — writing placeholder vectors so the
+      # imports resolve — would mean that if the exclusion ever lapsed, these specs would run
+      # against fabricated oracle data and PASS. There is nothing here to pass against.
+      #
+      # Checkout is a fresh copy on a runner; nothing is pushed from this job.
+      - name: Drop the specs whose oracle lives in the private sibling repo
+        run: rm src/app/core/itinerary-vectors.spec.ts src/app/pages/plan/trip-keys-vectors.spec.ts
+
+      # 460 of 480. The other 20 are the two specs removed above, and still run locally.
       - name: Unit tests
-        run: |
-          npx ng test --watch=false \
-            --exclude "**/itinerary-vectors.spec.ts" \
-            --exclude "**/trip-keys-vectors.spec.ts"
+        run: npx ng test --watch=false
 
       # The production build is its own check: the specs run against TypeScript, while `ng build`
       # is the only thing that exercises the real bundling, budgets and AOT compilation the
