@@ -1,0 +1,103 @@
+# Tests, build, and the vendored-SDK drift check.
+#
+# This repo had no CI at all. Everything that ships here — including the landing page, which is
+# static HTML nginx serves directly and no test previously touched — reached production on the
+# strength of somebody having run the suite locally. Three bugs in ADR-0045/ADR-0048 got through
+# that way; two of them were the landing page's inline copy of logic drifting from the Angular
+# service it duplicates, which `landing-capture.contract.spec.ts` now pins and which only runs if
+# something runs it.
+#
+# Deliberately NOT here: `prettier --check`. 36 files under src/ are currently unformatted, all of
+# them pre-existing, so adding it would make CI red on arrival and the fix is a 36-file reformat
+# that belongs in its own change rather than bundled into turning CI on.
+#
+# TWO SPECS CANNOT RUN HERE, and this is the first thing CI revealed. `itinerary-vectors.spec.ts`
+# and `trip-keys-vectors.spec.ts` import their oracle from `../../road-travel-docs/test-vectors/`,
+# a SIBLING REPOSITORY that is private while this one is public. A runner checks out this repo
+# only, so they cannot resolve — which is also why the suite had never run anywhere but a laptop
+# with all the repos cloned side by side.
+#
+# They are excluded rather than weakened: making them skip when the file is missing would let them
+# pass silently on a developer machine that had simply moved the folder, which is worse than not
+# running them. The guard step below asserts the excluded set is EXACTLY those two, so a third
+# sibling-dependent spec cannot quietly join them.
+#
+# To run the full 480 instead of 460: add a PAT with read access to road-travel-docs as a secret,
+# check that repo out to ../road-travel-docs, and drop the --exclude flags. Not done here because
+# a public repository holding a token to a private one is a decision to make deliberately, not a
+# side effect of turning CI on.
+name: checks
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      # 22.22.3 is a hard floor, not a preference: the Angular CLI refuses outright to run below
+      # v22.22.3 / v24.15.0 / v26.0.0. Pinning the floor exactly means a runner image bump cannot
+      # quietly move the version this is tested on.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22.22.3"
+          cache: npm
+
+      # `vendor/sdk` is a `file:` dependency whose `prepare` script runs `tsc -p
+      # tsconfig.build.json`, so this REBUILDS the committed vendor/sdk/dist as a side effect.
+      # That is what makes the next step a real check rather than a tautology.
+      - name: npm ci
+        run: npm ci
+
+      # dist/ is committed and is what the app compiles against. If it does not match what
+      # `prepare` produces from src/, the app is building against a stale SDK — which is precisely
+      # how the vendored copy fell three operations behind road-travel-contracts.
+      - name: The vendored SDK's dist/ must match its src/
+        run: |
+          git diff --exit-code -- vendor/sdk/dist || {
+            echo "::error::vendor/sdk/dist does not match what 'prepare' builds from vendor/sdk/src."
+            echo "::error::Run 'npm ci' locally and commit the resulting vendor/sdk/dist."
+            exit 1
+          }
+
+      # If this fails, a new spec has started importing the private sibling repo. Either exclude
+      # it here too and say why, or move its fixture into this repository.
+      - name: Only the two known specs may depend on the sibling repo
+        run: |
+          EXPECTED='src/app/core/itinerary-vectors.spec.ts
+          src/app/pages/plan/trip-keys-vectors.spec.ts'
+          ACTUAL=$(grep -rl "road-travel-docs/test-vectors" src --include='*.spec.ts' | sort)
+          if [ "$ACTUAL" != "$(echo "$EXPECTED" | sed 's/^ *//')" ]; then
+            echo "::error::specs depending on ../road-travel-docs changed. Found:"
+            echo "$ACTUAL"
+            exit 1
+          fi
+
+      # REMOVED, not --exclude'd. `ng test --exclude` stops a spec RUNNING, but the Angular
+      # compiler still typechecks every **/*.spec.ts in tsconfig.spec.json, so the unresolvable
+      # import fails the build before vitest ever filters anything. CI found that too.
+      #
+      # Deleting is also the safe version. The alternative — writing placeholder vectors so the
+      # imports resolve — would mean that if the exclusion ever lapsed, these specs would run
+      # against fabricated oracle data and PASS. There is nothing here to pass against.
+      #
+      # Checkout is a fresh copy on a runner; nothing is pushed from this job.
+      - name: Drop the specs whose oracle lives in the private sibling repo
+        run: rm src/app/core/itinerary-vectors.spec.ts src/app/pages/plan/trip-keys-vectors.spec.ts
+
+      # 460 of 480. The other 20 are the two specs removed above, and still run locally.
+      - name: Unit tests
+        run: npx ng test --watch=false
+
+      # The production build is its own check: the specs run against TypeScript, while `ng build`
+      # is the only thing that exercises the real bundling, budgets and AOT compilation the
+      # deployed artifact goes through.
+      - name: Production build
+        run: npx ng build
