@@ -10,6 +10,22 @@
 # Deliberately NOT here: `prettier --check`. 36 files under src/ are currently unformatted, all of
 # them pre-existing, so adding it would make CI red on arrival and the fix is a 36-file reformat
 # that belongs in its own change rather than bundled into turning CI on.
+#
+# TWO SPECS CANNOT RUN HERE, and this is the first thing CI revealed. `itinerary-vectors.spec.ts`
+# and `trip-keys-vectors.spec.ts` import their oracle from `../../road-travel-docs/test-vectors/`,
+# a SIBLING REPOSITORY that is private while this one is public. A runner checks out this repo
+# only, so they cannot resolve — which is also why the suite had never run anywhere but a laptop
+# with all the repos cloned side by side.
+#
+# They are excluded rather than weakened: making them skip when the file is missing would let them
+# pass silently on a developer machine that had simply moved the folder, which is worse than not
+# running them. The guard step below asserts the excluded set is EXACTLY those two, so a third
+# sibling-dependent spec cannot quietly join them.
+#
+# To run the full 480 instead of 460: add a PAT with read access to road-travel-docs as a secret,
+# check that repo out to ../road-travel-docs, and drop the --exclude flags. Not done here because
+# a public repository holding a token to a private one is a decision to make deliberately, not a
+# side effect of turning CI on.
 name: checks
 
 on:
@@ -51,8 +67,25 @@ jobs:
             exit 1
           }
 
+      # If this fails, a new spec has started importing the private sibling repo. Either exclude
+      # it here too and say why, or move its fixture into this repository.
+      - name: Only the two known specs may depend on the sibling repo
+        run: |
+          EXPECTED='src/app/core/itinerary-vectors.spec.ts
+          src/app/pages/plan/trip-keys-vectors.spec.ts'
+          ACTUAL=$(grep -rl "road-travel-docs/test-vectors" src --include='*.spec.ts' | sort)
+          if [ "$ACTUAL" != "$(echo "$EXPECTED" | sed 's/^ *//')" ]; then
+            echo "::error::specs depending on ../road-travel-docs changed. Found:"
+            echo "$ACTUAL"
+            exit 1
+          fi
+
+      # 460 of 480. The 20 excluded live in the two specs above.
       - name: Unit tests
-        run: npx ng test --watch=false
+        run: |
+          npx ng test --watch=false \
+            --exclude "**/itinerary-vectors.spec.ts" \
+            --exclude "**/trip-keys-vectors.spec.ts"
 
       # The production build is its own check: the specs run against TypeScript, while `ng build`
       # is the only thing that exercises the real bundling, budgets and AOT compilation the
