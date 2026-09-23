@@ -1,4 +1,13 @@
-import { Component, computed, effect, inject, input, linkedSignal, output, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  linkedSignal,
+  output,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import type {
@@ -54,12 +63,19 @@ import { DWELL_PRESETS, type DwellMinutes, MAX_STOPS } from './waypoints';
     <section class="explore">
       <header class="head">
         <h3>Explore along the way</h3>
-        <button class="close" type="button" (click)="close.emit()" aria-label="Close Explore">✕</button>
+        <button class="close" type="button" (click)="close.emit()" aria-label="Close Explore">
+          ✕
+        </button>
       </header>
 
       <div class="intents" role="group" aria-label="What are you looking for?">
         @for (d of intents; track d.intent) {
-          <button class="intent" type="button" [class.on]="intent() === d.intent" (click)="pickIntent(d.intent)">
+          <button
+            class="intent"
+            type="button"
+            [class.on]="intent() === d.intent"
+            (click)="pickIntent(d.intent)"
+          >
             <span class="i-icon" aria-hidden="true">{{ d.icon }}</span>
             <span class="i-label">{{ d.label }}</span>
           </button>
@@ -90,12 +106,22 @@ import { DWELL_PRESETS, type DwellMinutes, MAX_STOPS } from './waypoints';
       @if (result(); as r) {
         <div class="chips" role="group" aria-label="Refine results">
           @for (ref of refinementDefs; track ref.value) {
-            <button class="chip" type="button" [class.on]="refinements().includes(ref.value)" (click)="toggleRefinement(ref.value)">
+            <button
+              class="chip"
+              type="button"
+              [class.on]="refinements().includes(ref.value)"
+              (click)="toggleRefinement(ref.value)"
+            >
               {{ ref.label }}
             </button>
           }
           @for (c of categoryChips(); track c.value) {
-            <button class="chip" type="button" [class.on]="category() === c.value" (click)="toggleCategory(c.value)">
+            <button
+              class="chip"
+              type="button"
+              [class.on]="category() === c.value"
+              (click)="toggleCategory(c.value)"
+            >
               {{ c.label }}
             </button>
           }
@@ -149,7 +175,9 @@ import { DWELL_PRESETS, type DwellMinutes, MAX_STOPS } from './waypoints';
                   <div class="preview" (click)="$event.stopPropagation()">
                     @if (previewData(); as p) {
                       <p class="delta">
-                        +{{ dur(p.added_seconds) }} driving{{ p.dwell_seconds > 0 ? ' + ' + dur(p.dwell_seconds) + ' stop' : '' }}
+                        +{{ dur(p.added_seconds) }} driving{{
+                          p.dwell_seconds > 0 ? ' + ' + dur(p.dwell_seconds) + ' stop' : ''
+                        }}
                         · arrive <strong>{{ time(p.arrival_after) }}</strong>
                         <span class="was">(was {{ time(p.arrival_before) }})</span>
                       </p>
@@ -160,18 +188,33 @@ import { DWELL_PRESETS, type DwellMinutes, MAX_STOPS } from './waypoints';
                     <div class="preview-row">
                       <label class="dwell">
                         <span>Stop for</span>
-                        <select [ngModel]="previewDwell()" (ngModelChange)="setPreviewDwell($event)" name="preview-dwell">
+                        <select
+                          [ngModel]="previewDwell()"
+                          (ngModelChange)="setPreviewDwell($event)"
+                          name="preview-dwell"
+                        >
                           @for (m of presets; track m) {
-                            <option [ngValue]="m">{{ m === 0 ? 'Pass through' : m + ' min' }}</option>
+                            <option [ngValue]="m">
+                              {{ m === 0 ? 'Pass through' : m + ' min' }}
+                            </option>
                           }
                         </select>
                       </label>
-                      <button class="confirm" type="button" (click)="confirmAdd()" [disabled]="!previewData()">Add stop</button>
+                      <button
+                        class="confirm"
+                        type="button"
+                        (click)="confirmAdd()"
+                        [disabled]="!previewData()"
+                      >
+                        Add stop
+                      </button>
                       <button class="cancel" type="button" (click)="cancelPreview()">Cancel</button>
                     </div>
                   </div>
                 } @else if (canAddStop()) {
-                  <button class="add-stop" type="button" (click)="openPreview(card, $event)">+ Add as stop</button>
+                  <button class="add-stop" type="button" (click)="openPreview(card, $event)">
+                    + Add as stop
+                  </button>
                 }
               </div>
             </li>
@@ -193,10 +236,14 @@ import { DWELL_PRESETS, type DwellMinutes, MAX_STOPS } from './waypoints';
               placeholder="What were you hoping to find?"
               aria-label="What were you hoping to find?"
             />
-            <button class="go" type="submit" [disabled]="sendingFeedback() || !feedbackNote.trim()">Send</button>
+            <button class="go" type="submit" [disabled]="sendingFeedback() || !feedbackNote.trim()">
+              Send
+            </button>
           </form>
         } @else {
-          <button class="link" type="button" (click)="feedbackOpen.set(true)">I wanted something else</button>
+          <button class="link" type="button" (click)="feedbackOpen.set(true)">
+            I wanted something else
+          </button>
         }
       }
     </section>

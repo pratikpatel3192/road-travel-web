@@ -39,7 +39,9 @@ h1 {
   font-size: 0.9rem;
 }
 
-.faq { margin-bottom: 3rem; }
+.faq {
+  margin-bottom: 3rem;
+}
 
 .faq-heading {
   font-size: 0.75rem;
@@ -70,18 +72,24 @@ summary {
   color: var(--text);
 }
 
-summary::-webkit-details-marker { display: none; }
+summary::-webkit-details-marker {
+  display: none;
+}
 
 summary::after {
-  content: "+";
+  content: '+';
   font-size: 1.1rem;
   font-weight: 400;
   color: var(--muted);
   transition: transform 0.2s;
 }
 
-details[open] summary::after { transform: rotate(45deg); }
-details[open] { background: var(--surface); }
+details[open] summary::after {
+  transform: rotate(45deg);
+}
+details[open] {
+  background: var(--surface);
+}
 
 .faq-body {
   padding: 0 1.25rem 1.25rem;
@@ -138,8 +146,13 @@ details[open] { background: var(--surface); }
   transition: opacity 0.2s;
 }
 
-.btn:hover { opacity: 0.88; text-decoration: none; }
+.btn:hover {
+  opacity: 0.88;
+  text-decoration: none;
+}
 
 @media (max-width: 480px) {
-  .contact-card { flex-direction: column; }
+  .contact-card {
+    flex-direction: column;
+  }
 }

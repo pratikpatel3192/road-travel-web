@@ -1,7 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import type { PlanTripResponse, RouteSampleModel, WeatherSnapshotModel } from '@road-travel/sdk';
 
-import { SEVERITY_COLOR, SEVERITY_LEVELS, UNKNOWN_COLOR, UNKNOWN_LABEL, type Severity } from './severity';
+import {
+  SEVERITY_COLOR,
+  SEVERITY_LEVELS,
+  UNKNOWN_COLOR,
+  UNKNOWN_LABEL,
+  type Severity,
+} from './severity';
 import { Timeline } from './timeline';
 
 const weather = (over: Partial<WeatherSnapshotModel> = {}): WeatherSnapshotModel => ({
@@ -42,11 +48,7 @@ const plan = (): PlanTripResponse => ({
   total_dwell_seconds: 45 * 60,
   worst_severity: 'clear',
   route_coordinates: [],
-  samples: [
-    sample(0),
-    sample(1, { waypoint_index: 0, dwell_seconds: 45 * 60 }),
-    sample(2),
-  ],
+  samples: [sample(0), sample(1, { waypoint_index: 0, dwell_seconds: 45 * 60 }), sample(2)],
   segments: [],
   meta: { sample_count: 3, segment_count: 0, route_point_count: 0, provider_mode: 'mock' },
 });
@@ -146,10 +148,7 @@ describe('Timeline — the hazard tint across the five-level scale', () => {
 describe('Timeline — past the forecast horizon', () => {
   it('says there is no forecast yet instead of leaving the cell blank', () => {
     const beyond = plan();
-    beyond.samples = [
-      sample(0),
-      sample(1, { weather: null, beyond_forecast: true }),
-    ];
+    beyond.samples = [sample(0), sample(1, { weather: null, beyond_forecast: true })];
     const fixture = TestBed.createComponent(Timeline);
     fixture.componentRef.setInput('plan', beyond);
     fixture.componentRef.setInput('units', 'imperial');
@@ -183,7 +182,9 @@ describe('Timeline — past the forecast horizon', () => {
     fixture.componentRef.setInput('units', 'imperial');
     fixture.detectChanges();
 
-    expect((fixture.nativeElement as HTMLElement).textContent ?? '').not.toContain('No forecast yet');
+    expect((fixture.nativeElement as HTMLElement).textContent ?? '').not.toContain(
+      'No forecast yet',
+    );
     // ...but it is not left blank either.
     const cells = (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.cell');
     expect(cells[1].querySelector('.no-forecast')?.textContent?.trim()).toBe('Weather unavailable');

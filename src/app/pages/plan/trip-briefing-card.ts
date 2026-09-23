@@ -377,8 +377,7 @@ export class TripBriefingCard {
     const days = this.briefing().days;
     // "all 1 driving day" is what a template writes; a person says "1 driving day". The same wording
     // as the iOS card, so the two surfaces read identically for a one-day trip too.
-    const count =
-      days.length === 1 ? '1 driving day' : `all ${days.length} driving days`;
+    const count = days.length === 1 ? '1 driving day' : `all ${days.length} driving days`;
     const shown = days.find((d) => d.ordinal === this.selectedDay());
     if (!shown) return `The whole trip — ${count}.`;
     const n = shown.ordinal + 1;
@@ -398,7 +397,9 @@ export class TripBriefingCard {
    */
   readonly coverage = computed(() => {
     const { rollup, days } = this.briefing();
-    const bits = [`${rollup.days_with_forecast} of ${days.length} ${days.length === 1 ? 'day' : 'days'} forecast`];
+    const bits = [
+      `${rollup.days_with_forecast} of ${days.length} ${days.length === 1 ? 'day' : 'days'} forecast`,
+    ];
     if (rollup.days_beyond_forecast) {
       bits.push(`${rollup.days_beyond_forecast} past the ${FORECAST_HORIZON_DAYS}-day forecast`);
     }

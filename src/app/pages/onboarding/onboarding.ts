@@ -18,18 +18,30 @@ import { ProfileService } from '../../core/profile.service';
     @if (visible()) {
       <div class="overlay">
         <div class="sheet" role="dialog" aria-modal="true">
-          <img class="brand-logo brand-logo-light" src="logo-horizontal-light-2x.png"
-               srcset="logo-horizontal-light-2x.png 2x" alt="Road Travel" />
-          <img class="brand-logo brand-logo-dark" src="logo-horizontal-dark-2x.png"
-               srcset="logo-horizontal-dark-2x.png 2x" alt="Road Travel" />
+          <img
+            class="brand-logo brand-logo-light"
+            src="logo-horizontal-light-2x.png"
+            srcset="logo-horizontal-light-2x.png 2x"
+            alt="Road Travel"
+          />
+          <img
+            class="brand-logo brand-logo-dark"
+            src="logo-horizontal-dark-2x.png"
+            srcset="logo-horizontal-dark-2x.png 2x"
+            alt="Road Travel"
+          />
           <h2>Welcome to Road Travel</h2>
-          <p class="sub">A few quick details to personalize your drives. You can skip and finish later.</p>
+          <p class="sub">
+            A few quick details to personalize your drives. You can skip and finish later.
+          </p>
 
           <div class="grid2">
-            <label>First name*
+            <label
+              >First name*
               <input [value]="firstName()" (input)="firstName.set($any($event.target).value)" />
             </label>
-            <label>Last name*
+            <label
+              >Last name*
               <input [value]="lastName()" (input)="lastName.set($any($event.target).value)" />
             </label>
           </div>
@@ -43,7 +55,9 @@ import { ProfileService } from '../../core/profile.service';
                   class="chip"
                   [class.on]="vehicles().has(v.code)"
                   (click)="toggleVehicle(v.code)"
-                >{{ v.label }}</button>
+                >
+                  {{ v.label }}
+                </button>
               }
             </div>
           </div>
@@ -58,25 +72,42 @@ import { ProfileService } from '../../core/profile.service';
                     class="chip"
                     [class.on]="isChosen(q, o.value)"
                     (click)="choose(q, o.value)"
-                  >{{ o.label }}</button>
+                  >
+                    {{ o.label }}
+                  </button>
                 }
               </div>
             </div>
           }
 
           <label class="check required">
-            <input type="checkbox" [checked]="agreed()" (change)="agreed.set($any($event.target).checked)" />
-            <span>I agree to the <a href="/terms" target="_blank" rel="noopener">Terms</a> &amp; <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a> *</span>
+            <input
+              type="checkbox"
+              [checked]="agreed()"
+              (change)="agreed.set($any($event.target).checked)"
+            />
+            <span
+              >I agree to the <a href="/terms" target="_blank" rel="noopener">Terms</a> &amp;
+              <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a> *</span
+            >
           </label>
           <label class="check">
-            <input type="checkbox" [checked]="marketing()" (change)="marketing.set($any($event.target).checked)" />
+            <input
+              type="checkbox"
+              [checked]="marketing()"
+              (change)="marketing.set($any($event.target).checked)"
+            />
             <span>Send me product news and tips</span>
           </label>
 
-          @if (error()) { <p class="err" role="alert">{{ error() }}</p> }
+          @if (error()) {
+            <p class="err" role="alert">{{ error() }}</p>
+          }
 
           <div class="actions">
-            <button class="ghost" (click)="skip()" [disabled]="!agreed() || busy()">Skip for now</button>
+            <button class="ghost" (click)="skip()" [disabled]="!agreed() || busy()">
+              Skip for now
+            </button>
             <button class="cta" (click)="finish()" [disabled]="!canFinish() || busy()">
               {{ busy() ? 'Saving…' : 'Finish' }}
             </button>
@@ -87,34 +118,136 @@ import { ProfileService } from '../../core/profile.service';
   `,
   styles: [
     `
-      .overlay { position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.5);
-        display: grid; place-items: center; padding: 16px; overflow: auto; }
-      .sheet { width: 100%; max-width: 500px; background: var(--surface); color: var(--text);
-        border: 1px solid var(--border); border-radius: 18px; padding: 28px 24px;
-        box-shadow: 0 24px 60px rgba(0,0,0,.3); }
-      .brand-logo { margin-bottom: 14px; }
-      h2 { margin: 0 0 6px; font-size: 24px; }
-      .sub { margin: 0 0 20px; color: var(--muted); font-size: 14px; line-height: 1.4; }
-      .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-      label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
-      input[type=text], input, input[type=tel] { padding: 9px 10px; border: 1px solid var(--border);
-        border-radius: 9px; font: inherit; background: var(--surface); color: inherit; }
-      .block { margin-top: 20px; }
-      .lbl { display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
-      .chips { display: flex; flex-wrap: wrap; gap: 8px; row-gap: 10px; }
-      .chip { padding: 7px 12px; border: 1px solid var(--border); border-radius: 999px;
-        background: var(--surface); color: inherit; font-size: 13px; cursor: pointer; }
-      .chip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
-      .check { display: flex; flex-direction: row; align-items: center; gap: 8px; margin-top: 18px;
-        font-size: 13px; color: var(--text); }
-      .check.required { font-weight: 600; }
-      .check input { width: auto; }
-      .err { color: #b91c1c; font-size: 13px; margin: 10px 0 0; }
-      .actions { display: flex; justify-content: space-between; gap: 10px; margin-top: 18px; }
-      .cta { background: var(--accent); color: var(--accent-contrast); border: none; border-radius: 11px;
-        padding: 11px 20px; font-weight: 700; cursor: pointer; }
-      .cta:disabled, .ghost:disabled { opacity: .5; cursor: default; }
-      .ghost { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 13px; }
+      .overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 90;
+        background: rgba(0, 0, 0, 0.5);
+        display: grid;
+        place-items: center;
+        padding: 16px;
+        overflow: auto;
+      }
+      .sheet {
+        width: 100%;
+        max-width: 500px;
+        background: var(--surface);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 28px 24px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+      }
+      .brand-logo {
+        margin-bottom: 14px;
+      }
+      h2 {
+        margin: 0 0 6px;
+        font-size: 24px;
+      }
+      .sub {
+        margin: 0 0 20px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.4;
+      }
+      .grid2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      label {
+        display: grid;
+        gap: 4px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      input[type='text'],
+      input,
+      input[type='tel'] {
+        padding: 9px 10px;
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        font: inherit;
+        background: var(--surface);
+        color: inherit;
+      }
+      .block {
+        margin-top: 20px;
+      }
+      .lbl {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        row-gap: 10px;
+      }
+      .chip {
+        padding: 7px 12px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--surface);
+        color: inherit;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .chip.on {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--accent-contrast);
+      }
+      .check {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+        margin-top: 18px;
+        font-size: 13px;
+        color: var(--text);
+      }
+      .check.required {
+        font-weight: 600;
+      }
+      .check input {
+        width: auto;
+      }
+      .err {
+        color: #b91c1c;
+        font-size: 13px;
+        margin: 10px 0 0;
+      }
+      .actions {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 18px;
+      }
+      .cta {
+        background: var(--accent);
+        color: var(--accent-contrast);
+        border: none;
+        border-radius: 11px;
+        padding: 11px 20px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .cta:disabled,
+      .ghost:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      .ghost {
+        background: none;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 13px;
+      }
     `,
   ],
 })

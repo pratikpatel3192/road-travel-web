@@ -76,20 +76,24 @@ describe('BriefingCard (F-001 v2 progressive disclosure)', () => {
     ['clear', 'Clear', 'v-clear'],
     ['caution', 'Caution', 'v-caution'],
     ['consider-waiting', 'Consider waiting', 'v-consider-waiting'],
-  ] as const)('renders the %s verdict chip with its label and token class', (verdict, label, cls) => {
-    const el = render(briefing({ verdict })).nativeElement as HTMLElement;
-    const chip = el.querySelector<HTMLElement>('.chip')!;
-    expect(chip).toBeTruthy();
-    expect(chip.textContent?.trim()).toBe(label);
-    expect(chip.classList.contains(cls)).toBe(true);
-    // The chip is followed by the ≤12-word verdict line.
-    expect(el.querySelector('.verdict-line')?.textContent).toContain('one wet stretch');
-    // The old severity badge is subsumed by the chip.
-    expect(el.querySelector('.badge')).toBeNull();
-  });
+  ] as const)(
+    'renders the %s verdict chip with its label and token class',
+    (verdict, label, cls) => {
+      const el = render(briefing({ verdict })).nativeElement as HTMLElement;
+      const chip = el.querySelector<HTMLElement>('.chip')!;
+      expect(chip).toBeTruthy();
+      expect(chip.textContent?.trim()).toBe(label);
+      expect(chip.classList.contains(cls)).toBe(true);
+      // The chip is followed by the ≤12-word verdict line.
+      expect(el.querySelector('.verdict-line')?.textContent).toContain('one wet stretch');
+      // The old severity badge is subsumed by the chip.
+      expect(el.querySelector('.badge')).toBeNull();
+    },
+  );
 
   it('falls back to the severity badge (still server data) when there is no verdict', () => {
-    const el = render(briefing({ verdict: undefined, verdict_line: undefined })).nativeElement as HTMLElement;
+    const el = render(briefing({ verdict: undefined, verdict_line: undefined }))
+      .nativeElement as HTMLElement;
     expect(el.querySelector('.chip')).toBeNull();
     expect(el.querySelector('.badge')?.textContent?.trim()).toBe('Caution');
   });
@@ -103,7 +107,11 @@ describe('BriefingCard (F-001 v2 progressive disclosure)', () => {
     ['extreme', 'Extreme', SEVERITY_COLOR.extreme],
   ] as const)('badges %s as "%s" in its own colour', (severity, label, color) => {
     const el = render(
-      briefing({ verdict: undefined, verdict_line: undefined, facts: facts({ overall_severity: severity }) }),
+      briefing({
+        verdict: undefined,
+        verdict_line: undefined,
+        facts: facts({ overall_severity: severity }),
+      }),
     ).nativeElement as HTMLElement;
     const badge = el.querySelector<HTMLElement>('.badge')!;
     expect(badge.textContent?.trim()).toBe(label);
@@ -123,9 +131,7 @@ describe('BriefingCard (F-001 v2 progressive disclosure)', () => {
     const el = render(
       briefing({
         facts: facts({
-          hazards: [
-            hazard({ severity }),
-          ],
+          hazards: [hazard({ severity })],
         }),
       }),
     ).nativeElement as HTMLElement;
@@ -169,7 +175,8 @@ describe('BriefingCard (F-001 v2 progressive disclosure)', () => {
   });
 
   it('renders the full text with no toggle when the server sent no brief (pre-v2)', () => {
-    const el = render(briefing({ brief: undefined, claims: undefined })).nativeElement as HTMLElement;
+    const el = render(briefing({ brief: undefined, claims: undefined }))
+      .nativeElement as HTMLElement;
     expect(el.querySelector('.prose')?.textContent).toContain('Otherwise the drive is quiet');
     expect(el.querySelector('.more')).toBeNull();
   });
@@ -194,7 +201,8 @@ describe('BriefingCard (F-001 v2 progressive disclosure)', () => {
     const updated = render(briefing({ diff: { ...diff } })).nativeElement as HTMLElement;
     expect(updated.querySelector('.updated')?.textContent?.trim()).toBe('Updated');
 
-    const immaterial = render(briefing({ diff: { ...diff, material: false } })).nativeElement as HTMLElement;
+    const immaterial = render(briefing({ diff: { ...diff, material: false } }))
+      .nativeElement as HTMLElement;
     expect(immaterial.querySelector('.updated')).toBeNull();
 
     const noDiff = render(briefing({ diff: null })).nativeElement as HTMLElement;

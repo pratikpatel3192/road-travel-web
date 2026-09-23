@@ -66,7 +66,7 @@ export class AuthService {
       this.authError.set(
         code === 'email_exists'
           ? 'This email already has a Road Travel account. Sign in with an email link instead — ' +
-            'you can connect Google to it later in Settings.'
+              'you can connect Google to it later in Settings.'
           : (desc ?? 'Sign-in failed. Please try again.').replace(/\+/g, ' '),
       );
       // Drop the error params so a reload doesn't re-show it.

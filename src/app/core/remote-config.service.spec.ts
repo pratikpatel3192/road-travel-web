@@ -20,10 +20,13 @@ describe('RemoteConfigService', () => {
   function stubFetch(body: unknown): void {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => new Response(JSON.stringify(body), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      })),
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify(body), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+      ),
     );
   }
 
@@ -53,7 +56,10 @@ describe('RemoteConfigService', () => {
   });
 
   it('a failed fetch blocks nothing and disables nothing', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new Error('offline'))));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Promise.reject(new Error('offline'))),
+    );
     const service = TestBed.inject(RemoteConfigService);
     await service.fetch();
     expect(service.updateRequired()).toBe(false);

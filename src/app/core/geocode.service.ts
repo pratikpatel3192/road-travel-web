@@ -112,9 +112,14 @@ export class GeocodeService {
     const [longitude, latitude] = coords;
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
     const p = f.properties ?? {};
-    const parts = [p['name'], p['city'] ?? p['town'] ?? p['village'], p['state'], p['country']]
-      .filter((x): x is string => !!x);
-    const name = [...new Set(parts)].join(', ') || `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`;
+    const parts = [
+      p['name'],
+      p['city'] ?? p['town'] ?? p['village'],
+      p['state'],
+      p['country'],
+    ].filter((x): x is string => !!x);
+    const name =
+      [...new Set(parts)].join(', ') || `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`;
     return { name, latitude, longitude };
   }
 }

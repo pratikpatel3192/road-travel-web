@@ -46,7 +46,9 @@ const ESRI_LABELS =
  * and an empty temperature — a row of dark, blank pills along a day past the forecast horizon that
  * a traveller reasonably read as the map being broken.
  */
-export function pinKind(sample: Pick<RouteSampleModel, 'weather' | 'waypoint_index'>): 'stop' | 'weather' | null {
+export function pinKind(
+  sample: Pick<RouteSampleModel, 'weather' | 'waypoint_index'>,
+): 'stop' | 'weather' | null {
   if (sample.waypoint_index != null) return 'stop';
   return sample.weather ? 'weather' : null;
 }
@@ -105,7 +107,11 @@ export function mapWeatherNotice(
   }
   return all
     ? { kind: 'unavailable', prominent: true, text: "Weather isn't available for this route." }
-    : { kind: 'partial-unavailable', prominent: false, text: "Weather isn't available for part of this route." };
+    : {
+        kind: 'partial-unavailable',
+        prominent: false,
+        text: "Weather isn't available for part of this route.",
+      };
 }
 
 /**
@@ -123,7 +129,13 @@ export function mapWeatherNotice(
   imports: [IconComponent],
   template: `
     <div class="wrap" [class.expanded]="expanded()">
-      <div #mapEl class="map" [class.expanded]="expanded()" role="img" aria-label="Route map colored by weather severity"></div>
+      <div
+        #mapEl
+        class="map"
+        [class.expanded]="expanded()"
+        role="img"
+        aria-label="Route map colored by weather severity"
+      ></div>
       <div class="layers" role="group" aria-label="Map layers">
         <button
           type="button"
@@ -135,25 +147,51 @@ export function mapWeatherNotice(
           <app-icon [name]="expanded() ? 'minimize-2' : 'maximize-2'" [size]="15" />
         </button>
         @if (userLocation()) {
-          <button type="button" class="map-chip expand" (click)="recenter()" aria-label="Recenter on your location" title="Your location">
+          <button
+            type="button"
+            class="map-chip expand"
+            (click)="recenter()"
+            aria-label="Recenter on your location"
+            title="Your location"
+          >
             <app-icon name="locate-fixed" [size]="15" />
           </button>
         }
         <span class="sep"></span>
-        <button type="button" class="map-chip" [class.on]="settings.mapStyle() === 'standard'" (click)="settings.setMapStyle('standard')">
+        <button
+          type="button"
+          class="map-chip"
+          [class.on]="settings.mapStyle() === 'standard'"
+          (click)="settings.setMapStyle('standard')"
+        >
           Map
         </button>
-        <button type="button" class="map-chip" [class.on]="settings.mapStyle() === 'satellite'" (click)="settings.setMapStyle('satellite')">
+        <button
+          type="button"
+          class="map-chip"
+          [class.on]="settings.mapStyle() === 'satellite'"
+          (click)="settings.setMapStyle('satellite')"
+        >
           Satellite
         </button>
-        <button type="button" class="map-chip" [class.on]="settings.mapStyle() === 'hybrid'" (click)="settings.setMapStyle('hybrid')">
+        <button
+          type="button"
+          class="map-chip"
+          [class.on]="settings.mapStyle() === 'hybrid'"
+          (click)="settings.setMapStyle('hybrid')"
+        >
           Hybrid
         </button>
       </div>
       @if (notice(); as n) {
         <!-- Said on the map itself: a neutral line with no pills is otherwise indistinguishable
              from a map that failed to load its weather. -->
-        <p class="wx-notice" [class.prominent]="n.prominent" [attr.data-kind]="n.kind" role="status">
+        <p
+          class="wx-notice"
+          [class.prominent]="n.prominent"
+          [attr.data-kind]="n.kind"
+          role="status"
+        >
           @if (n.prominent) {
             <app-icon [name]="n.kind === 'beyond' ? 'calendar' : 'cloud'" [size]="16" />
           }
@@ -206,7 +244,9 @@ export function mapWeatherNotice(
         justify-content: center;
         padding: 7px 14px;
         border: 2px solid transparent;
-        transition: background 150ms ease-out, border-color 150ms ease-out;
+        transition:
+          background 150ms ease-out,
+          border-color 150ms ease-out;
       }
       .layers button.on {
         background: var(--accent-100);
@@ -277,7 +317,9 @@ export class RouteMap implements OnDestroy {
   readonly day = input<number | null>(null);
   /** The shown day's own `beyond_forecast` — such a day has no plan, so no samples to read it from. */
   readonly dayBeyondForecast = input(false);
-  readonly notice = computed(() => mapWeatherNotice(this.plan(), this.day(), this.dayBeyondForecast()));
+  readonly notice = computed(() =>
+    mapWeatherNotice(this.plan(), this.day(), this.dayBeyondForecast()),
+  );
   /**
    * Whether the mouse wheel / trackpad scroll zooms the map. The host page decides, because only it
    * knows whether the map is a full-height pane (the desktop planner, where a wheel over the map
@@ -362,7 +404,10 @@ export class RouteMap implements OnDestroy {
       // completely — and with wheel zoom off too, a desktop user had no way to zoom at all. The
       // bottom-right is no better on a phone: the no-forecast notice is bottom-centre and nearly
       // full-width there. The top-right is covered by nothing on any layout, expanded or not.
-      this.map = L.map(el, { zoomControl: false, scrollWheelZoom: this.wheelZoomOn() }).setView([37, -120], 6);
+      this.map = L.map(el, { zoomControl: false, scrollWheelZoom: this.wheelZoomOn() }).setView(
+        [37, -120],
+        6,
+      );
       L.control.zoom({ position: 'topright' }).addTo(this.map);
       this.applyLayers();
       this.resizeObserver = new ResizeObserver(() => this.fit());
@@ -415,7 +460,7 @@ export class RouteMap implements OnDestroy {
       // say something, this build just predates the word. `toSeverity` separates the two, and an
       // unrecognised value degrades to caution rather than to "no forecast".
       const known: Severity | null =
-        seg.severity == null ? null : toSeverity(seg.severity) ?? SEVERITY_FALLBACK;
+        seg.severity == null ? null : (toSeverity(seg.severity) ?? SEVERITY_FALLBACK);
       //
       // The no-forecast stretch is also DASHED. A solid muted line on satellite imagery is exactly
       // what a failed or disabled layer looks like, and that is how users read it ("why is it
@@ -452,7 +497,8 @@ export class RouteMap implements OnDestroy {
         : '';
       const stop = s.waypoint_index ?? null;
       const marker = L.marker([s.latitude, s.longitude], {
-        icon: stop != null ? this.stopIcon(stop + 1, sev, false) : this.pinIcon(icon, temp, sev, false),
+        icon:
+          stop != null ? this.stopIcon(stop + 1, sev, false) : this.pinIcon(icon, temp, sev, false),
         keyboard: false,
         zIndexOffset: stop != null ? 500 : 0,
       });
@@ -497,7 +543,12 @@ export class RouteMap implements OnDestroy {
       iconAnchor: [9, 9],
     });
     if (this.userMarker) this.userMarker.setLatLng([loc.latitude, loc.longitude]).setIcon(icon);
-    else this.userMarker = L.marker([loc.latitude, loc.longitude], { icon, keyboard: false, zIndexOffset: 900 }).addTo(map);
+    else
+      this.userMarker = L.marker([loc.latitude, loc.longitude], {
+        icon,
+        keyboard: false,
+        zIndexOffset: 900,
+      }).addTo(map);
   }
 
   recenter(): void {
@@ -557,7 +608,9 @@ export class RouteMap implements OnDestroy {
     const sel = this.selected();
     this.markers.forEach(({ marker, sev, icon, temp, stop }, idx) => {
       const on = idx === sel;
-      marker.setIcon(stop != null ? this.stopIcon(stop + 1, sev, on) : this.pinIcon(icon, temp, sev, on));
+      marker.setIcon(
+        stop != null ? this.stopIcon(stop + 1, sev, on) : this.pinIcon(icon, temp, sev, on),
+      );
       marker.setZIndexOffset(on ? 1000 : stop != null ? 500 : 0);
     });
   }

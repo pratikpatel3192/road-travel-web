@@ -53,7 +53,12 @@ const plan = (samples: RouteSampleModel[]): PlanTripResponse => ({
       ],
     },
   ],
-  meta: { sample_count: samples.length, segment_count: 1, route_point_count: 2, provider_mode: 'mock' },
+  meta: {
+    sample_count: samples.length,
+    segment_count: 1,
+    route_point_count: 2,
+    provider_mode: 'mock',
+  },
 });
 
 const BEYOND_DAY_3 = `Day 3 is past the ${FORECAST_HORIZON_DAYS}-day forecast — we'll have it closer to the day.`;
@@ -81,11 +86,15 @@ describe('RouteMap — samples with no forecast', () => {
     await TestBed.configureTestingModule({ imports: [RouteMap] }).compileComponents();
   });
 
-  async function render(p: PlanTripResponse | null, inputs: { day?: number | null; dayBeyondForecast?: boolean } = {}) {
+  async function render(
+    p: PlanTripResponse | null,
+    inputs: { day?: number | null; dayBeyondForecast?: boolean } = {},
+  ) {
     const fixture = TestBed.createComponent(RouteMap);
     fixture.componentRef.setInput('plan', p);
     if (inputs.day !== undefined) fixture.componentRef.setInput('day', inputs.day);
-    if (inputs.dayBeyondForecast !== undefined) fixture.componentRef.setInput('dayBeyondForecast', inputs.dayBeyondForecast);
+    if (inputs.dayBeyondForecast !== undefined)
+      fixture.componentRef.setInput('dayBeyondForecast', inputs.dayBeyondForecast);
     fixture.detectChanges();
     await new Promise((r) => setTimeout(r, 0)); // render() is deferred a tick
     fixture.detectChanges();
@@ -102,7 +111,13 @@ describe('RouteMap — samples with no forecast', () => {
   });
 
   it('keeps the pills for samples that DO have weather, and only those', async () => {
-    const el = await render(plan([sample(0), sample(1, { weather: null }), sample(2, { weather: weather({ temperature_c: 30 }) })]));
+    const el = await render(
+      plan([
+        sample(0),
+        sample(1, { weather: null }),
+        sample(2, { weather: weather({ temperature_c: 30 }) }),
+      ]),
+    );
     const pins = [...el.querySelectorAll<HTMLElement>('.wx-pin')];
     expect(pins.length).toBe(2);
     expect(pins.map((p) => p.textContent?.trim())).toEqual(['68°', '86°']);
@@ -156,7 +171,11 @@ describe('pinKind', () => {
 
 describe('mapWeatherNotice', () => {
   it('names the day and quotes the horizon constant for a day past the forecast', () => {
-    expect(mapWeatherNotice(plan([past(0), past(1)]), 3)).toEqual({ kind: 'beyond', prominent: true, text: BEYOND_DAY_3 });
+    expect(mapWeatherNotice(plan([past(0), past(1)]), 3)).toEqual({
+      kind: 'beyond',
+      prominent: true,
+      text: BEYOND_DAY_3,
+    });
     expect(BEYOND_DAY_3).toContain(`${FORECAST_HORIZON_DAYS}-day`);
   });
 
@@ -168,8 +187,15 @@ describe('mapWeatherNotice', () => {
 
   it('never blames the horizon for a sample that failed INSIDE it', () => {
     // Every sample missing, but one of them is a failure, not the calendar: no "closer to the day".
-    const n = mapWeatherNotice(plan([past(0), sample(1, { weather: null, beyond_forecast: false })]), 3);
-    expect(n).toEqual({ kind: 'unavailable', prominent: true, text: "Weather isn't available for this route." });
+    const n = mapWeatherNotice(
+      plan([past(0), sample(1, { weather: null, beyond_forecast: false })]),
+      3,
+    );
+    expect(n).toEqual({
+      kind: 'unavailable',
+      prominent: true,
+      text: "Weather isn't available for this route.",
+    });
   });
 
   it('notes, quietly, a day that runs off the end of the forecast part-way', () => {
@@ -210,8 +236,14 @@ describe('RouteMap — zoom controls', () => {
     fixture.detectChanges();
     await new Promise((r) => setTimeout(r, 0)); // the map is created a tick after the first render
     fixture.detectChanges();
-    const map = () => (fixture.componentInstance as unknown as { map: { scrollWheelZoom: { enabled(): boolean } } }).map;
-    return { fixture, el: fixture.nativeElement as HTMLElement, wheel: () => map().scrollWheelZoom.enabled() };
+    const map = () =>
+      (fixture.componentInstance as unknown as { map: { scrollWheelZoom: { enabled(): boolean } } })
+        .map;
+    return {
+      fixture,
+      el: fixture.nativeElement as HTMLElement,
+      wheel: () => map().scrollWheelZoom.enabled(),
+    };
   }
 
   it('puts the zoom buttons in the top-right corner, never the top-left the trip panel covers', async () => {

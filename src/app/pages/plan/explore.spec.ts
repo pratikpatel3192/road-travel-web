@@ -31,7 +31,12 @@ describe('F-005 buildExploreRequest', () => {
     expect(body.destination).toEqual(SAC);
     expect(body.departure_at).toBe(DEPART);
     expect(body.waypoints).toEqual([
-      { name: HARRIS.name, latitude: HARRIS.latitude, longitude: HARRIS.longitude, dwell_minutes: 45 },
+      {
+        name: HARRIS.name,
+        latitude: HARRIS.latitude,
+        longitude: HARRIS.longitude,
+        dwell_minutes: 45,
+      },
     ]);
     expect(body.intent).toBe('passenger_stops');
     // No chip state -> the optional keys are omitted entirely.

@@ -45,9 +45,12 @@ describe('F-012 re-brief keys', () => {
       ['a changed dwell', { ...trip(), waypoints: toWaypoints([newStop(HARRIS, 60)]) }],
       ['a removed stop', { ...trip(), waypoints: [] }],
       ['a different destination', { ...trip(), destination: SAC }],
-    ])('changes after %s, so a shown briefing is never left describing an old plan', (_w, edited) => {
-      expect(tripIdentityKey(edited)).not.toBe(tripIdentityKey(trip()));
-    });
+    ])(
+      'changes after %s, so a shown briefing is never left describing an old plan',
+      (_w, edited) => {
+        expect(tripIdentityKey(edited)).not.toBe(tripIdentityKey(trip()));
+      },
+    );
 
     it('is stable for identical inputs', () => {
       expect(tripIdentityKey(trip())).toBe(tripIdentityKey(trip()));
@@ -78,9 +81,9 @@ describe('F-012 re-brief keys', () => {
     });
 
     it('ignores coordinate noise below 4 dp', () => {
-      expect(
-        tripBaselineKey({ origin: { ...SF, latitude: 37.77490001 }, destination: LA }),
-      ).toBe(tripBaselineKey({ origin: SF, destination: LA }));
+      expect(tripBaselineKey({ origin: { ...SF, latitude: 37.77490001 }, destination: LA })).toBe(
+        tripBaselineKey({ origin: SF, destination: LA }),
+      );
     });
   });
 

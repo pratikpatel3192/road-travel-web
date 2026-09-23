@@ -49,7 +49,10 @@ describe('Plan — landing-page ?from=&to= handoff', () => {
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
-        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap(params) } } },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { queryParamMap: convertToParamMap(params) } },
+        },
         { provide: GeocodeService, useValue: { search, reverse: vi.fn(async () => null) } },
         {
           provide: ApiService,
@@ -75,7 +78,12 @@ describe('Plan — landing-page ?from=&to= handoff', () => {
         },
         {
           provide: SettingsService,
-          useValue: { units: () => 'imperial', home: () => null, work: () => null, setUnits: vi.fn() },
+          useValue: {
+            units: () => 'imperial',
+            home: () => null,
+            work: () => null,
+            setUnits: vi.fn(),
+          },
         },
       ],
     });
