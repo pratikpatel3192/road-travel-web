@@ -40,7 +40,9 @@ h1 {
   margin-bottom: 2.5rem;
 }
 
-.section { margin-bottom: 2.5rem; }
+.section {
+  margin-bottom: 2.5rem;
+}
 
 h2 {
   font-size: 1.1rem;
@@ -49,7 +51,8 @@ h2 {
   color: var(--text);
 }
 
-p, li {
+p,
+li {
   color: var(--body-muted);
   font-size: 0.95rem;
   line-height: 1.75;

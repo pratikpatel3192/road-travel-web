@@ -15,10 +15,18 @@ import { AuthService, type OAuthProvider } from '../../core/auth.service';
   imports: [FormsModule, RouterLink],
   template: `
     <div class="login">
-      <img class="brand-logo brand-logo-light" src="logo-horizontal-light-2x.png"
-           srcset="logo-horizontal-light-2x.png 2x" alt="Road Travel" />
-      <img class="brand-logo brand-logo-dark" src="logo-horizontal-dark-2x.png"
-           srcset="logo-horizontal-dark-2x.png 2x" alt="Road Travel" />
+      <img
+        class="brand-logo brand-logo-light"
+        src="logo-horizontal-light-2x.png"
+        srcset="logo-horizontal-light-2x.png 2x"
+        alt="Road Travel"
+      />
+      <img
+        class="brand-logo brand-logo-dark"
+        src="logo-horizontal-dark-2x.png"
+        srcset="logo-horizontal-dark-2x.png 2x"
+        alt="Road Travel"
+      />
       <h1>Sign in</h1>
       @if (!auth.configured()) {
         <p class="note">
@@ -35,10 +43,13 @@ import { AuthService, type OAuthProvider } from '../../core/auth.service';
             because this is the only screen between a visitor and the trial beginning. The copy
             promises exactly what the server does: 7 days of full access, then a subscription.
           -->
-          <p class="trial-pitch">Sign up and get <strong>7 days free</strong> — full access, no card
-            required.</p>
-          <p class="note">Already have an account? Signing in works the same way — or just
-            <a routerLink="/plan">keep using the planner</a>.</p>
+          <p class="trial-pitch">
+            Sign up and get <strong>7 days free</strong> — full access, no card required.
+          </p>
+          <p class="note">
+            Already have an account? Signing in works the same way — or just
+            <a routerLink="/plan">keep using the planner</a>.
+          </p>
           <div class="methods">
             <button class="oauth" (click)="oauth('apple')">Continue with Apple</button>
             <button class="oauth" (click)="oauth('google')">Continue with Google</button>
@@ -51,8 +62,15 @@ import { AuthService, type OAuthProvider } from '../../core/auth.service';
             <p class="note">Check your email for a sign-in link, then return here.</p>
           } @else {
             <form (ngSubmit)="submit()">
-              <label> Email
-                <input type="email" [(ngModel)]="email" name="email" required placeholder="you@example.com" />
+              <label>
+                Email
+                <input
+                  type="email"
+                  [(ngModel)]="email"
+                  name="email"
+                  required
+                  placeholder="you@example.com"
+                />
               </label>
               <button type="submit" class="go" [disabled]="loading() || !email">
                 {{ loading() ? 'Sending…' : 'Email me a link' }}
@@ -150,7 +168,9 @@ import { AuthService, type OAuthProvider } from '../../core/auth.service';
         line-height: 1.5;
         color: var(--text);
       }
-      .trial-pitch strong { color: var(--accent); }
+      .trial-pitch strong {
+        color: var(--accent);
+      }
 
       .note {
         color: var(--muted);

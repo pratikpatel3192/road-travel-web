@@ -29,8 +29,8 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
       } @else {
         <h1>Thanks — you're all set</h1>
         <p>
-          Your subscription is being confirmed. Head back to Road Travel; Pro appears as soon as
-          the payment clears, usually within a few seconds.
+          Your subscription is being confirmed. Head back to Road Travel; Pro appears as soon as the
+          payment clears, usually within a few seconds.
         </p>
       }
 
@@ -91,7 +91,9 @@ export class CheckoutReturn {
 
   /** The scheme is registered in the app's Info.plist (CFBundleURLSchemes: roadtravel). */
   readonly appLink = computed(() =>
-    this.cancelled() ? 'roadtravel://checkout?status=cancel' : 'roadtravel://checkout?status=success',
+    this.cancelled()
+      ? 'roadtravel://checkout?status=cancel'
+      : 'roadtravel://checkout?status=success',
   );
 
   constructor() {

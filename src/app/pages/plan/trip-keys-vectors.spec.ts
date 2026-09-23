@@ -39,7 +39,9 @@ function dedupeKey(t: VectorTrip): string {
   const hour = Math.floor(Date.parse(t.departureAt) / 3_600_000);
   const place = (p: PlaceValue) => `${p.name}:${p.latitude.toFixed(4)},${p.longitude.toFixed(4)}`;
   const stops = t.waypoints
-    .map((w) => `|wp:${w.name}:${w.latitude.toFixed(4)},${w.longitude.toFixed(4)}:${w.dwellMinutes}`)
+    .map(
+      (w) => `|wp:${w.name}:${w.latitude.toFixed(4)},${w.longitude.toFixed(4)}:${w.dwellMinutes}`,
+    )
     .join('');
   return `${place(t.origin)}|${place(t.destination)}|${hour}${stops}`;
 }

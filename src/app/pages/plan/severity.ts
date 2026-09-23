@@ -81,9 +81,7 @@ export function isHazard(sev: Severity | null | undefined): boolean {
 const MI_PER_M = 1 / 1609.344;
 
 export function formatTemp(celsius: number, units: 'imperial' | 'metric'): string {
-  return units === 'metric'
-    ? `${Math.round(celsius)}°C`
-    : `${Math.round(celsius * 1.8 + 32)}°F`;
+  return units === 'metric' ? `${Math.round(celsius)}°C` : `${Math.round(celsius * 1.8 + 32)}°F`;
 }
 
 export function formatDistance(meters: number, units: 'imperial' | 'metric'): string {

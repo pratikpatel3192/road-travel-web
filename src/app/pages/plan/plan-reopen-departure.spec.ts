@@ -45,8 +45,14 @@ describe('Plan — reopening a saved trip whose departure has passed', () => {
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
-        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({}) } } },
-        { provide: GeocodeService, useValue: { search: vi.fn(async () => []), reverse: vi.fn(async () => null) } },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { queryParamMap: convertToParamMap({}) } },
+        },
+        {
+          provide: GeocodeService,
+          useValue: { search: vi.fn(async () => []), reverse: vi.fn(async () => null) },
+        },
         {
           provide: ApiService,
           useValue: {
@@ -77,7 +83,12 @@ describe('Plan — reopening a saved trip whose departure has passed', () => {
         { provide: AuthService, useValue: { configured: () => true, hasRealAccount: () => true } },
         {
           provide: SettingsService,
-          useValue: { units: () => 'imperial', home: () => null, work: () => null, setUnits: vi.fn() },
+          useValue: {
+            units: () => 'imperial',
+            home: () => null,
+            work: () => null,
+            setUnits: vi.fn(),
+          },
         },
       ],
     });
@@ -112,11 +123,15 @@ describe('Plan — reopening a saved trip whose departure has passed', () => {
     plan.origin.set(CHICAGO);
     plan.destination.set(DALLAS);
     const twoHoursAgo = new Date(Date.now() - 2 * 3_600_000);
-    plan.departureAt.set(`${twoHoursAgo.getFullYear()}-${String(twoHoursAgo.getMonth() + 1).padStart(2, '0')}-${String(twoHoursAgo.getDate()).padStart(2, '0')}T${String(twoHoursAgo.getHours()).padStart(2, '0')}:${String(twoHoursAgo.getMinutes()).padStart(2, '0')}`);
+    plan.departureAt.set(
+      `${twoHoursAgo.getFullYear()}-${String(twoHoursAgo.getMonth() + 1).padStart(2, '0')}-${String(twoHoursAgo.getDate()).padStart(2, '0')}T${String(twoHoursAgo.getHours()).padStart(2, '0')}:${String(twoHoursAgo.getMinutes()).padStart(2, '0')}`,
+    );
 
     await plan.submit();
 
-    const sent = new Date((planTrip.mock.calls as unknown as [{ departure_at: string }][])[0][0].departure_at);
+    const sent = new Date(
+      (planTrip.mock.calls as unknown as [{ departure_at: string }][])[0][0].departure_at,
+    );
     expect(Date.now() - sent.getTime()).toBeLessThan(90_000);
     expect(new Date(plan.departureAt()).getTime()).toBe(sent.getTime());
   });

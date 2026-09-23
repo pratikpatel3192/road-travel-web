@@ -119,7 +119,9 @@ const VERDICT_LABEL: Record<Verdict, string> = {
             href="https://weatherkit.apple.com/legal-attribution.html"
             target="_blank"
             rel="noopener"
-          > Weather</a>
+          >
+            Weather</a
+          >
         </footer>
       </section>
     }

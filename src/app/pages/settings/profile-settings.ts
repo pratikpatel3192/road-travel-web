@@ -18,16 +18,20 @@ import { ProfileService } from '../../core/profile.service';
         <h2>Profile</h2>
         @if (loaded()) {
           <div class="grid2">
-            <label>First name
+            <label
+              >First name
               <input [value]="firstName()" (input)="firstName.set($any($event.target).value)" />
             </label>
-            <label>Last name
+            <label
+              >Last name
               <input [value]="lastName()" (input)="lastName.set($any($event.target).value)" />
             </label>
-            <label>Display name
+            <label
+              >Display name
               <input [value]="displayName()" (input)="displayName.set($any($event.target).value)" />
             </label>
-            <label>Phone
+            <label
+              >Phone
               <input type="tel" [value]="phone()" (input)="phone.set($any($event.target).value)" />
             </label>
           </div>
@@ -35,18 +39,29 @@ import { ProfileService } from '../../core/profile.service';
           <span class="lbl">Vehicles</span>
           <div class="chips">
             @for (v of vehicleTypes(); track v.code) {
-              <button type="button" class="chip" [class.on]="vehicles().has(v.code)" (click)="toggleVehicle(v.code)">
+              <button
+                type="button"
+                class="chip"
+                [class.on]="vehicles().has(v.code)"
+                (click)="toggleVehicle(v.code)"
+              >
                 {{ v.label }}
               </button>
             }
           </div>
 
           <label class="check">
-            <input type="checkbox" [checked]="marketing()" (change)="marketing.set($any($event.target).checked)" />
+            <input
+              type="checkbox"
+              [checked]="marketing()"
+              (change)="marketing.set($any($event.target).checked)"
+            />
             <span>Send me product news and tips</span>
           </label>
 
-          @if (message()) { <p class="msg" [class.err]="isError()">{{ message() }}</p> }
+          @if (message()) {
+            <p class="msg" [class.err]="isError()">{{ message() }}</p>
+          }
           <button class="save" (click)="save()" [disabled]="busy()">
             {{ busy() ? 'Saving…' : 'Save profile' }}
           </button>
@@ -58,26 +73,96 @@ import { ProfileService } from '../../core/profile.service';
   `,
   styles: [
     `
-      .card { background: var(--surface); border: 1px solid var(--border);
-        border-radius: var(--radius,14px); padding: 16px; margin-bottom: 14px; }
-      h2 { font-size: 15px; margin: 0 0 12px; }
-      .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-      label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
-      input { padding: 9px 10px; border: 1px solid var(--border); border-radius: 9px;
-        font: inherit; background: var(--surface); color: var(--text); }
-      .lbl { display: block; font-size: 13px; font-weight: 600; margin: 14px 0 6px; }
-      .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-      .chip { padding: 7px 12px; border: 1px solid var(--border); border-radius: 999px;
-        background: var(--surface); color: inherit; font-size: 13px; cursor: pointer; }
-      .chip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
-      .check { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 13px; }
-      .check input { width: auto; }
-      .save { margin-top: 14px; background: var(--accent); color: var(--accent-contrast); border: none;
-        border-radius: 10px; padding: 10px 18px; font-weight: 600; cursor: pointer; }
-      .save:disabled { opacity: .6; }
-      .msg { font-size: 13px; margin: 12px 0 0; color: var(--muted); }
-      .msg.err { color: #b91c1c; }
-      .muted { color: var(--muted); font-size: 13px; }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius, 14px);
+        padding: 16px;
+        margin-bottom: 14px;
+      }
+      h2 {
+        font-size: 15px;
+        margin: 0 0 12px;
+      }
+      .grid2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      label {
+        display: grid;
+        gap: 4px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      input {
+        padding: 9px 10px;
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        font: inherit;
+        background: var(--surface);
+        color: var(--text);
+      }
+      .lbl {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        margin: 14px 0 6px;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .chip {
+        padding: 7px 12px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--surface);
+        color: inherit;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .chip.on {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--accent-contrast);
+      }
+      .check {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 14px;
+        font-size: 13px;
+      }
+      .check input {
+        width: auto;
+      }
+      .save {
+        margin-top: 14px;
+        background: var(--accent);
+        color: var(--accent-contrast);
+        border: none;
+        border-radius: 10px;
+        padding: 10px 18px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .save:disabled {
+        opacity: 0.6;
+      }
+      .msg {
+        font-size: 13px;
+        margin: 12px 0 0;
+        color: var(--muted);
+      }
+      .msg.err {
+        color: #b91c1c;
+      }
+      .muted {
+        color: var(--muted);
+        font-size: 13px;
+      }
     `,
   ],
 })
@@ -121,7 +206,6 @@ export class ProfileSettings implements OnInit {
     this.vehicles.set(next);
   }
 
-
   async save(): Promise<void> {
     this.busy.set(true);
     this.message.set(null);
@@ -145,5 +229,4 @@ export class ProfileSettings implements OnInit {
       this.busy.set(false);
     }
   }
-
 }

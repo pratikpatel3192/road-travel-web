@@ -67,8 +67,8 @@ const APPLE_SUBSCRIPTIONS_URL = 'https://account.apple.com/account/manage';
             <div class="acct-who">
               <p class="manage-title">Drive recording</p>
               <p class="acct-note">
-                Lets you record drives you choose to save (route + stats, private to you).
-                Turning this off withdraws your consent and stops all recording.
+                Lets you record drives you choose to save (route + stats, private to you). Turning
+                this off withdraws your consent and stops all recording.
               </p>
             </div>
             <button
@@ -104,10 +104,18 @@ const APPLE_SUBSCRIPTIONS_URL = 'https://account.apple.com/account/manage';
       <section class="card">
         <h2>Units</h2>
         <div class="seg" role="group" aria-label="Units">
-          <button type="button" [class.on]="settings.units() === 'imperial'" (click)="settings.setUnits('imperial')">
+          <button
+            type="button"
+            [class.on]="settings.units() === 'imperial'"
+            (click)="settings.setUnits('imperial')"
+          >
             Miles · °F
           </button>
-          <button type="button" [class.on]="settings.units() === 'metric'" (click)="settings.setUnits('metric')">
+          <button
+            type="button"
+            [class.on]="settings.units() === 'metric'"
+            (click)="settings.setUnits('metric')"
+          >
             Kilometers · °C
           </button>
         </div>
@@ -184,8 +192,14 @@ const APPLE_SUBSCRIPTIONS_URL = 'https://account.apple.com/account/manage';
             <div class="acct-who">
               <p class="manage-title">Road Travel Pro</p>
               <p class="acct-note">
-                {{ sub.management === 'apple' ? 'Billed through Apple.' : 'Billed through our website.' }}
-                @if (sub.will_renew === false) { Won't renew. }
+                {{
+                  sub.management === 'apple'
+                    ? 'Billed through Apple.'
+                    : 'Billed through our website.'
+                }}
+                @if (sub.will_renew === false) {
+                  Won't renew.
+                }
               </p>
             </div>
             <button
@@ -228,16 +242,24 @@ const APPLE_SUBSCRIPTIONS_URL = 'https://account.apple.com/account/manage';
            where billing lives instead of failing (ADR-0028 "never cross the streams"). -->
       @if (appleModal()) {
         <div class="modal-backdrop" (click)="appleModal.set(false)">
-          <div class="modal" role="dialog" aria-modal="true" aria-labelledby="apple-manage-title"
-               (click)="$event.stopPropagation()">
+          <div
+            class="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="apple-manage-title"
+            (click)="$event.stopPropagation()"
+          >
             <h3 id="apple-manage-title">Billed through Apple</h3>
             <p>
               Your subscription is billed through Apple. To cancel or change your plan, open the
-              Road Travel app on your iPhone and go to <strong>Settings → Manage subscription</strong>.
+              Road Travel app on your iPhone and go to
+              <strong>Settings → Manage subscription</strong>.
             </p>
             <p class="modal-alt">
               Don't have your device handy? You can also manage it from
-              <a [href]="appleSubscriptionsUrl" target="_blank" rel="noopener">your Apple account</a>
+              <a [href]="appleSubscriptionsUrl" target="_blank" rel="noopener"
+                >your Apple account</a
+              >
               under Subscriptions.
             </p>
             <button type="button" class="acct-btn modal-close" (click)="appleModal.set(false)">
@@ -534,9 +556,7 @@ export class Settings {
    * wall at the value action, ADR-0025), and not to anyone already Pro — including someone mid
    * trial, who is Pro and would be baffled to be sold it again.
    */
-  readonly showGoPro = computed(
-    () => this.entitlement.signedIn() && !this.entitlement.isPro(),
-  );
+  readonly showGoPro = computed(() => this.entitlement.signedIn() && !this.entitlement.isPro());
 
   /** Fetch the offer and open the paywall — the same component a 402 raises. */
   async goPro(): Promise<void> {

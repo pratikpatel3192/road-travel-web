@@ -44,7 +44,9 @@ import { formatDwell } from './waypoints';
             <!-- F-006 US-3: a stop is a first-class cell — name, ARRIVAL time, dwell, weather. -->
             <div class="stop-head">
               <span class="stop-num">{{ s.waypoint_index + 1 }}</span>
-              <span class="stop-name" [title]="stopName(s.waypoint_index)">{{ short(stopName(s.waypoint_index)) }}</span>
+              <span class="stop-name" [title]="stopName(s.waypoint_index)">{{
+                short(stopName(s.waypoint_index))
+              }}</span>
             </div>
             <div class="eta">arrive {{ time(s.eta) }}</div>
             <div class="dwell">{{ dwell(s.dwell_seconds) }}</div>
@@ -54,12 +56,16 @@ import { formatDwell } from './waypoints';
           }
           @if (s.weather; as w) {
             <div class="cond-row">
-              <span class="wx" [title]="w.condition_text"><app-icon [name]="icon(w.condition_symbol, w.condition_text)" [size]="17" /></span>
+              <span class="wx" [title]="w.condition_text"
+                ><app-icon [name]="icon(w.condition_symbol, w.condition_text)" [size]="17"
+              /></span>
               <span class="temp">{{ temp(w.temperature_c) }}</span>
             </div>
             <div class="cond" [title]="w.condition_text">{{ w.condition_text }}</div>
             <div class="meta">
-              <span class="drop"><app-icon name="droplets" [size]="13" /> {{ precip(w.precipitation_chance) }}</span>
+              <span class="drop"
+                ><app-icon name="droplets" [size]="13" /> {{ precip(w.precipitation_chance) }}</span
+              >
               <span><app-icon name="wind" [size]="13" /> {{ wind(w.wind_speed_kph) }}</span>
             </div>
           } @else {
@@ -69,7 +75,9 @@ import { formatDwell } from './waypoints';
                  the two reasons stay different answers: past the horizon nobody HAS a forecast yet
                  (UNKNOWN_LABEL, as the briefings say), while a failed fetch inside the horizon must
                  not claim that; it says what the map's notice says. -->
-            <div class="cond no-forecast">{{ s.beyond_forecast ? unknownLabel : 'Weather unavailable' }}</div>
+            <div class="cond no-forecast">
+              {{ s.beyond_forecast ? unknownLabel : 'Weather unavailable' }}
+            </div>
           }
         </div>
       }
@@ -105,8 +113,11 @@ import { formatDwell } from './waypoints';
         box-shadow: var(--shadow-sm);
         scroll-snap-align: start;
         cursor: pointer;
-        transition: box-shadow 150ms ease-out, transform 150ms ease-out,
-          border-color 150ms ease-out, background 150ms ease-out;
+        transition:
+          box-shadow 150ms ease-out,
+          transform 150ms ease-out,
+          border-color 150ms ease-out,
+          background 150ms ease-out;
       }
       /* Caution-or-worse milestones flip to the hazard tint (dark flip below via :host-context). */
       .cell.hazard {
@@ -274,7 +285,7 @@ export class Timeline {
    * when nobody has looked. A severity this build does not recognise degrades to caution instead.
    */
   dot(sev?: Severity): string {
-    return sev == null ? UNKNOWN_COLOR : SEVERITY_COLOR[sev] ?? SEVERITY_COLOR[SEVERITY_FALLBACK];
+    return sev == null ? UNKNOWN_COLOR : (SEVERITY_COLOR[sev] ?? SEVERITY_COLOR[SEVERITY_FALLBACK]);
   }
   /** Organic 3.1.0: caution-or-worse milestones flip the cell to the terracotta hazard tint. */
   hazard(sev?: Severity): boolean {

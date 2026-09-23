@@ -26,10 +26,15 @@
   border-radius: var(--radius-pill);
   cursor: pointer;
   white-space: nowrap;
-  transition: color 150ms ease-out, background 150ms ease-out;
+  transition:
+    color 150ms ease-out,
+    background 150ms ease-out;
 }
 
-.nav-link:hover { color: var(--text); text-decoration: none; }
+.nav-link:hover {
+  color: var(--text);
+  text-decoration: none;
+}
 
 /* Active route = selected-chip language. */
 .nav-link[aria-current],
@@ -50,7 +55,10 @@
   transition: background 150ms ease-out;
 }
 
-.nav-cta:hover { background: var(--accent-hover); color: var(--accent-contrast); }
+.nav-cta:hover {
+  background: var(--accent-hover);
+  color: var(--accent-contrast);
+}
 
 /* App Store link (T-021): a surface capsule with an Apple glyph, marking it as an external store
    link rather than an in-app destination. The glyph inherits currentColor so it swaps with theme. */
@@ -63,8 +71,13 @@
   border: 1.5px solid var(--border);
   box-shadow: none;
 }
-.nav-store:hover { background: var(--surface-2); color: var(--text); }
-.apple-glyph { display: block; }
+.nav-store:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.apple-glyph {
+  display: block;
+}
 
 /* Identity chip: quiet well capsule. */
 .nav-id {
@@ -83,7 +96,10 @@
   transition: border-color 150ms ease-out;
 }
 
-.nav-id:hover { border-color: var(--border-strong); text-decoration: none; }
+.nav-id:hover {
+  border-color: var(--border-strong);
+  text-decoration: none;
+}
 
 /*
   The header is a single non-wrapping flex row. Signed OUT that is two items and fits anywhere;
@@ -113,7 +129,9 @@
     gap: 6px 10px;
   }
   /* App destinations first; the store CTA is marketing and can take the end of the row. */
-  .nav-store { order: 99; }
+  .nav-store {
+    order: 99;
+  }
 
   /*
     Signed in, the store CTA is the widest item in the nav and the least useful: this person already
@@ -121,11 +139,15 @@
     from three rows to two on a phone. It stays for SIGNED-OUT mobile visitors, who are exactly the
     audience it is for, and the marketing landing page keeps its own App Store links regardless.
   */
-  .site-header.is-signed-in .nav-store { display: none; }
+  .site-header.is-signed-in .nav-store {
+    display: none;
+  }
 }
 
 @media (max-width: 520px) {
-  .nav-id { max-width: 120px; }
+  .nav-id {
+    max-width: 120px;
+  }
 }
 
 .logo {
@@ -146,9 +168,15 @@
   margin-top: auto;
 }
 
-.site-footer a { color: var(--link); text-decoration: none; }
+.site-footer a {
+  color: var(--link);
+  text-decoration: none;
+}
 
-.site-footer a:hover { color: var(--link-hover); text-decoration: underline; }
+.site-footer a:hover {
+  color: var(--link-hover);
+  text-decoration: underline;
+}
 
 :host {
   display: flex;
@@ -181,7 +209,9 @@
   opacity: 0.85;
   transition: opacity 150ms ease-out;
 }
-.auth-error button:hover { opacity: 1; }
+.auth-error button:hover {
+  opacity: 1;
+}
 
 /* ADR-0036 force-upgrade overlay — sits above everything, no dismiss path. */
 .force-update {
@@ -227,4 +257,6 @@
   box-shadow: var(--shadow-md);
   transition: background 150ms ease-out;
 }
-.force-update-card button:hover { background: var(--accent-hover); }
+.force-update-card button:hover {
+  background: var(--accent-hover);
+}

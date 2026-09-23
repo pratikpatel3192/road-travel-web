@@ -7,10 +7,6 @@
 # service it duplicates, which `landing-capture.contract.spec.ts` now pins and which only runs if
 # something runs it.
 #
-# Deliberately NOT here: `prettier --check`. 36 files under src/ are currently unformatted, all of
-# them pre-existing, so adding it would make CI red on arrival and the fix is a 36-file reformat
-# that belongs in its own change rather than bundled into turning CI on.
-#
 # TWO SPECS CANNOT RUN HERE, and this is the first thing CI revealed. `itinerary-vectors.spec.ts`
 # and `trip-keys-vectors.spec.ts` import their oracle from `../../road-travel-docs/test-vectors/`,
 # a SIBLING REPOSITORY that is private while this one is public. A runner checks out this repo
@@ -93,6 +89,11 @@ jobs:
         run: rm src/app/core/itinerary-vectors.spec.ts src/app/pages/plan/trip-keys-vectors.spec.ts
 
       # 460 of 480. The other 20 are the two specs removed above, and still run locally.
+      # Added once the pre-existing 36 unformatted files were fixed — enforcing a style nobody had
+      # been held to would have made CI red on arrival, which teaches people to ignore it.
+      - name: Formatting
+        run: npx prettier --check "src/**/*.{ts,html,css}"
+
       - name: Unit tests
         run: npx ng test --watch=false
 

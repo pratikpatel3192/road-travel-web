@@ -29,7 +29,14 @@ describe('Paywall (paywall_viewed)', () => {
         { provide: PaywallService, useValue: paywallService },
         { provide: AnalyticsService, useValue: analytics },
         { provide: ApiService, useValue: {} },
-        { provide: AuthService, useValue: { configured: signal(true), hasRealAccount: signal(true), passkeySupported: false } },
+        {
+          provide: AuthService,
+          useValue: {
+            configured: signal(true),
+            hasRealAccount: signal(true),
+            passkeySupported: false,
+          },
+        },
         { provide: EntitlementService, useValue: { trialEligible: signal(true) } },
       ],
     });

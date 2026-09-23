@@ -106,7 +106,12 @@ import {
             @if (!auth.configured() || auth.hasRealAccount()) {
               <!-- ADR-0025 §1: My Trips is LOGIN-ONLY — hidden from guests (the route is walled by
                  realAccountGuard). ADR-0029 removed Recents; this is the server's whole list. -->
-              <a class="icon" routerLink="/saved" aria-label="My trips" title="My trips" data-tour="my-trips"
+              <a
+                class="icon"
+                routerLink="/saved"
+                aria-label="My trips"
+                title="My trips"
+                data-tour="my-trips"
                 ><app-icon name="bookmark" [size]="16"
               /></a>
             }
@@ -268,7 +273,8 @@ import {
             <!-- A grey stretch on the map and an empty cell in the timeline read as a glitch. This
                reads as an answer: there is no forecast yet, and there will be. -->
             <p class="beyond-note">
-              Part of this trip is past the {{ horizonDays }}-day forecast. We'll have it closer to the day.
+              Part of this trip is past the {{ horizonDays }}-day forecast. We'll have it closer to
+              the day.
             </p>
           }
           <app-timeline

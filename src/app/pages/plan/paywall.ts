@@ -23,10 +23,18 @@ import { PaywallService } from '../../core/paywall.service';
       <div class="overlay" (click)="dismiss()">
         <div class="sheet" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
           <button class="close" (click)="dismiss()" aria-label="Close">✕</button>
-                <img class="brand-logo brand-logo-light" src="logo-horizontal-light-2x.png"
-           srcset="logo-horizontal-light-2x.png 2x" alt="Road Travel" />
-      <img class="brand-logo brand-logo-dark" src="logo-horizontal-dark-2x.png"
-           srcset="logo-horizontal-dark-2x.png 2x" alt="Road Travel" />
+          <img
+            class="brand-logo brand-logo-light"
+            src="logo-horizontal-light-2x.png"
+            srcset="logo-horizontal-light-2x.png 2x"
+            alt="Road Travel"
+          />
+          <img
+            class="brand-logo brand-logo-dark"
+            src="logo-horizontal-dark-2x.png"
+            srcset="logo-horizontal-dark-2x.png 2x"
+            alt="Road Travel"
+          />
           <h2>Go Pro</h2>
           <p class="msg">{{ p.message }}</p>
 
@@ -65,9 +73,11 @@ import { PaywallService } from '../../core/paywall.service';
           @if (!auth.configured()) {
             <p class="hint">Subscriptions aren't set up in this environment yet.</p>
           } @else if (!auth.hasRealAccount()) {
-            <p class="hint">Sign in to start your subscription — it keeps Pro across your devices.</p>
+            <p class="hint">
+              Sign in to start your subscription — it keeps Pro across your devices.
+            </p>
             <div class="auth">
-              <button class="oauth" (click)="oauth('apple')"> Continue with Apple</button>
+              <button class="oauth" (click)="oauth('apple')">Continue with Apple</button>
               <button class="oauth google" (click)="oauth('google')">Continue with Google</button>
               @if (auth.passkeySupported) {
                 <button class="oauth" (click)="passkey()">Continue with a passkey</button>
@@ -81,7 +91,9 @@ import { PaywallService } from '../../core/paywall.service';
                   placeholder="you@example.com"
                   aria-label="Email"
                 />
-                <button type="button" (click)="emailLink()" [disabled]="!email()">Email me a link</button>
+                <button type="button" (click)="emailLink()" [disabled]="!email()">
+                  Email me a link
+                </button>
               </div>
             </div>
           } @else {

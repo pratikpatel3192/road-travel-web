@@ -26,7 +26,8 @@ import {
         <div class="body">
           <div class="head">{{ label(a.severity) }} weather ~{{ a.miles }} mi in</div>
           <div class="detail">
-            {{ a.condition }} · {{ temp(a.tempC) }} · {{ precip(a.precip) }} precip · {{ wind(a.windKph) }} wind
+            {{ a.condition }} · {{ temp(a.tempC) }} · {{ precip(a.precip) }} precip ·
+            {{ wind(a.windKph) }} wind
           </div>
         </div>
       </div>

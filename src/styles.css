@@ -1,4 +1,10 @@
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 /* Organic 3.1.0 (road-travel-docs/branding/branding-3.1.0): warm cream ground, terracotta +
    sage accents, Caprasimo display over Figtree, pills and 8/16/28 radii. Palette mirrors the
@@ -11,7 +17,7 @@
   --radius-md: 16px;
   --radius-lg: 28px;
   --radius-xl: 28px;
-  --radius: 16px;               /* legacy alias (cards) */
+  --radius: 16px; /* legacy alias (cards) */
   --radius-pill: 999px;
 
   /* Elevation — ink-tinted, the kit's three shadows. */
@@ -21,24 +27,42 @@
   --shadow-card: var(--shadow-sm);
 
   /* Type */
-  --font-heading: "Caprasimo", system-ui, sans-serif;   /* weight 400 only; display */
-  --font-body: "Figtree", system-ui, sans-serif;        /* everything else; 600-800 UI labels */
+  --font-heading: 'Caprasimo', system-ui, sans-serif; /* weight 400 only; display */
+  --font-body: 'Figtree', system-ui, sans-serif; /* everything else; 600-800 UI labels */
 
   /* Terracotta accent ramp — actions, route, rain/hazard. */
-  --accent-100: #fff2eb; --accent-200: #ffe1d0; --accent-300: #ffc6a5;
-  --accent-400: #f6a06b; --accent-500: #d67f48; --accent-600: #b2622d;
-  --accent-700: #8c491a; --accent-800: #643312; --accent-900: #402310;
+  --accent-100: #fff2eb;
+  --accent-200: #ffe1d0;
+  --accent-300: #ffc6a5;
+  --accent-400: #f6a06b;
+  --accent-500: #d67f48;
+  --accent-600: #b2622d;
+  --accent-700: #8c491a;
+  --accent-800: #643312;
+  --accent-900: #402310;
 
   /* Sage accent ramp — all-clear, AI surfaces, Pro. */
   --accent-2: #7a8a5e;
-  --accent-2-100: #f0fae1; --accent-2-200: #e1eecc; --accent-2-300: #ccdbb2;
-  --accent-2-400: #aebf92; --accent-2-500: #8fa073; --accent-2-600: #728157;
-  --accent-2-700: #56633f; --accent-2-800: #3d472b; --accent-2-900: #272e1b;
+  --accent-2-100: #f0fae1;
+  --accent-2-200: #e1eecc;
+  --accent-2-300: #ccdbb2;
+  --accent-2-400: #aebf92;
+  --accent-2-500: #8fa073;
+  --accent-2-600: #728157;
+  --accent-2-700: #56633f;
+  --accent-2-800: #3d472b;
+  --accent-2-900: #272e1b;
 
   /* Warm neutrals — never grey. */
-  --neutral-100: #f9f4ed; --neutral-200: #eee7db; --neutral-300: #dcd3c4;
-  --neutral-400: #c0b6a5; --neutral-500: #a19786; --neutral-600: #82796a;
-  --neutral-700: #645c50; --neutral-800: #474238; --neutral-900: #2e2b25;
+  --neutral-100: #f9f4ed;
+  --neutral-200: #eee7db;
+  --neutral-300: #dcd3c4;
+  --neutral-400: #c0b6a5;
+  --neutral-500: #a19786;
+  --neutral-600: #82796a;
+  --neutral-700: #645c50;
+  --neutral-800: #474238;
+  --neutral-900: #2e2b25;
 
   /* Severity (product semantics, re-hued): all-clear = sage, hazard = a five-step terracotta ramp
      that deepens as it worsens — except `extreme`, which leaves the ramp for red on purpose. A
@@ -64,9 +88,9 @@
 
   /* Ground */
   --page-gradient: #f5ead8;
-  --bg: #f5ead8;                /* page background */
-  --surface: #ffffff;           /* cards / floating chrome */
-  --surface-2: #f9f4ed;         /* inputs / wells */
+  --bg: #f5ead8; /* page background */
+  --surface: #ffffff; /* cards / floating chrome */
+  --surface-2: #f9f4ed; /* inputs / wells */
   --ink: #201e1d;
   --ink-2: #82796a;
   --text: var(--ink);
@@ -78,12 +102,12 @@
   --hero-gradient: linear-gradient(#f9f4ed, #ebddc5);
   --hero-border: #eee7db;
   --hero-tagline: #645c50;
-  --accent: #c67139;            /* primary action = terracotta */
+  --accent: #c67139; /* primary action = terracotta */
   --accent-contrast: #ffffff;
-  --accent-hover: #b2622d;      /* one ramp step past base on light */
+  --accent-hover: #b2622d; /* one ramp step past base on light */
   --btn-secondary-bg: #ffffff;
   --btn-secondary-border: #eee7db;
-  --link: #8c491a;              /* accent-700 — base accent isn't enough for text on cream */
+  --link: #8c491a; /* accent-700 — base accent isn't enough for text on cream */
   --link-hover: #643312;
   color-scheme: light;
 }
@@ -105,7 +129,7 @@
   --hero-tagline: #c0b6a5;
   --accent: #c67139;
   --accent-contrast: #ffffff;
-  --accent-hover: #f6a06b;      /* one step lighter on dark */
+  --accent-hover: #f6a06b; /* one step lighter on dark */
   --btn-secondary-bg: #474238;
   --btn-secondary-border: #645c50;
   --link: #ffc6a5;
@@ -190,18 +214,29 @@ body {
   min-height: 100vh;
 }
 
-h1, h2, h3 {
+h1,
+h2,
+h3 {
   font-family: var(--font-heading);
   font-weight: 400;
   line-height: 1.12;
   letter-spacing: -0.015em;
 }
 
-button { font-family: inherit; }
+button {
+  font-family: inherit;
+}
 
-:focus { outline: none; }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-::selection { background: rgba(198, 113, 57, 0.3); }
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+::selection {
+  background: rgba(198, 113, 57, 0.3);
+}
 
 /* Organic buttons: capsule, terracotta primary (hover one ramp step), white secondary. */
 .btn-primary {
@@ -217,7 +252,10 @@ button { font-family: inherit; }
   box-shadow: var(--shadow-md);
   transition: background 150ms ease-out;
 }
-.btn-primary:hover { background: var(--accent-hover); text-decoration: none; }
+.btn-primary:hover {
+  background: var(--accent-hover);
+  text-decoration: none;
+}
 .btn-secondary {
   background: var(--btn-secondary-bg);
   color: var(--text);
@@ -228,10 +266,19 @@ button { font-family: inherit; }
   cursor: pointer;
   text-decoration: none;
   display: inline-block;
-  transition: background 150ms ease-out, border-color 150ms ease-out;
+  transition:
+    background 150ms ease-out,
+    border-color 150ms ease-out;
 }
-.btn-secondary:hover { background: var(--surface-2); text-decoration: none; }
-.btn-primary:disabled, .btn-secondary:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-secondary:hover {
+  background: var(--surface-2);
+  text-decoration: none;
+}
+.btn-primary:disabled,
+.btn-secondary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 
 /* ADR-0026 "you are here" dot (Leaflet divIcon — global because it renders outside components). */
 .rt-you {
@@ -240,7 +287,9 @@ button { font-family: inherit; }
   border-radius: 50%;
   background: var(--origin-dot);
   border: 3px solid #ffffff;
-  box-shadow: 0 0 0 2px rgba(122, 138, 94, 0.35), 0 1px 6px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 0 0 2px rgba(122, 138, 94, 0.35),
+    0 1px 6px rgba(0, 0, 0, 0.3);
 }
 
 /* Map pin labels for stops (F-006) + explore results (F-005) — Leaflet permanent tooltips render
@@ -257,7 +306,9 @@ button { font-family: inherit; }
   box-shadow: var(--shadow-sm);
   white-space: nowrap;
 }
-.leaflet-tooltip.wx-map-label::before { display: none; } /* drop the little pointer arrow */
+.leaflet-tooltip.wx-map-label::before {
+  display: none;
+} /* drop the little pointer arrow */
 
 /* Cartography tint (kit: cream ground / warm night). Raster tiles can't be restyled directly, so
    the standard-map layer gets a warm filter; route-map toggles .rt-tiles-warm ONLY for the
@@ -270,29 +321,49 @@ button { font-family: inherit; }
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) .rt-tiles-warm .leaflet-tile-pane {
-    filter: invert(0.92) hue-rotate(185deg) saturate(0.35) brightness(0.92) contrast(0.9) sepia(0.22);
+    filter: invert(0.92) hue-rotate(185deg) saturate(0.35) brightness(0.92) contrast(0.9)
+      sepia(0.22);
   }
 }
 
 /* Organic cards: white surface on cream, radius 16, kit shadows — token-driven app-wide. */
-.card { box-shadow: var(--shadow-card); }
+.card {
+  box-shadow: var(--shadow-card);
+}
 
 /* Route line (Leaflet SVG paths take these as CSS classes so strokes are theme-live):
    terracotta over a white casing; severity darkens the stroke step by step, ending at the
    severity red. route-map.ts builds these names as 'rt-sev-' + level, so EVERY level of
    `Severity` needs a class here — a missing one falls back to an unstyled stroke silently. */
-.rt-route-casing { stroke: var(--route-casing); }
-.rt-sev-clear { stroke: var(--route-line); }
-.rt-sev-caution { stroke: var(--sev-caution); }
-.rt-sev-high { stroke: var(--sev-high); }
-.rt-sev-severe { stroke: var(--accent-800); }
-.rt-sev-extreme { stroke: var(--sev-extreme); }
+.rt-route-casing {
+  stroke: var(--route-casing);
+}
+.rt-sev-clear {
+  stroke: var(--route-line);
+}
+.rt-sev-caution {
+  stroke: var(--sev-caution);
+}
+.rt-sev-high {
+  stroke: var(--sev-high);
+}
+.rt-sev-severe {
+  stroke: var(--accent-800);
+}
+.rt-sev-extreme {
+  stroke: var(--sev-extreme);
+}
 /* No forecast reaches this stretch. It had NO class before, so it fell back to the stroke attribute
    (neutral-500: 2.9:1 on the light casing, and not theme-live) — on satellite imagery a faint solid
    line that read as a layer that failed to load. Now a darker/lighter neutral per theme, dashed by
    route-map.ts ("tentative", not "broken"). The casing under it is what separates it from imagery. */
-.rt-sev-unknown { stroke: var(--route-unknown); }
-.rt-route-dim { stroke: var(--neutral-400); opacity: 0.45; }
+.rt-sev-unknown {
+  stroke: var(--route-unknown);
+}
+.rt-route-dim {
+  stroke: var(--neutral-400);
+  opacity: 0.45;
+}
 
 /* Map weather chip (Leaflet divIcon — renders outside components): white pill with the
    condition glyph + temp; hazard flips to the terracotta tint (deep end at night). */
@@ -309,7 +380,10 @@ button { font-family: inherit; }
   font: 700 12.5px var(--font-body);
   white-space: nowrap;
 }
-.wx-pin svg { width: 13px; height: 13px; }
+.wx-pin svg {
+  width: 13px;
+  height: 13px;
+}
 .wx-pin.hazard {
   background: var(--accent-100);
   border-color: var(--accent-300);
@@ -337,13 +411,22 @@ button { font-family: inherit; }
   border: 2.5px solid var(--border);
   box-shadow: var(--shadow-sm);
 }
-.wx-dot.caution { border-color: var(--sev-caution); }
-.wx-dot.high { border-color: var(--sev-high); }
-.wx-dot.severe { border-color: var(--sev-severe); }
-.wx-dot.extreme { border-color: var(--sev-extreme); }
+.wx-dot.caution {
+  border-color: var(--sev-caution);
+}
+.wx-dot.high {
+  border-color: var(--sev-high);
+}
+.wx-dot.severe {
+  border-color: var(--sev-severe);
+}
+.wx-dot.extreme {
+  border-color: var(--sev-extreme);
+}
 
 /* Numbered stop pin (terracotta) + explore pin (sage) — divIcon HTML, global for the same reason. */
-.rt-stop-pin, .rt-explore-pin {
+.rt-stop-pin,
+.rt-explore-pin {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -355,8 +438,12 @@ button { font-family: inherit; }
   box-shadow: var(--shadow-sm);
   font: 700 13px var(--font-body);
 }
-.rt-stop-pin { background: var(--accent-500); }
-.rt-explore-pin { background: var(--accent-2-600); }
+.rt-stop-pin {
+  background: var(--accent-500);
+}
+.rt-explore-pin {
+  background: var(--accent-2-600);
+}
 
 /* Leaflet chrome: round white zoom stack + attribution, in the kit's chip language. */
 .leaflet-control-zoom.leaflet-bar {
@@ -376,12 +463,16 @@ button { font-family: inherit; }
   font-weight: 700;
   transition: background 150ms ease-out;
 }
-.leaflet-control-zoom.leaflet-bar a:hover { background: var(--surface-2); }
+.leaflet-control-zoom.leaflet-bar a:hover {
+  background: var(--surface-2);
+}
 /* route-map.ts puts the zoom stack top-right, where nothing on any layout covers it — but that corner
    also holds the layer-chip row (.layers: top 10px, ~35px tall). Drop the stack below the row with the
    same 10px gap Leaflet leaves around its own controls. Its default top-left sat under the desktop
    planner's trip panel. */
-.leaflet-top.leaflet-right .leaflet-control-zoom { margin-top: 55px; }
+.leaflet-top.leaflet-right .leaflet-control-zoom {
+  margin-top: 55px;
+}
 .leaflet-container .leaflet-control-attribution {
   background: rgba(255, 255, 255, 0.75);
   color: var(--neutral-600);
@@ -401,7 +492,9 @@ button { font-family: inherit; }
   cursor: pointer;
   transition: background 150ms ease-out;
 }
-.map-chip:hover { background: var(--surface-2); }
+.map-chip:hover {
+  background: var(--surface-2);
+}
 
 /* Brand logo (docs/BRANDING.md): every surface renders BOTH day/night <img>s and CSS shows exactly
    one, resolved the SAME way as the palette above — forced [data-theme] wins, else the OS scheme.
@@ -411,16 +504,34 @@ button { font-family: inherit; }
   width: auto;
   display: inline-block;
 }
-.brand-logo-dark { display: none; }
-:root[data-theme='dark'] .brand-logo-light { display: none; }
-:root[data-theme='dark'] .brand-logo-dark { display: inline-block; }
+.brand-logo-dark {
+  display: none;
+}
+:root[data-theme='dark'] .brand-logo-light {
+  display: none;
+}
+:root[data-theme='dark'] .brand-logo-dark {
+  display: inline-block;
+}
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) .brand-logo-light { display: none; }
-  :root:not([data-theme]) .brand-logo-dark { display: inline-block; }
+  :root:not([data-theme]) .brand-logo-light {
+    display: none;
+  }
+  :root:not([data-theme]) .brand-logo-dark {
+    display: inline-block;
+  }
 }
 
-a { color: var(--link); text-decoration: none; transition: color 150ms ease-out; }
-a:hover { color: var(--link-hover); text-decoration: underline; text-underline-offset: 3px; }
+a {
+  color: var(--link);
+  text-decoration: none;
+  transition: color 150ms ease-out;
+}
+a:hover {
+  color: var(--link-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 
 /* ------------------------------------------------------------------------------------------------
    Touch targets.
