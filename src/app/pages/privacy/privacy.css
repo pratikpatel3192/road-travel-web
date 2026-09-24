@@ -72,3 +72,10 @@ ul {
   flex-direction: column;
   gap: 0.4rem;
 }
+
+/* The postal identity block. Paragraphs on this page carry no bottom margin — the sections do the
+   spacing, because a section is normally one paragraph — so the three stacked <p>s in Contact
+   would otherwise run together into one wall of text. */
+.postal {
+  margin: 0.9rem 0;
+}

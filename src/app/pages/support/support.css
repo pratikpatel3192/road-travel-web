@@ -156,3 +156,14 @@ details[open] {
     flex-direction: column;
   }
 }
+
+/* Postal identity under the contact button — required on the legal/support surface, but it is
+   reference information, not a call to action, so it sits quieter than the paragraph above and
+   carries no bottom margin fighting the card's padding. */
+.contact-body .postal {
+  margin-top: 0.9rem;
+  margin-bottom: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
