@@ -43,7 +43,7 @@ import { PlaceField, type PlaceValue } from './place-field';
 import { BriefingMemory, tripBaselineKey, tripIdentityKey } from './rebrief';
 import { RouteMap } from './route-map';
 import { SnapshotLine } from './snapshot-line';
-import { SEVERITY_FALLBACK, SEVERITY_RANK, formatDuration, severityOrFallback } from './severity';
+import { SEVERITY_RANK, formatDuration, severityOrFallback } from './severity';
 import { StopsEditor } from './stops-editor';
 import { StopsSummary, deriveTripDays } from './stops-summary';
 import { Timeline } from './timeline';
@@ -1454,9 +1454,9 @@ export class Plan implements OnInit, AfterViewInit {
         departure_at: new Date(this.departureAt()).toISOString(),
         distance_meters: totals.distanceMeters ?? 0,
         duration_seconds: totals.durationSeconds ?? 0,
-        // Same reasoning as the manual save this replaced: `worst_severity` is required, and
-        // 'clear' would persist an affirmative all-clear we do not have.
-        worst_severity: totals.worstSeverity ?? SEVERITY_FALLBACK,
+        // Null when the plan has no forecast at all — the contract carries that now, so an
+        // auto-save no longer has to invent a severity to be allowed to save.
+        worst_severity: totals.worstSeverity ?? null,
         waypoints,
       });
       // Only when the result on screen was planned for exactly what was just saved. When the form
@@ -1816,7 +1816,7 @@ export class Plan implements OnInit, AfterViewInit {
   private tripTotals(): {
     distanceMeters?: number;
     durationSeconds?: number;
-    worstSeverity?: string;
+    worstSeverity?: string | null;
   } {
     const itinerary = this.itinerary();
     if (itinerary) {

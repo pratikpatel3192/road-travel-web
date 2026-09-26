@@ -67,12 +67,16 @@ export type AddStopPreviewResponse = {
     exposure_after: number;
     /**
      * Worst Before
+     *
+     * Worst condition on the route WITHOUT the stop, across samples that have weather. Null when none does. Required until now, so a weatherless comparison reported `clear` on both sides and the stop looked like it changed nothing.
      */
-    worst_before: 'clear' | 'caution' | 'high' | 'severe' | 'extreme';
+    worst_before?: 'clear' | 'caution' | 'high' | 'severe' | 'extreme' | null;
     /**
      * Worst After
+     *
+     * The same, WITH the stop. Null when no sample has weather.
      */
-    worst_after: 'clear' | 'caution' | 'high' | 'severe' | 'extreme';
+    worst_after?: 'clear' | 'caution' | 'high' | 'severe' | 'extreme' | null;
 };
 
 /**
@@ -146,9 +150,11 @@ export type BriefingFactsModel = {
     /**
      * Overall Severity
      *
-     * Worst across the route samples that HAVE weather. NOT a measurement when `samples_with_weather` is 0: the field is required, so a weatherless run still carries the legacy `clear` here, and a client must read the sample counts first and show 'no forecast' instead. A floor, not a verdict, when only some samples have weather.
+     * Worst across the route samples that HAVE weather. **Null when none does.** This field used to be required, which meant a weatherless run carried `clear` — a verdict of 'all fine' on a route nobody had forecast. A client must read the sample counts and show 'no forecast' rather than trusting this alone. A floor, not a verdict, when only some samples have weather.
+     *
+     * Servers may keep sending `clear` for the weatherless case while older clients are still in the field.
      */
-    overall_severity: 'clear' | 'caution' | 'high' | 'severe' | 'extreme';
+    overall_severity?: 'clear' | 'caution' | 'high' | 'severe' | 'extreme' | null;
     worst_stretch?: WorstStretchModel | null;
     /**
      * Hazards
@@ -254,9 +260,9 @@ export type BriefingResponse = {
     /**
      * Verdict
      *
-     * Deterministic engine verdict (US-6); maps 1:1 from severity.
+     * Deterministic engine verdict (US-6); maps 1:1 from severity. **Null when no sample has weather** — there is no verdict to give. It defaulted to `clear`, which is the one answer a driver must not be handed about a route nobody forecast.
      */
-    verdict?: 'clear' | 'caution' | 'consider-waiting';
+    verdict?: 'clear' | 'caution' | 'consider-waiting' | null;
     /**
      * Verdict Line
      *
@@ -592,7 +598,10 @@ export type DaySnapshotModel = {
 /**
  * DeleteResponse
  *
- * GDPR/CCPA delete — MVP marks the account for deletion; a background job erases it.
+ * GDPR/CCPA delete — reports what was actually erased, which is the app data only.
+ *
+ * ``status`` was once ``"scheduled"``, paired with a message saying identity deletion was being
+ * processed. It never was. The endpoint now reports only what it did.
  */
 export type DeleteResponse = {
     /**
@@ -993,7 +1002,7 @@ export type ExportResponse = {
     /**
      * Data
      *
-     * All personal data the service holds for this user (profile, saved trips incl. coordinates, recorded drives incl. polylines, garage vehicles, driving stats, survey answers, consents, usage, billing linkage).
+     * All personal data the service holds for this user (profile, saved trips incl. coordinates, recorded drives incl. polylines, garage vehicles, driving stats, survey answers, consents, usage, billing linkage, and marketing attribution — the creator referral of ADR-0045 plus the campaign source and touches of ADR-0048). Free-form on purpose: it grows whenever the service starts holding something new, so a client that mirrors it with a fixed type will silently drop whatever it has not heard of — which for an Art. 15 export is the one failure that matters, because the result still looks complete.
      */
     data: {
         [key: string]: unknown;
@@ -2377,9 +2386,11 @@ export type PlanTripResponse = {
     /**
      * Worst Severity
      *
-     * Worst condition across the trip.
+     * Worst condition across the samples that HAVE weather. **Null when none does** — a trip entirely beyond the forecast, or one whose every fetch failed. It used to be required, so those runs were badged `clear`: the most reassuring value in the enum, shown to a driver nobody had forecast anything for. A client must render 'no forecast' rather than a verdict; `samples_with_weather` says which case it is.
+     *
+     * Servers may keep sending `clear` for that case while older clients are still in the field — read the sample counts, not this field alone.
      */
-    worst_severity: 'clear' | 'caution' | 'high' | 'severe' | 'extreme';
+    worst_severity?: 'clear' | 'caution' | 'high' | 'severe' | 'extreme' | null;
     /**
      * Route Coordinates
      *
@@ -2881,8 +2892,10 @@ export type SaveTripRequest = {
     duration_seconds: number;
     /**
      * Worst Severity
+     *
+     * Null when the plan had no forecast at all. `SavedTripModel.worst_severity` has always been nullable, so a trip saved without weather could be read back as unknown but never written that way — the client had to invent a severity to save at all.
      */
-    worst_severity: string;
+    worst_severity?: string | null;
     /**
      * Waypoints
      */
@@ -3135,6 +3148,26 @@ export type SendResponse = {
 };
 
 /**
+ * SequenceRunResponse
+ *
+ * One report per step, keyed by email — day 2, 3 and 5 each succeed or fail on their own.
+ */
+export type SequenceRunResponse = {
+    /**
+     * Steps
+     *
+     * Step key (nudge/differentiator/depth) -> what that step did.
+     */
+    steps: {
+        [key: string]: RunResponse;
+    };
+    /**
+     * Dry Run
+     */
+    dry_run: boolean;
+};
+
+/**
  * SubscriptionModel
  *
  * Where the active subscription is billed/managed (ADR-0028). ``management`` is the ONLY
@@ -3263,6 +3296,58 @@ export type SurveyQuestionsResponse = {
      * Questions
      */
     questions: Array<SurveyQuestionModel>;
+};
+
+/**
+ * TouchRequest
+ *
+ * POST /v1/attribution/touch — "this visitor arrived under this campaign".
+ */
+export type TouchRequest = {
+    /**
+     * Utm Source
+     */
+    utm_source?: string | null;
+    /**
+     * Utm Medium
+     */
+    utm_medium?: string | null;
+    /**
+     * Utm Campaign
+     */
+    utm_campaign?: string | null;
+    /**
+     * Utm Term
+     */
+    utm_term?: string | null;
+    /**
+     * Utm Content
+     */
+    utm_content?: string | null;
+    /**
+     * Referrer
+     *
+     * The referring URL or host. Only the HOST is stored — a full referrer carries the referring page's own path and query, which we have no reason to keep.
+     */
+    referrer?: string | null;
+    /**
+     * Landing Path
+     *
+     * Path of the landing URL. The query string is stripped server-side regardless: on this product a query string is a place name (ADR-0037).
+     */
+    landing_path?: string | null;
+};
+
+/**
+ * TouchResponse
+ */
+export type TouchResponse = {
+    /**
+     * Recorded
+     *
+     * True when this call created a NEW (visitor, campaign) row. False means the arrival was counted against an existing one, or that there was nothing usable to record — either way the client's job is done and there is nothing to retry.
+     */
+    recorded: boolean;
 };
 
 /**
@@ -4555,6 +4640,37 @@ export type DeleteAccountV1AccountDeleteResponses = {
 
 export type DeleteAccountV1AccountDeleteResponse = DeleteAccountV1AccountDeleteResponses[keyof DeleteAccountV1AccountDeleteResponses];
 
+export type RecordTouchV1AttributionTouchPostData = {
+    body: TouchRequest;
+    headers?: {
+        /**
+         * X-Device-Id
+         */
+        'x-device-id'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/attribution/touch';
+};
+
+export type RecordTouchV1AttributionTouchPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RecordTouchV1AttributionTouchPostError = RecordTouchV1AttributionTouchPostErrors[keyof RecordTouchV1AttributionTouchPostErrors];
+
+export type RecordTouchV1AttributionTouchPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: TouchResponse;
+};
+
+export type RecordTouchV1AttributionTouchPostResponse = RecordTouchV1AttributionTouchPostResponses[keyof RecordTouchV1AttributionTouchPostResponses];
+
 export type RevenuecatWebhookV1WebhooksRevenuecatPostData = {
     body: RevenueCatWebhookBody;
     headers?: {
@@ -5261,6 +5377,14 @@ export type PreviewSequenceV1OpsLifecyclePreviewPostResponse = PreviewSequenceV1
 
 export type RunConversionEmailsV1OpsLifecycleRunConversionPostData = {
     body: RunRequest;
+    headers?: {
+        /**
+         * Authorization
+         *
+         * Admin Supabase JWT, or the operator shared secret.
+         */
+        authorization?: string | null;
+    };
     path?: never;
     query?: never;
     url: '/v1/ops/lifecycle/run-conversion';
@@ -5284,8 +5408,49 @@ export type RunConversionEmailsV1OpsLifecycleRunConversionPostResponses = {
 
 export type RunConversionEmailsV1OpsLifecycleRunConversionPostResponse = RunConversionEmailsV1OpsLifecycleRunConversionPostResponses[keyof RunConversionEmailsV1OpsLifecycleRunConversionPostResponses];
 
+export type RunSequenceEmailsV1OpsLifecycleRunSequencePostData = {
+    body: RunRequest;
+    headers?: {
+        /**
+         * Authorization
+         *
+         * Admin Supabase JWT, or the operator shared secret.
+         */
+        authorization?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/ops/lifecycle/run-sequence';
+};
+
+export type RunSequenceEmailsV1OpsLifecycleRunSequencePostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RunSequenceEmailsV1OpsLifecycleRunSequencePostError = RunSequenceEmailsV1OpsLifecycleRunSequencePostErrors[keyof RunSequenceEmailsV1OpsLifecycleRunSequencePostErrors];
+
+export type RunSequenceEmailsV1OpsLifecycleRunSequencePostResponses = {
+    /**
+     * Successful Response
+     */
+    200: SequenceRunResponse;
+};
+
+export type RunSequenceEmailsV1OpsLifecycleRunSequencePostResponse = RunSequenceEmailsV1OpsLifecycleRunSequencePostResponses[keyof RunSequenceEmailsV1OpsLifecycleRunSequencePostResponses];
+
 export type RunLegUpgradeSweepV1OpsLifecycleRunLegUpgradesPostData = {
     body: LegUpgradeRunRequest;
+    headers?: {
+        /**
+         * Authorization
+         *
+         * Admin Supabase JWT, or the operator shared secret.
+         */
+        authorization?: string | null;
+    };
     path?: never;
     query?: never;
     url: '/v1/ops/lifecycle/run-leg-upgrades';

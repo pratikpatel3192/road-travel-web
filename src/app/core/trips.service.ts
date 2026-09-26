@@ -2,7 +2,6 @@ import { Injectable, effect, inject, signal } from '@angular/core';
 import type { SavedTripModel, WaypointModel } from '@road-travel/sdk';
 
 import type { PlaceValue } from '../pages/plan/place-field';
-import { SEVERITY_FALLBACK } from '../pages/plan/severity';
 import { ApiService } from './api.service';
 import { AuthService } from './auth.service';
 
@@ -30,7 +29,7 @@ interface LegacySavedTrip {
   destination: PlaceValue;
   departureAt?: string;
   distanceMeters?: number;
-  worstSeverity?: string;
+  worstSeverity?: string | null;
 }
 
 const cacheKey = (userId: string) => `rt.savedTrips.v2.${userId}`;
@@ -120,7 +119,7 @@ export class TripsService {
     departureAt: string;
     distanceMeters?: number;
     durationSeconds?: number;
-    worstSeverity?: string;
+    worstSeverity?: string | null;
     /** F-006: stops + dwell persist with the trip (ADR-0030). */
     waypoints?: WaypointModel[];
   }): Promise<boolean> {
@@ -136,11 +135,11 @@ export class TripsService {
       departure_at: trip.departureAt,
       distance_meters: trip.distanceMeters ?? 0,
       duration_seconds: trip.durationSeconds ?? 0,
-      // Not 'clear'. `worst_severity` is required on the write, so when we genuinely do not know
-      // the trip's worst stretch we have to persist SOMETHING — and 'clear' persists an
-      // affirmative all-clear that My Trips then draws as a calm sage badge for the life of the
-      // row. Caution is the mildest value that does not make a claim about the road being fine.
-      worst_severity: trip.worstSeverity ?? SEVERITY_FALLBACK,
+      // Null, now that the contract allows it. This used to persist 'caution' — the mildest
+      // value that does not claim the road is fine — because the field was required and 'clear'
+      // would have written an affirmative all-clear into My Trips for the life of the row.
+      // Caution was the least-wrong lie available; null is not a lie at all.
+      worst_severity: trip.worstSeverity ?? null,
       waypoints: trip.waypoints ?? [],
     });
     this.saved.set([saved, ...this.saved()]);
@@ -220,10 +219,9 @@ export class TripsService {
           departure_at: t.departureAt ?? new Date().toISOString(),
           distance_meters: t.distanceMeters ?? 0,
           duration_seconds: 0,
-          // Same reasoning as the save above: a legacy row saved before this field existed has no
-          // worst stretch to migrate, and 'clear' would invent one. This over-marks those old
-          // trips as caution, which is the direction to be wrong in.
-          worst_severity: t.worstSeverity ?? SEVERITY_FALLBACK,
+          // A legacy row saved before this field existed has no worst stretch to migrate. It
+          // used to be over-marked as caution; it can now be migrated as what it is — unknown.
+          worst_severity: t.worstSeverity ?? null,
         });
         pushed = true;
       }
