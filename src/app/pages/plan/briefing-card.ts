@@ -2,7 +2,7 @@ import { Component, computed, input, linkedSignal, output } from '@angular/core'
 import type { BriefingResponse, ClaimModel } from '@road-travel/sdk';
 
 import { IconComponent } from '../../ui/icon';
-import { SEVERITY_COLOR, SEVERITY_LABEL, formatDistance, severityOrFallback } from './severity';
+import { formatDistance, severityColor, severityLabel } from './severity';
 
 /** The engine's F-001 v2 verdict scale (US-6) — always server-decided, never derived here. */
 type Verdict = NonNullable<BriefingResponse['verdict']>;
@@ -375,11 +375,12 @@ export class BriefingCard {
    * level this build predates must still come out as a colour and a word — `severityOrFallback`
    * degrades it to caution rather than leaving an undefined swatch and a blank label.
    */
-  color(sev: string): string {
-    return SEVERITY_COLOR[severityOrFallback(sev)];
+  // Absent is grey and says "no forecast yet"; an unrecognised level still degrades to caution.
+  color(sev: string | null | undefined): string {
+    return severityColor(sev);
   }
-  label(sev: string): string {
-    return SEVERITY_LABEL[severityOrFallback(sev)];
+  label(sev: string | null | undefined): string {
+    return severityLabel(sev);
   }
   dist(m: number): string {
     return formatDistance(m, this.units());

@@ -288,6 +288,25 @@ export const deleteAccountV1AccountDelete = (options) => (options?.client ?? cli
     ...options
 });
 /**
+ * Record that this visitor arrived under a marketing campaign
+ *
+ * Record one campaign arrival. Never fails the caller over marketing data.
+ *
+ * Returns ``recorded=False`` rather than an error for every unusable case — no device id, no
+ * campaign in the payload, a lost race — because there is nothing the client could do about any
+ * of them. It did not author these values, it copied them out of a URL, and a retry would send
+ * exactly the same thing.
+ */
+export const recordTouchV1AttributionTouchPost = (options) => (options.client ?? client).post({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/attribution/touch',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
  * RevenueCat entitlement webhook (signature-verified, idempotent)
  *
  * Called by RevenueCat, not by app clients. **Not** JWT-authenticated: it is authorized by a shared secret that RevenueCat sends verbatim in the `Authorization` header (set in the RevenueCat dashboard) and compared in constant time. Fail-closed outside `local`, and idempotent. SEC-25: documented here so the auth mechanism is visible in the contract.
@@ -557,6 +576,26 @@ export const previewSequenceV1OpsLifecyclePreviewPost = (options) => (options.cl
 export const runConversionEmailsV1OpsLifecycleRunConversionPost = (options) => (options.client ?? client).post({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/v1/ops/lifecycle/run-conversion',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
+ * Send onboarding emails 2-4 that fall due today (operator only; dry by default)
+ *
+ * Runs every scheduled step of the onboarding sequence: day 2 `nudge`, day 3 `differentiator`, day 5 `depth`. Each step selects accounts whose **welcome email** went out between N and N+1 days ago, so the spacing a reader experiences is the spacing that was designed, and an account that never received email #1 is never dropped into the middle of the sequence.
+ *
+ * The day-2 nudge additionally skips anyone who has already planned a trip — it exists to restart a stalled account, and sending it to an active one says we are not looking.
+ *
+ * Idempotent per step: each send is recorded in `public.campaign_sends` under `lifecycle:<step>`, so a re-run skips anyone already mailed. Consent and suppression are both enforced. Steps are independent — one failing does not stop the others.
+ *
+ * `dry_run` defaults to **true**: the default behaviour of an endpoint that sends marketing to real users should be to send nothing. Pass `false` deliberately.
+ */
+export const runSequenceEmailsV1OpsLifecycleRunSequencePost = (options) => (options.client ?? client).post({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/ops/lifecycle/run-sequence',
     ...options,
     headers: {
         'Content-Type': 'application/json',

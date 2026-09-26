@@ -73,6 +73,26 @@ export function severityOrFallback(value: string | null | undefined): Severity {
   return toSeverity(value) ?? SEVERITY_FALLBACK;
 }
 
+/**
+ * What to PAINT for an API severity, keeping absent and unrecognised apart — the distinction
+ * `SEVERITY_FALLBACK` describes but callers kept collapsing.
+ *
+ *   null / undefined  -> grey. Nobody has forecast this; say so.
+ *   an unknown word   -> the caution fail-safe. A server that grew the scale grew it at the bad end.
+ *   a known level     -> itself.
+ *
+ * Before the contract could carry null, "no forecast" arrived as the string 'clear' and there was
+ * nothing to distinguish; every caller therefore went through `severityOrFallback`, which turned a
+ * genuine absence into 'caution'. Both readings were wrong in opposite directions.
+ */
+export function severityColor(value: string | null | undefined): string {
+  return value == null ? UNKNOWN_COLOR : SEVERITY_COLOR[severityOrFallback(value)];
+}
+
+export function severityLabel(value: string | null | undefined): string {
+  return value == null ? UNKNOWN_LABEL : SEVERITY_LABEL[severityOrFallback(value)];
+}
+
 /** Caution-or-worse: the levels that are worth interrupting the driver about. */
 export function isHazard(sev: Severity | null | undefined): boolean {
   return sev != null && SEVERITY_RANK[sev] >= SEVERITY_RANK.caution;

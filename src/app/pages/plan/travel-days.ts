@@ -5,13 +5,12 @@ import { FORECAST_HORIZON_DAYS, dayLabel } from '../../core/forecast-horizon';
 import { type DerivedLeg, totalDays, totalNights } from '../../core/itinerary';
 import type { PlaceValue } from './place-field';
 import {
-  SEVERITY_COLOR,
-  SEVERITY_LABEL,
   UNKNOWN_COLOR,
   UNKNOWN_LABEL,
   formatDistance,
   formatDuration,
-  severityOrFallback,
+  severityColor,
+  severityLabel,
 } from './severity';
 import { DEFAULT_STOP_DEPARTURE, formatClock } from './stops-summary';
 import { formatNights } from './waypoints';
@@ -310,13 +309,13 @@ export class TravelDays {
     return this.longDayOrdinals().includes(ordinal);
   }
 
-  /** The day's worst condition, through the shared fail-safe — never a raw cast to Severity. */
+  /** The day's worst condition. Absent is grey and says so; unrecognised degrades to caution. */
   color(severity: string | null | undefined): string {
-    return SEVERITY_COLOR[severityOrFallback(severity)];
+    return severityColor(severity);
   }
 
   label(severity: string | null | undefined): string {
-    return SEVERITY_LABEL[severityOrFallback(severity)];
+    return severityLabel(severity);
   }
 
   distance(meters: number): string {
